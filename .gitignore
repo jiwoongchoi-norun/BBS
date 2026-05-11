@@ -25,3 +25,8 @@ build/
 
 uploads/
 public/uploads/
+
+
+docs/*.pdf         
+docs/*.ppt     
+docs/*.pptx
