@@ -1,41 +1,49 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
 
-    <title>update</title>
-</head>
+<%- include('partials/head', { title: 'Edit Post' }) %>
+
 <body>
-    <%
-        var column = rows[0];
-    %>
+    <%- include('partials/nav') %>
 
-    <form name="form1" action="/bbs/updatesave" method="post">
-        <table border="1" style="width:600px">
-            <tbody>
-                <tr>
-                    <td>작성자</td>
-                    <td><input type="text" name="brdwriter" size="20" maxlength="20" value="<%=column[3]%>"></td>
-                </tr>
-                <tr>
-                    <td>제목</td>
-                    <td><input type="text" name="brdtitle" size="70" maxlength="250" value="<%=column[1]%>"></td>
-                </tr>
-                <tr>
-                    <td>내용</td>
-                    <td><textarea name="brdmemo" rows="5" cols="60"><%=column[2]%></textarea></td>
-                </tr>
-                <tr>
-                    <td>작성일</td>
-                    <td><%=column[4]%></textarea></td>
-                </tr>
-            </tbody>
-        </table>
-
-        <a href="#" onclick="form1.submit()">저장</a>
-        <input type="hidden" name="brdno" value="<%=column[0]%>">
-    </form>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+    <main class="container py-4">
+        <% var column=rows[0]; %>
+            <div class="card form-card mx-auto">
+                <div class="card-header bg-white">
+                    <h1 class="h4 mb-0">글수정</h1>
+                </div>
+                <div class="card-body">
+                    <form name="form1" action="/bbs/updatesave" method="post">
+                        <div class="mb-3">
+                            <label class="form-label" for="brdwriter">작성자</label>
+                            <input class="form-control" type="text" id="brdwriter" name="brdwriter" size="20"
+                                maxlength="20" value="<%=column[3]%>">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="brdtitle">제목</label>
+                            <input class="form-control" type="text" id="brdtitle" name="brdtitle" size="70"
+                                maxlength="250" value="<%=column[1]%>">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="brdmemo">내용</label>
+                            <textarea class="form-control" id="brdmemo" name="brdmemo" rows="8"
+                                cols="60"><%=column[2]%></textarea>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label">작성일</label>
+                            <div class="form-control bg-light">
+                                <%=column[4]%>
+                            </div>
+                        </div>
+                        <input type="hidden" name="brdno" value="<%=column[0]%>">
+                        <div class="d-flex justify-content-end gap-2">
+                            <a href="/bbs/read?brdno=<%=column[0]%>" class="btn btn-secondary">취소</a>
+                            <a href="#" class="btn btn-primary" onclick="form1.submit()">저장</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+    </main>
 </body>
+
 </html>
