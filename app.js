@@ -2,53 +2,51 @@ var createError = require('http-errors');
 var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
-var logger = require('morgan');
 var expressSession = require('express-session');
+var logger = require('morgan');
 require('dotenv').config({ quiet: true });
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
-var bbsRouter = require('./routes/bbs');
-
+var bbsRouter = require("./routes/bbs");
 var app = express();
+var sessionSecret = process.env.SESSION_SECRET;
+
+if (!sessionSecret) {
+  throw new Error('SESSION_SECRET is required. Set it in your .env file.');
+}
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'ejs');  //임베디드 제이슨
-
-app.use(
-  expressSession(
-    {
-      secret : process.env.SESSION_SECRET || "Session-Key",
-      resave : true,
-      saveUninitialized : true,
-    }
-  )
-)
+//app.set('view engine', 'jade');
+app.set("view engine", 'ejs');
 
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+  expressSession(
+    {
+      secret: sessionSecret,
+      resave: false,
+      saveUninitialized: false,
+    }
+  )
+);
+
 
 app.use('/', indexRouter);
-//app.use('/users', usersRouter);
-app.use('/bbs',bbsRouter)
+app.use('/users', usersRouter);
+app.use("/bbs", bbsRouter);
 // catch 404 and forward to error handler
-app.get('/favicon.ico', function(req, res) {
-  res.status(204).end();
-});
-
-app.get('/.well-known/appspecific/com.chrome.devtools.json', function(req, res) {
-  res.status(204).end();
-});
-app.use(function(req, res, next) {
+app.use(function (req, res, next) {
   next(createError(404));
 });
 
 // error handler
-app.use(function(err, req, res, next) {
+app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};

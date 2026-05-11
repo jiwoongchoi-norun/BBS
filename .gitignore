@@ -1,6 +1,7 @@
 node_modules/
 
 .env
+.env.local
 .env.*
 !.env.example
 
@@ -21,3 +22,6 @@ Thumbs.db
 coverage/
 dist/
 build/
+
+uploads/
+public/uploads/
