@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>에러 메세지</title>
+</head>
+
+<body>
+
+    <% if(errcode == 1) { %>
+        <script>
+            alert('패스워드가 다릅니다.');
+
+            setTimeout(function() {
+                location.href='http://localhost:3000/bbs/signup';
+            }, 1000);
+        </script>
+    <% } %>
+
+    <% if(errcode == 2) { %>
+        <script>
+            alert('id, 패스워드, 이름은 공백일 수 없습니다.');
+
+            setTimeout(function() {
+                location.href='http://localhost:3000/bbs/signup';
+            }, 1000);
+        </script>
+    <% } %>
+
+    <% if(errcode == 3) { %>
+        <script>
+            alert('아이디가 중복되었습니다. 다시 가입하세요.');
+
+            setTimeout(function() {
+                location.href='http://localhost:3000/bbs/signup';
+            }, 1000);
+        </script>
+    <% } %>
+
+    <% if(errcode == 4) { %>
+        <script>
+            alert('로그인 되어 있지 않습니다. 로그인부터 하세요.');
+
+            setTimeout(function() {
+                location.href='http://localhost:3000/bbs/list';
+            }, 1000);
+        </script>
+    <% } %>
+
+</body>
+</html>

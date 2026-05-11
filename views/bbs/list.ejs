@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<title>게시판</title>
+</head>
+
+<body>
+    <table class="table table-dark table-striped table-hover" border="2" style="margin: auto;"> 
+        <thead>
+            <tr>
+                <th>번호</th>
+                <th>제목</th>
+                <th>작성자</th>
+                <th>글내용</th>
+                <th>등록일</th>
+                <th>활성화</th>
+            </tr>
+        </thead>
+        <tbody>
+<%
+    //console.log("list start ==========");
+    //console.log("rows : " + JSON.stringify(rows));
+    //console.log("rows : " + rows.length);
+    for(var i=0; i<rows.length; i++){
+        var column = rows[i];
+        //console.log(column[0]); //글번호 콘솔 주석 처리
+%>
+           <tr>
+                <td><a href='/bbs/read?brdno=<%=column[0]%>'><%=column[0]%></a></td>
+                <td><a href='/bbs/read?brdno=<%=column[0]%>'><%=column[1]%></a></td>
+                <td><%=column[2]%></td>
+                <td><%=column[3]%></td>
+                <td><%=column[4]%></td>
+                <td><%=column[5]%></td>
+</tr>
+<%
+    }
+%>
+        </tbody>
+    </table>
+
+    <form action="/bbs/search" class="form" style="width: 50%; margin: auto;">
+    <input type="radio" name="choice" value="TITLE" checked> 제목<br> 
+    <input type="radio" name="choice" value="WRITER"> 등록자<br>
+    <input type="radio" name="choice" value="CONTENT"> 내용<br>
+    <input type="radio" name="choice" value="TITL_CONTENT"> 제목 + 내용 검색<br>
+    검색할 내용:
+    <input type="text" name="search">
+    <input type="submit" value="검색">
+    </form>
+
+    <div class="div" style="margin: auto;">
+    <button type="button" class="btn btn-outline-primary">
+        <a href="/bbs/form">글쓰기</a>
+    </button>
+
+    <button type="button" class="btn btn-outline-primary">
+        <a href="/bbs/login">로그인</a>
+    </button>
+
+    <button type="button" class="btn btn-outline-primary">
+        <a href="/bbs/logout">로그아웃</a>
+    </button>
+
+    <button type="button" class="btn btn-outline-primary">
+        <a href="/bbs/signup">회원가입</a>
+    </button>
+
+    <button type="button" class="btn btn-outline-primary">
+        <a href="/bbs/updatesignup">정보수정</a>
+    </button>
+</div>    
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+</body>
+</html>
+
