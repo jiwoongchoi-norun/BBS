@@ -203,8 +203,8 @@ router.get('/list', function (req, res, next) {
             console.error("err : " + err);
             return next(err);
         }
-        // soft delete된 글은 목록에서 제외하고 최신 글부터 보여준다.
-        var sql = "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), OK FROM BBS WHERE OK=1 ORDER BY NO DESC";
+        // soft delete된 글은 목록에서 제외하고 글번호 오름차순으로 보여준다.
+        var sql = "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), OK FROM BBS WHERE OK=1 ORDER BY NO ASC";
 
         connection.execute(sql, function (err, rows) {
             if (err) {
@@ -213,7 +213,11 @@ router.get('/list', function (req, res, next) {
                 return next(err);
             }
 
-            res.render('bbs/list', rows);
+            res.render('bbs/list', {
+                rows: rows.rows,
+                searchChoice: 'TITLE',
+                searchKeyword: ''
+            });
             connection.release();
         });
     });
@@ -384,6 +388,13 @@ router.post('/updatesave', function (req, res, next) {
 });
 
 router.get('/search', function (req, res, next) {
+    var choice = req.query.choice || 'TITLE';
+    var searchKeyword = req.query.search || '';
+    var allowedChoices = ['TITLE', 'WRITER', 'CONTENT', 'TITLE_CONTENT'];
+
+    if (allowedChoices.indexOf(choice) < 0) {
+        choice = 'TITLE';
+    }
 
     oracledb.getConnection(dbconfig, function (err, connection) {
         if (err) {
@@ -393,18 +404,18 @@ router.get('/search', function (req, res, next) {
 
         var sql;
 
-        if (req.query.choice == 'TITLE_CONTENT') {
+        if (choice == 'TITLE_CONTENT') {
             // 제목+내용 검색은 OR 조건을 괄호로 묶어 OK=1 조건과 함께 적용한다.
 
             sql = "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), OK " +
-                "FROM BBS WHERE OK=1 AND (TITLE LIKE '%" + req.query.search + "%' " +
-                "OR CONTENT LIKE '%" + req.query.search + "%') " +
-                "ORDER BY NO DESC";
+                "FROM BBS WHERE OK=1 AND (TITLE LIKE '%" + searchKeyword + "%' " +
+                "OR CONTENT LIKE '%" + searchKeyword + "%') " +
+                "ORDER BY NO ASC";
         }
         else {
             sql = "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), OK " +
-                "FROM BBS WHERE OK=1 AND " + req.query.choice + " LIKE '%" + req.query.search + "%' " +
-                "ORDER BY NO DESC";
+                "FROM BBS WHERE OK=1 AND " + choice + " LIKE '%" + searchKeyword + "%' " +
+                "ORDER BY NO ASC";
         }
         connection.execute(sql, function (err, rows) {
             if (err) {
@@ -413,7 +424,11 @@ router.get('/search', function (req, res, next) {
                 return next(err);
             }
 
-            res.render('bbs/list', rows);
+            res.render('bbs/list', {
+                rows: rows.rows,
+                searchChoice: choice,
+                searchKeyword: searchKeyword
+            });
             connection.release();
         });
     });
