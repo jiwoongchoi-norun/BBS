@@ -27,7 +27,10 @@ uploads/
 public/uploads/
 
 
-docs/*.pdf         
+docs/*.pdf
 docs/*.ppt     
 docs/*.pptx
 AGENTS.md
+notion.md
+docs/result.txt
+pdftotext.exe
