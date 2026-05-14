@@ -1,3 +1,7 @@
+-- BBS 신규 OracleDB 스키마.
+-- 기존 DB에는 이 파일 대신 scripts/migration.sql을 사용한다.
+-- 비밀번호는 신규 계정 기준 bcrypt 저장을 전제로 한다.
+
 CREATE TABLE LOGIN (
   ID VARCHAR2(100) PRIMARY KEY,
   PASSWORD VARCHAR2(255) NOT NULL,

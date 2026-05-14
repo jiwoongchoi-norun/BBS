@@ -1,179 +1,151 @@
 # BBS 게시판 프로젝트
 
-Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수님 PPT 요구사항을 기준으로 게시판 기본 흐름을 복구하고, 보안/편의 기능을 단계적으로 보강한다.
+Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트입니다. 교수님 PPT 요구사항의 기본 게시판 흐름을 우선 충족하고, 추가 점수 후보인 bcrypt, 파일업로드, 댓글/대댓글, 좋아요/싫어요, SQL bind variable 적용까지 보강했습니다.
 
 ## 현재 상태
 
-현재 코드 기준으로 게시글 CRUD, 검색, 로그인/로그아웃, 회원가입, 회원정보 수정, 세션 처리, bcrypt 비밀번호 저장, 기존 SHA-512 계정 자동 마이그레이션, 조회수, 페이징, 댓글/대댓글, 게시글 좋아요/싫어요, 파일 업로드/다운로드가 구현되어 있다. 주요 SQL은 Oracle bind variable 방식으로 정리되어 있고, 글/댓글 삭제와 게시글 수정/삭제에는 작성자 권한 체크가 적용되어 있다.
+현재 구현 기준으로 게시글 CRUD, 검색, 페이징, 조회수, 로그인/로그아웃, 회원가입, 회원정보 수정, bcrypt 비밀번호 저장, 기존 SHA-512 + salt 계정 자동 bcrypt 마이그레이션, 댓글/대댓글, 댓글 삭제, 게시글 좋아요/싫어요, 파일 업로드/다운로드가 동작합니다.
 
-아직 댓글 수정, 관리자 기능, 자동화 테스트는 남은 개선 후보이다.
+좋아요/싫어요를 누른 뒤 읽기 화면으로 돌아오는 내부 이동은 조회수를 올리지 않도록 처리했습니다. 일반적으로 목록에서 게시글을 클릭해 읽는 경우에는 조회수가 증가합니다.
 
-## 사용 기술
+## 기술 스택
 
-| 구분            | 기술                                          |
-| --------------- | --------------------------------------------- |
-| Runtime         | Node.js                                       |
-| Web Framework   | Express                                       |
-| Template Engine | EJS                                           |
-| Database        | OracleDB                                      |
-| Session         | express-session                               |
-| Environment     | dotenv                                        |
-| Logging         | morgan                                        |
-| UI              | Bootstrap 5 CDN, custom CSS                   |
-| Upload          | multer                                        |
-| Password        | bcrypt, 기존 SHA-512 + salt 자동 마이그레이션 |
-| Dev Tooling     | ESLint, Prettier, nodemon                     |
+| 구분      | 사용 기술                              |
+| --------- | -------------------------------------- |
+| Runtime   | Node.js                                |
+| Framework | Express                                |
+| Template  | EJS                                    |
+| Database  | OracleDB XE                            |
+| Session   | express-session                        |
+| Upload    | multer                                 |
+| Password  | bcrypt, legacy SHA-512 + salt fallback |
+| UI        | Bootstrap 5, custom CSS                |
+| Tooling   | ESLint, Prettier, nodemon              |
 
 ## 구현 기능
 
-| 기능            | 상태 | 주요 경로                                           |
-| --------------- | ---- | --------------------------------------------------- |
-| 게시글 목록     | 완료 | `GET /bbs/list`                                     |
-| 글쓰기          | 완료 | `GET /bbs/form`, `POST /bbs/save`                   |
-| 글읽기          | 완료 | `GET /bbs/read?brdno={no}`                          |
-| 글수정          | 완료 | `GET /bbs/update`, `POST /bbs/updatesave`           |
-| 글삭제          | 완료 | `GET /bbs/delete`, soft delete                      |
-| 검색            | 완료 | `GET /bbs/search`                                   |
-| 로그인          | 완료 | `GET /bbs/login`, `POST /bbs/logincheck`            |
-| 로그아웃        | 완료 | `GET /bbs/logout`                                   |
-| 회원가입        | 완료 | `GET /bbs/signup`, `POST /bbs/signupsave`           |
-| 회원정보 수정   | 완료 | `GET /bbs/updatesignup`, `POST /bbs/updatesignsave` |
-| 세션 처리       | 완료 | `req.session.user`                                  |
-| 비밀번호 암호화 | 완료 | bcrypt, 기존 SHA-512 자동 전환                      |
-| 조회수          | 완료 | `BBS.VIEW_COUNT`                                    |
-| 페이징          | 완료 | 목록/검색 `page` query                              |
-| 댓글            | 완료 | `POST /bbs/wsave`                                   |
-| 대댓글          | 완료 | `POST /bbs/wreply`                                  |
-| 댓글 삭제       | 완료 | `GET /bbs/wdelete`                                  |
-| 좋아요/싫어요   | 완료 | `POST /bbs/reaction`                                |
-| 파일 업로드     | 완료 | `POST /bbs/save`                                    |
-| 파일 다운로드   | 완료 | `GET /bbs/download`                                 |
+| 기능                     | 상태 | 주요 경로                                 |
+| ------------------------ | ---- | ----------------------------------------- |
+| 게시글 목록              | 완료 | `GET /bbs/list`                           |
+| 게시글 검색              | 완료 | `GET /bbs/search`                         |
+| 게시글 작성              | 완료 | `GET /bbs/form`, `POST /bbs/save`         |
+| 게시글 읽기              | 완료 | `GET /bbs/read?brdno={no}`                |
+| 게시글 수정              | 완료 | `GET /bbs/update`, `POST /bbs/updatesave` |
+| 게시글 삭제              | 완료 | `GET /bbs/delete`, soft delete            |
+| 조회수                   | 완료 | `BBS.VIEW_COUNT`                          |
+| 로그인/로그아웃          | 완료 | `POST /bbs/logincheck`, `GET /bbs/logout` |
+| 회원가입                 | 완료 | `POST /bbs/signupsave`                    |
+| 회원정보 수정            | 완료 | `POST /bbs/updatesignsave`                |
+| bcrypt 저장              | 완료 | 신규/수정 비밀번호 bcrypt 저장            |
+| legacy 계정 마이그레이션 | 완료 | SHA-512 로그인 성공 시 bcrypt 재저장      |
+| 댓글                     | 완료 | `POST /bbs/wsave`                         |
+| 대댓글                   | 완료 | `POST /bbs/wreply`                        |
+| 댓글 삭제                | 완료 | `GET /bbs/wdelete`                        |
+| 좋아요/싫어요            | 완료 | `POST /bbs/reaction`                      |
+| 파일 업로드              | 완료 | `POST /bbs/save`                          |
+| 파일 다운로드            | 완료 | `GET /bbs/download`                       |
 
-## 설치 방법
+## 설치
 
 ```powershell
 npm install
 ```
 
-`.env.example`을 참고해 `.env`를 작성한다.
+`.env.example`을 참고해 `.env`를 작성합니다.
 
 ```env
 PORT=3000
 SESSION_SECRET=change-this-session-secret
-
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 DB_CONNECT_STRING=localhost/XEPDB1
 ```
 
-필수 환경변수:
+## DB 준비
 
-- `SESSION_SECRET`
-- `DB_USER`
-- `DB_PASSWORD`
-- `DB_CONNECT_STRING`
-
-## OracleDB 스키마 생성
-
-신규 DB에는 다음 순서로 실행한다.
+신규 DB는 아래 순서로 실행합니다.
 
 ```sql
 @scripts/schema.sql
 @scripts/sample-data.sql
 ```
 
-기존 DB에 기능별로 보강할 때는 필요한 스크립트를 실행한다.
+기존 DB를 유지하면서 보강할 때는 통합 마이그레이션을 실행합니다.
 
 ```sql
 @scripts/migration.sql
 ```
 
-개별 보강 스크립트가 필요한 경우:
+되돌림 검토용 스크립트는 아래 파일입니다. 데이터 삭제나 DROP TABLE은 하지 않도록 작성되어 있습니다.
 
 ```sql
-@scripts/add-view-count.sql
-@scripts/add-login-salt.sql
-@scripts/add-bbsw.sql
-@scripts/add-bbs-file.sql
+@scripts/rollback.sql
 ```
 
-`sample-data.sql`의 기본 관리자 계정은 SHA-512 + salt 예시이며, 로그인 성공 시 bcrypt로 자동 전환된다.
-
-## 실행 방법
+## 실행
 
 ```powershell
 npm start
 ```
 
-개발 중 자동 재시작이 필요하면 다음 명령을 사용한다.
+개발 중 자동 재시작이 필요하면:
 
 ```powershell
 npm run dev
 ```
 
-기본 접속 주소:
+기본 접속:
 
 ```text
 http://localhost:3000/bbs/list
 ```
 
-## npm scripts
+## 검증 명령
 
-| 명령                       | 설명                                 |
-| -------------------------- | ------------------------------------ |
-| `npm start`                | Express 서버 실행                    |
-| `npm run dev`              | nodemon 개발 서버 실행               |
-| `npm run lint`             | JS 코드 ESLint 검사                  |
-| `npm run format`           | Prettier 전체 포맷                   |
-| `npm run format:check`     | Prettier 포맷 검사                   |
-| `npm run audit`            | npm 취약점 검사                      |
-| `npm run verify:app`       | Express 앱 모듈 로드 검증            |
-| `npm run check`            | lint, format check, audit 연속 실행  |
-| `npm run security:secrets` | gitleaks 설치 환경에서 secret scan   |
-| `npm run security:semgrep` | semgrep 설치 환경에서 보안 패턴 scan |
-
-## 디렉터리 구조
-
-```text
-BBS/
-|- app.js
-|- bin/www
-|- config/dbconfig.js
-|- docs/
-|- public/stylesheets/style.css
-|- routes/bbs.js
-|- scripts/
-|  |- add-bbs-file.sql
-|  |- add-bbsw.sql
-|  |- add-login-salt.sql
-|  |- add-view-count.sql
-|  |- migration.sql
-|  |- rollback.sql
-|  |- sample-data.sql
-|  `- schema.sql
-|- uploads/bbs/
-|- views/bbs/
-|- package.json
-`- README.md
+```powershell
+npm run lint
+npm run format:check
+npm run verify:app
 ```
 
-`uploads/bbs/`에는 실제 업로드 파일이 저장된다. 제출물이나 git 관리 대상에는 실제 업로드 파일을 포함하지 않는다.
+선택 검증:
+
+```powershell
+npm run audit
+npm run security:secrets
+npm run security:semgrep
+```
 
 ## 주요 문서
 
-- `docs/requirements_summary.md`: 과제 요구사항과 현재 충족 상태
-- `docs/progress_report.md`: 진행 보고서
-- `docs/change_log.md`: 변경 이력
-- `docs/security_report.md`: 보안 보강 내용
-- `docs/password_hash_test.md`: 비밀번호 해시 수동 테스트 절차
-- `docs/schema_summary.md`: OracleDB 스키마 및 마이그레이션 요약
-- `docs/test_plan.md`: 제출 전 테스트 계획
-- `docs/todo.md`: 남은 작업 목록
+| 문서                           | 용도                           |
+| ------------------------------ | ------------------------------ |
+| `docs/requirements_summary.md` | 과제 요구사항과 현재 충족 상태 |
+| `docs/progress_report.md`      | 진행 보고서                    |
+| `docs/architecture.md`         | 실행 구조와 라우터 흐름        |
+| `docs/schema_summary.md`       | OracleDB 테이블/컬럼 요약      |
+| `docs/test_plan.md`            | 수동 테스트와 제출 캡처 기준   |
+| `docs/security_report.md`      | 보안 보강 내용                 |
+| `docs/code_review_guide.md`    | 코드 리뷰와 공부 순서          |
+| `docs/change_log.md`           | 변경 이력                      |
 
-## 제출 전 확인
+## 코드 리뷰 추천 순서
 
-- `npm run lint`
-- `npm run format:check`
-- `npm run verify:app`
-- OracleDB 신규 스키마 또는 migration 실행 확인
-- 회원가입, 로그인, 글 작성, 파일 업로드, 댓글/대댓글, 좋아요/싫어요, 검색, 페이징, 수정, 삭제 수동 테스트
+1. `app.js`에서 Express, session, router 연결 확인
+2. `config/dbconfig.js`에서 OracleDB 접속 설정 확인
+3. `routes/bbs.js` 상단 helper 함수 확인
+4. 로그인/회원가입 라우터 확인
+5. 목록/검색/읽기/작성/수정/삭제 라우터 확인
+6. 댓글/대댓글 라우터 확인
+7. 좋아요/싫어요 라우터와 조회수 예외 처리 확인
+8. 파일 업로드/다운로드 라우터 확인
+9. `views/bbs/*.ejs`에서 화면 표시 방식 확인
+10. `scripts/schema.sql`, `scripts/migration.sql`로 DB 구조 확인
+
+## 남은 개선 후보
+
+- 댓글 수정 기능
+- 관리자 기능
+- CSRF 방어
+- 업로드 파일 물리 삭제 정책 정리
+- 자동화 테스트 추가

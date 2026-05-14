@@ -11,6 +11,7 @@ oracledb.autoCommit = true;
 var dbconfig = require('../config/dbconfig');
 var bcryptSaltRounds = 12;
 var uploadDir = path.join(__dirname, '..', 'uploads', 'bbs');
+var skipViewCountTokens = Object.create(null);
 var allowedFileExts = [
   '.jpg',
   '.jpeg',
@@ -57,7 +58,7 @@ var upload = multer({
   }
 });
 
-// 湲?곌린/?섏젙/??젣泥섎읆 ?몄쬆???꾩슂???붿껌?먯꽌 怨듯넻?쇰줈 ?곕뒗 媛꾨떒??濡쒓렇???뺤씤.
+// 글쓰기, 수정, 삭제처럼 로그인이 필요한 요청에서 공통으로 사용하는 인증 가드.
 function requireLogin(req, res) {
   if (!req.session.user) {
     res.redirect('/bbs/login');
@@ -66,7 +67,49 @@ function requireLogin(req, res) {
   return true;
 }
 
-// 鍮꾨?踰덊샇 ?뷀샇??異붽?
+// 추천 처리 후 read 화면으로 돌아갈 때 조회수가 증가하지 않도록 1회용 토큰을 만든다.
+function createSkipViewCountToken(bbsno) {
+  var token = crypto.randomBytes(16).toString('hex');
+  skipViewCountTokens[token] = bbsno;
+  return token;
+}
+
+// 일반 글 읽기는 조회수를 올리고, 좋아요/싫어요 후 내부 이동은 조회수를 올리지 않는다.
+function shouldSkipViewCount(req, brdno) {
+  var token = cleanText(req.query.skip_view_token, 64);
+
+  if (token && skipViewCountTokens[token] === brdno) {
+    delete skipViewCountTokens[token];
+    return true;
+  }
+
+  if (req.session && toValidNumber(req.session.skipViewCountBbsno) === brdno) {
+    delete req.session.skipViewCountBbsno;
+    return true;
+  }
+
+  return false;
+}
+
+// express-session 저장 타이밍 때문에 리다이렉트 전에 session.save를 명시적으로 호출한다.
+function redirectReadWithoutViewCount(req, res, next, bbsno) {
+  var token = createSkipViewCountToken(bbsno);
+  req.session.skipViewCountBbsno = bbsno;
+  req.session.save(function (err) {
+    if (err) {
+      return next(err);
+    }
+
+    res.redirect(
+      '/bbs/read?brdno=' +
+        encodeURIComponent(bbsno) +
+        '&skip_view_token=' +
+        encodeURIComponent(token)
+    );
+  });
+}
+
+// 기존 SHA-512 + salt 계정 검증용 해시 함수. 로그인 성공 시 bcrypt로 자동 전환한다.
 function createPasswordHash(password, salt) {
   return crypto
     .createHash('sha512')
@@ -78,6 +121,7 @@ function isBcryptPassword(algo, storedPassword) {
   return algo === 'bcrypt' || /^\$2[aby]\$/.test(storedPassword || '');
 }
 
+// 신규 가입과 회원정보 수정은 bcrypt만 저장한다.
 function createBcryptPassword(password, callback) {
   bcrypt.hash(password, bcryptSaltRounds, callback);
 }
@@ -620,6 +664,9 @@ router.get('/read', function (req, res, next) {
       return next(err);
     }
 
+    var skipViewCount = shouldSkipViewCount(req, brdno);
+
+    // read 화면은 상세 조회, 조회수 증가, 댓글/파일/내 추천 상태 조회를 한 번에 처리한다.
     var updateSql =
       'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
     var sql =
@@ -641,82 +688,86 @@ router.get('/read', function (req, res, next) {
       "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
       'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
 
-    connection.execute(updateSql, { brdno: brdno }, function (err) {
-      if (err) {
-        connection.release();
-        console.error('err : ' + err);
-        return next(err);
-      }
-
-      connection.execute(sql, { brdno: brdno }, function (err, rows) {
+    connection.execute(
+      skipViewCount ? 'BEGIN NULL; END;' : updateSql,
+      { brdno: brdno },
+      function (err) {
         if (err) {
           connection.release();
           console.error('err : ' + err);
           return next(err);
         }
 
-        if (rows.rows.length < 1) {
-          connection.release();
-          res.redirect('/bbs/list');
-          return;
-        }
-
-        connection.execute(commentSql, { bbsno: brdno }, function (err, commentRows) {
+        connection.execute(sql, { brdno: brdno }, function (err, rows) {
           if (err) {
             connection.release();
             console.error('err : ' + err);
             return next(err);
           }
 
-          connection.execute(fileSql, { bbsno: brdno }, function (err, fileRows) {
+          if (rows.rows.length < 1) {
+            connection.release();
+            res.redirect('/bbs/list');
+            return;
+          }
+
+          connection.execute(commentSql, { bbsno: brdno }, function (err, commentRows) {
             if (err) {
               connection.release();
               console.error('err : ' + err);
               return next(err);
             }
 
-            if (!req.session.user) {
-              res.render('bbs/read', {
-                rows: rows.rows,
-                comments: commentRows.rows,
-                files: fileRows.rows,
-                currentUser: null,
-                userReaction: ''
-              });
-              connection.release();
-              return;
-            }
+            connection.execute(fileSql, { bbsno: brdno }, function (err, fileRows) {
+              if (err) {
+                connection.release();
+                console.error('err : ' + err);
+                return next(err);
+              }
 
-            var reactionSql =
-              'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
-
-            connection.execute(
-              reactionSql,
-              {
-                bbsno: brdno,
-                userId: req.session.user.id
-              },
-              function (err, reactionRows) {
-                if (err) {
-                  connection.release();
-                  console.error('err : ' + err);
-                  return next(err);
-                }
-
+              if (!req.session.user) {
                 res.render('bbs/read', {
                   rows: rows.rows,
                   comments: commentRows.rows,
                   files: fileRows.rows,
-                  currentUser: req.session.user,
-                  userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : ''
+                  currentUser: null,
+                  userReaction: ''
                 });
                 connection.release();
+                return;
               }
-            );
+
+              var reactionSql =
+                'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
+
+              connection.execute(
+                reactionSql,
+                {
+                  bbsno: brdno,
+                  userId: req.session.user.id
+                },
+                function (err, reactionRows) {
+                  if (err) {
+                    connection.release();
+                    console.error('err : ' + err);
+                    return next(err);
+                  }
+
+                  res.render('bbs/read', {
+                    rows: rows.rows,
+                    comments: commentRows.rows,
+                    files: fileRows.rows,
+                    currentUser: req.session.user,
+                    userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : ''
+                  });
+                  connection.release();
+                }
+              );
+            });
           });
         });
-      });
-    });
+      }
+    );
   });
 });
 
@@ -955,6 +1006,7 @@ router.post('/reaction', function (req, res, next) {
 
         var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
 
+        // 기록이 없으면 새 추천을 추가하고 게시글 카운터를 증가시킨다.
         if (!currentReaction) {
           var insertReactionSql =
             reactionType === 'LIKE'
@@ -978,12 +1030,13 @@ router.post('/reaction', function (req, res, next) {
               }
 
               connection.release();
-              res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+              redirectReadWithoutViewCount(req, res, next, bbsno);
             }
           );
           return;
         }
 
+        // 같은 버튼을 다시 누르면 추천 기록을 삭제하고 카운터를 되돌린다.
         if (currentReaction === reactionType) {
           var cancelReactionSql =
             reactionType === 'LIKE'
@@ -1004,11 +1057,12 @@ router.post('/reaction', function (req, res, next) {
             }
 
             connection.release();
-            res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+            redirectReadWithoutViewCount(req, res, next, bbsno);
           });
           return;
         }
 
+        // 반대 버튼을 누르면 기록은 갱신하고 기존 카운터와 새 카운터를 동시에 보정한다.
         var switchReactionSql =
           reactionType === 'LIKE'
             ? 'BEGIN ' +
@@ -1031,7 +1085,7 @@ router.post('/reaction', function (req, res, next) {
             }
 
             connection.release();
-            res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+            redirectReadWithoutViewCount(req, res, next, bbsno);
           }
         );
       });

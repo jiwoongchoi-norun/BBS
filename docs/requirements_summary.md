@@ -1,80 +1,71 @@
 # BBS 과제 요구사항 요약
 
-## 프로젝트
+## 프로젝트 목표
 
-Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수님 수업자료의 게시판 흐름을 우선 충족하고, 이후 보안과 편의 기능을 가산점 후보로 확장한다.
+Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트입니다. 1차 목표는 교수님 PPT의 필수 게시판 기능 충족이고, 2차 목표는 보안과 편의 기능을 추가해 제출 완성도를 높이는 것입니다.
 
-## 교수님 PPT 기준 필수 기능
+## 필수 요구사항 충족 현황
 
-- 게시글 목록
-- 글쓰기
-- 글읽기
-- 글수정
-- 글삭제
-- 검색
-- 로그인
-- 로그아웃
-- 회원가입
-- 회원정보 수정
-- 세션 처리
-- 비밀번호 암호화
-- 조회수
-- 페이징
-- 댓글
-- 파일업로드
+| 요구사항        | 상태 | 구현 위치                                           |
+| --------------- | ---- | --------------------------------------------------- |
+| 게시글 목록     | 완료 | `GET /bbs/list`                                     |
+| 글쓰기          | 완료 | `GET /bbs/form`, `POST /bbs/save`                   |
+| 글읽기          | 완료 | `GET /bbs/read`                                     |
+| 글수정          | 완료 | `GET /bbs/update`, `POST /bbs/updatesave`           |
+| 글삭제          | 완료 | `GET /bbs/delete`, `BBS.OK = 0`                     |
+| 검색            | 완료 | `GET /bbs/search`                                   |
+| 로그인          | 완료 | `GET /bbs/login`, `POST /bbs/logincheck`            |
+| 로그아웃        | 완료 | `GET /bbs/logout`                                   |
+| 회원가입        | 완료 | `GET /bbs/signup`, `POST /bbs/signupsave`           |
+| 회원정보 수정   | 완료 | `GET /bbs/updatesignup`, `POST /bbs/updatesignsave` |
+| 세션 처리       | 완료 | `req.session.user`                                  |
+| 비밀번호 암호화 | 완료 | bcrypt, legacy SHA-512 fallback                     |
+| 조회수          | 완료 | `BBS.VIEW_COUNT`                                    |
+| 페이징          | 완료 | 목록/검색 `page` query                              |
+| 댓글            | 완료 | `BBSW`, `POST /bbs/wsave`                           |
+| 파일업로드      | 완료 | `multer`, `BBS_FILE`                                |
 
-## 현재 구현 완료
+## 추가 구현 완료
 
-- Express/EJS/OracleDB 기본 실행 구조
-- `.env` 기반 DB 설정 및 `SESSION_SECRET` 사용
-- 게시글 목록, 작성, 읽기, 수정, soft delete
-- 제목/내용/작성자/제목+내용 검색
-- 로그인, 로그아웃, 회원가입, 회원정보 수정
-- `req.session.user` 기반 세션 처리
-- bcrypt 기반 비밀번호 저장 및 로그인 검증
-- 기존 SHA-512 + salt 계정 로그인 성공 시 bcrypt 자동 마이그레이션
-- 조회수 증가 및 화면 표시
-- 목록/검색 페이징
-- 댓글 작성, 대댓글 작성, 본인 댓글 삭제
-- 게시글 좋아요/싫어요, 중복 추천 방지, 추천 취소
-- 첨부파일 업로드 및 다운로드
-- 작성자 기준 게시글 수정/삭제 권한 체크
-- 주요 SQL bind variable 적용
-- 서버 측 기본 입력값 검증
-- Bootstrap 5 기반 반응형 UI
-- ESLint, Prettier, npm scripts, VSCode debug 설정
-
-## 현재 미완료 또는 개선 후보
-
-- 댓글 수정 기능
-- 관리자 기능
-- 자동화 테스트
-- 업로드 파일 정리 정책
-- 기존 평문 계정의 비밀번호 마이그레이션 절차
+- SQL Injection 완화: 주요 SQL에 Oracle bind variable 적용
+- bcrypt 비밀번호 저장: 신규 가입과 회원정보 수정 시 bcrypt 저장
+- SHA-512 + salt 자동 마이그레이션: 기존 계정 로그인 성공 시 bcrypt로 재저장
+- 대댓글: `BBSW.PARENT_NO`, `DEPTH` 기반
+- 댓글 삭제: 작성자 본인만 soft delete
+- 게시글 좋아요/싫어요: `BBS_REACTION`으로 중복 추천 방지
+- 좋아요/싫어요 취소와 전환
+- 추천 후 read 화면 이동 시 조회수 증가 방지
+- 작성자 권한 체크: 게시글 수정/삭제, 댓글 삭제
+- Bootstrap 기반 반응형 UI
+- ESLint/Prettier/app load 검증 스크립트
 
 ## DB 스크립트 현황
 
-- 신규 DB: `scripts/schema.sql`, `scripts/sample-data.sql`
-- 기존 DB 통합 보강:
-  - `scripts/migration.sql`
-  - `scripts/rollback.sql`
-- 기존 DB 기능별 보강:
-  - `scripts/add-view-count.sql`
-  - `scripts/add-login-salt.sql`
-  - `scripts/add-bbsw.sql`
-  - `scripts/add-bbs-file.sql`
+| 파일                         | 용도                               |
+| ---------------------------- | ---------------------------------- |
+| `scripts/schema.sql`         | 신규 DB 생성용 전체 스키마         |
+| `scripts/sample-data.sql`    | 샘플 데이터                        |
+| `scripts/migration.sql`      | 기존 DB 보강용 통합 마이그레이션   |
+| `scripts/rollback.sql`       | FK/index 중심 되돌림 참고 스크립트 |
+| `scripts/add-view-count.sql` | 조회수 컬럼 보강                   |
+| `scripts/add-login-salt.sql` | legacy 비밀번호 salt 보강          |
+| `scripts/add-bbsw.sql`       | 댓글 테이블 보강                   |
+| `scripts/add-bbs-file.sql`   | 파일 테이블 보강                   |
 
-## 제출 준비 체크리스트
-
-- `scripts/schema.sql`에 `LOGIN`, `BBS`, `BBSW`, `BBS_REACTION`, `BBS_FILE` 및 각 시퀀스가 포함되어 있는지 확인한다.
-- 화면 캡처 대상: 목록, 페이징, 검색, 글쓰기, 파일업로드, 글읽기, 다운로드, 댓글, 대댓글, 좋아요/싫어요, 수정, 삭제, 로그인, 로그아웃, 회원가입, 회원정보 수정.
-- `.env`, `node_modules`, `.git`, 실제 업로드 파일은 제출물에서 제외한다.
-- 새 계정으로 회원가입 후 로그인, 글 작성, 댓글 작성, 파일 다운로드까지 수동 테스트한다.
-
-## 다음 작업 우선순위
+## 제출 전 확인 항목
 
 1. OracleDB에서 신규 스키마 또는 `scripts/migration.sql` 실행 확인
-2. 기존 SHA-512 계정 로그인 후 bcrypt 자동 전환 확인
-3. 좋아요/싫어요 중복 방지 및 취소 수동 테스트
-4. 댓글 수정 또는 관리자 기능 중 하나를 선택해 추가 구현
-5. 제출용 화면 캡처 정리
+2. `npm run lint`
+3. `npm run format:check`
+4. `npm run verify:app`
+5. 로그인, 글쓰기, 읽기, 조회수, 댓글, 대댓글, 좋아요/싫어요, 파일업로드 수동 테스트
+6. 기존 SHA-512 계정이 있다면 로그인 후 bcrypt 전환 확인
+7. 제출용 화면 캡처 정리
+
+## 남은 개선 후보
+
+- 댓글 수정
+- 관리자 기능
+- CSRF 방어
+- 업로드 파일 물리 삭제 정책 보강
+- 자동화 테스트 추가

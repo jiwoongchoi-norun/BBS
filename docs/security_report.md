@@ -1,31 +1,55 @@
-# Security hardening report
+# Security Report
 
-## SQL Injection
+## 적용된 보강
 
-- Replaced high-risk request string concatenation with Oracle bind variables in login, signup, profile update, post read, post create, post update, post delete, search, comments, replies, and downloads.
-- Numeric request values are converted with `Number()` and rejected unless they are positive integers.
-- Search column names are still dynamic, but only after allowlist validation.
+### 비밀번호
 
-## Authorization
+- 신규 회원가입은 bcrypt hash로 저장합니다.
+- 회원정보 수정 시 새 비밀번호도 bcrypt로 저장합니다.
+- 기존 SHA-512 + salt 계정은 로그인 성공 시 bcrypt로 자동 전환합니다.
+- `LOGIN.PASSWORD_ALGO`로 해시 방식을 구분합니다.
+- 회원정보 수정 화면에서 기존 비밀번호를 다시 출력하지 않습니다.
 
-- Post update and delete now require login and `BBS.WRITER = req.session.user.id`.
-- Comment delete now requires login and `BBSW.WRITER = req.session.user.id`.
-- Unauthorized writes return a 403 response.
+### 세션
 
-## Input validation
+- 로그인 성공 시 `req.session.user`에 필요한 사용자 정보만 저장합니다.
+- 글쓰기, 수정, 삭제, 댓글, 추천 등 로그인 필요 기능은 `requireLogin()`을 거칩니다.
+- `SESSION_SECRET`은 `.env`에서 주입합니다.
 
-- Login blocks blank id/password.
-- Signup trims values, requires id/password/name, validates email shape, and requires password length 4 or more.
-- Post create/update require title and content, with server-side length limits.
-- Comment/reply create require non-empty content and reject content longer than 4000 characters.
-- File upload keeps extension allowlist and 10MB size limit.
+### SQL Injection 완화
 
-## Test checklist
+- 주요 DB 쿼리는 Oracle bind variable을 사용합니다.
+- 숫자 파라미터는 `toValidNumber()`로 양의 정수만 허용합니다.
+- 검색 컬럼은 허용 목록으로 제한합니다.
 
-- `/bbs/read?brdno=1 OR 1=1` should return a bad request response.
-- Login with SQL Injection strings should fail normally.
-- A different user should not be able to update or delete another user's post.
-- A different user should not be able to delete another user's comment.
-- Blank post title/content should be rejected.
-- Overlong comment content should be rejected.
-- Logged-out post/comment writes should redirect to login.
+### 권한 체크
+
+- 게시글 수정/삭제는 로그인 사용자와 `BBS.WRITER`가 같아야 합니다.
+- 댓글 삭제는 로그인 사용자와 `BBSW.WRITER`가 같아야 합니다.
+- 권한이 없으면 403 응답을 반환합니다.
+
+### 파일 업로드
+
+- `multer`를 사용합니다.
+- 파일 크기는 10MB로 제한합니다.
+- 허용 확장자만 업로드할 수 있습니다.
+- `.exe`, `.js`, `.sh`, `.bat`, `.cmd`, `.ps1` 등 위험 확장자는 차단합니다.
+- 다운로드는 DB에 저장된 파일 메타데이터를 기준으로 처리합니다.
+
+### 추천 기능
+
+- `BBS_REACTION`의 `(BBSNO, USER_ID)` 기본키로 중복 추천을 방지합니다.
+- 추천 타입은 `LIKE`, `DISLIKE`만 허용합니다.
+- 좋아요/싫어요 후 read 화면으로 돌아오는 내부 이동은 조회수를 증가시키지 않습니다.
+
+## 남은 위험 요소
+
+- CSRF 방어가 없습니다.
+- 게시글 삭제와 댓글 삭제가 GET 요청입니다.
+- `oracledb.autoCommit = true`라 여러 SQL을 하나의 트랜잭션으로 묶는 보장은 약합니다.
+- 업로드 게시글 삭제 시 실제 파일 정리 정책이 아직 명확하지 않습니다.
+- 관리자 기능과 계정 잠금 정책은 없습니다.
+
+## 제출 기준 판단
+
+과제 수준에서는 SQL Injection 완화, 비밀번호 평문 저장 방지, 세션 분리, 작성자 권한 체크가 반영되어 있습니다. 실서비스 기준으로는 CSRF, 트랜잭션, 파일 삭제 정책, 접근 로그, 계정 잠금 정책을 추가해야 합니다.

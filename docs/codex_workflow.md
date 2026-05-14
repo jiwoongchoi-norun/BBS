@@ -1,67 +1,42 @@
-# Codex 작업 루틴
+# Codex Workflow
 
-## 기본 원칙
+## 작업 원칙
 
-- 실제 프로젝트 루트는 `C:\BBS\BBS`이다.
-- 작업 전 `docs/requirements_summary.md`와 관련 파일만 확인한다.
-- 한 번에 한 기능 또는 한 문서 작업 단위만 수정한다.
-- `.env` 전체 내용은 출력하지 않는다.
-- `node_modules`, `.git`, `package-lock.json` 세부 diff는 읽지 않는다.
-- 사용자 변경은 되돌리지 않는다.
+- `docs/requirements_summary.md`를 먼저 확인합니다.
+- 한 번에 한 기능만 수정합니다.
+- `node_modules`, `.git`, `package-lock.json` 세부 diff는 읽지 않습니다.
+- 기능 삭제나 대규모 리팩토링은 하지 않습니다.
+- 수정 후 lint, format check, app load를 확인합니다.
 
-## 수정 전 확인
+## 일반 작업 순서
 
-```powershell
-git status --short
-rg "확인할_키워드" app.js routes views config scripts docs
-```
+1. 요구사항 확인
+2. 관련 파일만 검색
+3. 원인 설명
+4. 최소 범위 수정
+5. 정적 검증
+6. 가능하면 서버 실행 또는 HTTP 흐름 검증
+7. 변경 파일과 테스트 결과 정리
+8. 문서 최신화
+9. git commit/push
 
-## 코드 수정 후 검증
+## 이번 단계에서 확인한 기준
 
-```powershell
-npm run lint
-npm run verify:app
-```
+- 좋아요/싫어요 후 조회수가 증가하지 않아야 함
+- 일반 게시글 읽기는 조회수가 증가해야 함
+- 문서는 현재 구현 기능과 DB 구조를 반영해야 함
+- 코드 리뷰용 설명 주석은 핵심 흐름에만 추가해야 함
 
-## 문서 수정 후 검증
+## 코드 리뷰 권장 방식
 
-```powershell
-npx prettier README.md NOTION.md docs/*.md --check
-```
+처음부터 `routes/bbs.js` 전체를 한 번에 읽지 말고 다음 순서로 나눠 봅니다.
 
-필요하면 문서만 포맷한다.
-
-```powershell
-npx prettier README.md NOTION.md docs/*.md --write
-```
-
-## 제출 전 검증
-
-```powershell
-npm run format:check
-npm run audit
-```
-
-선택 보안 도구가 설치된 환경에서는 다음 명령을 추가로 실행한다.
-
-```powershell
-npm run security:secrets
-npm run security:semgrep
-```
-
-## VSCode 디버깅
-
-1. `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING`을 설정한다.
-2. VSCode에서 `Debug Express` 구성을 실행한다.
-3. 브라우저에서 `http://localhost:3000/bbs/list`로 접속한다.
-
-## 보고 형식
-
-작업 완료 보고에는 다음을 포함한다.
-
-- 현재 프로젝트 상태 분석
-- 수정 대상 파일 목록
-- 각 파일별 수정 내용
-- 실행한 검증 명령
-- 남은 위험 또는 다음 작업
-- 추천 git commit 메시지
+1. helper 함수
+2. 로그인/회원가입
+3. 목록/검색
+4. 글쓰기/읽기/수정/삭제
+5. 댓글/대댓글
+6. 좋아요/싫어요
+7. 파일 다운로드
+8. EJS 화면
+9. SQL 스크립트

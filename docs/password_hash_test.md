@@ -1,88 +1,57 @@
-# bcrypt password migration test
+# Password Hash Test
 
-## Migration strategy
+## 목적
 
-The app now stores new passwords with bcrypt.
+bcrypt 기반 신규 비밀번호 저장과 기존 SHA-512 + salt 계정의 자동 마이그레이션 동작을 확인하기 위한 문서입니다.
 
-Existing SHA-512 + salt accounts are still supported:
+## 현재 전략
 
-1. Login reads `PASSWORD`, `SALT`, and `PASSWORD_ALGO`.
-2. If `PASSWORD_ALGO = 'bcrypt'` or the stored password looks like a bcrypt hash, login uses `bcrypt.compare()`.
-3. Otherwise login verifies the old SHA-512 + salt value.
-4. When the old SHA-512 login succeeds, the app rewrites that account to bcrypt:
-   - `PASSWORD = <bcrypt hash>`
-   - `SALT = NULL`
-   - `PASSWORD_ALGO = 'bcrypt'`
-   - `PASSWORD_UPDATED_AT = SYSDATE`
+| 계정 유형        | 저장 방식      | 로그인 처리                          |
+| ---------------- | -------------- | ------------------------------------ |
+| 신규 가입        | bcrypt         | `bcrypt.compare()`                   |
+| 회원정보 수정 후 | bcrypt         | `bcrypt.compare()`                   |
+| 기존 legacy 계정 | SHA-512 + salt | SHA-512 검증 성공 후 bcrypt로 재저장 |
 
-This keeps existing SHA-512 users able to log in while moving them forward automatically.
+## 확인 쿼리
 
-## DB setup
-
-New DB:
+비밀번호 원문은 출력하지 않습니다.
 
 ```sql
-@scripts/schema.sql
-@scripts/sample-data.sql
-```
-
-Existing DB:
-
-```sql
-@scripts/migration.sql
-```
-
-Do not print full `PASSWORD` values in screenshots.
-
-## Signup test
-
-1. Open `/bbs/signup`.
-2. Create a new test account.
-3. Confirm the app redirects to `/bbs/login`.
-4. Check metadata only:
-
-```sql
-SELECT ID, PASSWORD_ALGO, SALT, PASSWORD_UPDATED_AT, OK
+SELECT ID, PASSWORD_ALGO, SALT, PASSWORD_UPDATED_AT, LAST_LOGIN_AT, OK
 FROM LOGIN
-WHERE ID = 'test_id';
+ORDER BY ID;
 ```
 
-Expected:
+## 신규 계정 테스트
+
+1. 회원가입 화면에서 신규 계정 생성
+2. 로그인
+3. 아래 쿼리 실행
+
+```sql
+SELECT ID, PASSWORD_ALGO, SALT
+FROM LOGIN
+WHERE ID = '신규ID';
+```
+
+기대 결과:
 
 - `PASSWORD_ALGO = 'bcrypt'`
-- `SALT` is null
-- `PASSWORD_UPDATED_AT` is not null
+- `SALT IS NULL`
+- `PASSWORD`는 `$2a$`, `$2b$`, `$2y$` 계열 bcrypt prefix
 
-## Existing SHA-512 migration test
+## legacy 계정 테스트
 
-1. Prepare or use a SHA-512 + salt account with `PASSWORD_ALGO = 'sha512'`.
-2. Log in with the correct password.
-3. Confirm the app redirects to `/bbs/list`.
-4. Check metadata:
+1. SHA-512 + salt 방식으로 저장된 기존 계정 준비
+2. 기존 비밀번호로 로그인
+3. 로그인 성공 후 다시 쿼리 확인
 
-```sql
-SELECT ID, PASSWORD_ALGO, SALT, PASSWORD_UPDATED_AT
-FROM LOGIN
-WHERE ID = 'admin';
-```
+기대 결과:
 
-Expected after successful login:
+- 로그인 전: `PASSWORD_ALGO = 'sha512'`, `SALT` 존재
+- 로그인 후: `PASSWORD_ALGO = 'bcrypt'`, `SALT = NULL`
+- 기존 사용자는 로그인 불가 상태가 되지 않아야 함
 
-- `PASSWORD_ALGO = 'bcrypt'`
-- `SALT` is null
-- `PASSWORD_UPDATED_AT` is updated
+## 롤백 관점
 
-## Login failure test
-
-1. Try the same account with a wrong password.
-2. Confirm the password error alert appears.
-3. Confirm `PASSWORD_ALGO` did not change because login failed.
-
-## Profile password update test
-
-1. Log in with the test account.
-2. Open `/bbs/updatesignup`.
-3. Confirm both password fields are blank.
-4. Enter a new password in both password fields and save.
-5. Log out, then log in again with the new password.
-6. Confirm `PASSWORD_ALGO = 'bcrypt'`.
+이미 bcrypt로 전환된 비밀번호는 원래 SHA-512 + salt 값으로 되돌릴 수 없습니다. 이 프로젝트의 `rollback.sql`은 컬럼/테이블 삭제가 아니라 FK와 인덱스 중심 되돌림 참고용입니다.

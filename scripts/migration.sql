@@ -1,6 +1,7 @@
 -- BBS existing-database migration for Oracle XE.
 -- Goal: keep existing data, add columns/tables/constraints/indexes needed by current and near-future features.
 -- Safe to re-run: each block checks USER_* metadata before applying changes.
+-- Current features covered: bcrypt migration, view count, comments/replies, reactions, file upload.
 
 SET DEFINE OFF;
 

@@ -1,6 +1,7 @@
 -- Rollback companion for scripts/migration.sql.
 -- This file intentionally avoids DROP TABLE and avoids deleting table rows.
 -- Columns added by migration.sql are left in place because dropping columns would delete stored data.
+-- Use this only when you need to remove migration-added constraints/indexes while preserving data.
 
 SET DEFINE OFF;
 
