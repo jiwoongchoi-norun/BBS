@@ -1,7 +1,7 @@
 body {
   background: #f5f7fb;
   color: #212529;
-  font-family: Arial, "Noto Sans KR", sans-serif;
+  font-family: Arial, 'Noto Sans KR', sans-serif;
 }
 
 .navbar {
@@ -101,6 +101,10 @@ body {
 
 .board-date {
   width: 190px;
+}
+
+.board-hit {
+  width: 90px;
 }
 
 .board-status {

@@ -3,7 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./bin/www"
+    "start": "node ./bin/www",
+    "dev": "nodemon ./bin/www",
+    "lint": "eslint app.js config/**/*.js routes/**/*.js bin/www",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check",
+    "audit": "npm audit --audit-level=moderate",
+    "security:semgrep": "semgrep scan --config auto",
+    "security:secrets": "gitleaks detect --source . --redact",
+    "verify:app": "node -e \"require('./app'); console.log('app loaded')\"",
+    "check": "npm run lint && npm run format:check && npm run audit"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -20,6 +29,10 @@
     "oracledb": "^6.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.8.3"
   }
 }

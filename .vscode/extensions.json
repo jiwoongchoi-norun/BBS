@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "ms-vscode-remote.remote-ssh",
+    "eamodio.gitlens",
+    "github.vscode-pull-request-github",
+    "oracle.oracledevtools",
+    "rangav.vscode-thunder-client",
+    "usernamehw.errorlens"
+  ]
+}
