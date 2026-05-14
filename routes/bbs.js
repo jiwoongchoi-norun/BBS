@@ -1,4 +1,4 @@
-﻿var express = require('express');
+var express = require('express');
 var router = express.Router();
 var oracledb = require('oracledb');
 var crypto = require('crypto');
@@ -163,7 +163,7 @@ function getUploadOriginalName(file) {
   return Buffer.from(file.originalname, 'latin1').toString('utf8');
 }
 
-// 蹂댁븞 媛뺥솕 異붽?
+// 문자열 입력값을 trim하고 최대 길이를 넘으면 빈 값으로 처리한다.
 function cleanText(value, maxLength) {
   var text = (value || '').trim();
 
@@ -174,30 +174,30 @@ function cleanText(value, maxLength) {
   return text;
 }
 
-// 蹂댁븞 媛뺥솕 異붽?
+// URL/query/body로 들어온 숫자가 양의 정수인지 확인한다.
 function isValidNumber(value) {
   var numberValue = Number(value);
   return Number.isInteger(numberValue) && numberValue > 0;
 }
 
-// 蹂댁븞 媛뺥솕 異붽?
+// 유효하지 않은 숫자는 null로 바꿔 라우터에서 bad request로 처리하게 한다.
 function toValidNumber(value) {
   return isValidNumber(value) ? Number(value) : null;
 }
 
-// 蹂댁븞 媛뺥솕 異붽?
+// 이메일은 선택 입력값이며, 값이 있으면 기본 이메일 형식만 허용한다.
 function isValidEmail(value) {
   if (!value) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-// 蹂댁븞 媛뺥솕 異붽?
+// 권한이 없는 요청에 대한 공통 응답.
 function renderForbidden(res) {
   res.status(403);
   res.send('권한이 없습니다.');
 }
 
-// 蹂댁븞 媛뺥솕 異붽?
+// 잘못된 입력값에 대한 공통 응답.
 function renderBadRequest(res, message) {
   res.status(400);
   res.send(message || '잘못된 요청입니다.');
@@ -218,8 +218,8 @@ router.get('/login', function (req, res) {
 });
 
 router.post('/logincheck', function (req, res, next) {
-  var id = cleanText(req.body.id, 50); // 蹂댁븞 媛뺥솕 異붽?
-  var pw = cleanText(req.body.password, 100); // 蹂댁븞 媛뺥솕 異붽?
+  var id = cleanText(req.body.id, 50); // 입력값 검증
+  var pw = cleanText(req.body.password, 100); // 입력값 검증
   var code = 0;
 
   if (!id || !pw) {
@@ -348,10 +348,10 @@ router.get('/signup', function (req, res) {
 
 router.post('/signupsave', function (req, res, next) {
   var id = cleanText(req.body.id, 50),
-    pw1 = cleanText(req.body.pw1, 100), // 보안 강화 추가
-    pw2 = cleanText(req.body.pw2, 100); // 보안 강화 추가
-  var name = cleanText(req.body.name, 100); // 보안 강화 추가
-  var email = cleanText(req.body.email, 200); // 보안 강화 추가
+    pw1 = cleanText(req.body.pw1, 100), // 입력값 검증
+    pw2 = cleanText(req.body.pw2, 100); // 입력값 검증
+  var name = cleanText(req.body.name, 100); // 입력값 검증
+  var email = cleanText(req.body.email, 200); // 입력값 검증
 
   var code = 0;
 
@@ -427,7 +427,7 @@ router.get('/updatesignup', function (req, res, next) {
         }
 
         var row = result.rows[0];
-        // 鍮꾨?踰덊샇 ?뷀샇??異붽?: ?붾㈃???댁떆 鍮꾨?踰덊샇瑜??몄텧?섏? ?딅뒗??
+        // 비밀번호 해시가 화면에 다시 노출되지 않도록 빈 값으로 넘긴다.
         res.render('bbs/updatesignform', { rows: [[row[0], '', row[1], row[2]]] });
         connection.release();
       });
@@ -438,11 +438,11 @@ router.get('/updatesignup', function (req, res, next) {
 });
 
 router.post('/updatesignsave', function (req, res, next) {
-  var id = cleanText(req.body.id, 50); // 보안 강화 추가
-  var pw = cleanText(req.body.pw1, 100); // 보안 강화 추가
-  var name = cleanText(req.body.name, 100); // 보안 강화 추가
-  var email = cleanText(req.body.email, 200); // 보안 강화 추가
-  var pw2 = cleanText(req.body.pw2, 100); // 보안 강화 추가
+  var id = cleanText(req.body.id, 50); // 입력값 검증
+  var pw = cleanText(req.body.pw1, 100); // 입력값 검증
+  var name = cleanText(req.body.name, 100); // 입력값 검증
+  var email = cleanText(req.body.email, 200); // 입력값 검증
+  var pw2 = cleanText(req.body.pw2, 100); // 입력값 검증
 
   if (!requireLogin(req, res)) return;
 
@@ -501,7 +501,7 @@ router.get('/list', function (req, res, next) {
       console.error('err : ' + err);
       return next(err);
     }
-    // soft delete??湲? 紐⑸줉?먯꽌 ?쒖쇅?섍퀬 理쒖떊 湲??癒쇱? 蹂댁씠?꾨줉 ?뺣젹?쒕떎.
+    // soft delete된 글은 목록에서 제외하고 최신 글이 먼저 보이도록 정렬한다.
     var countSql = 'SELECT COUNT(*) FROM BBS WHERE OK = 1';
 
     connection.execute(countSql, function (err, countResult) {
@@ -566,9 +566,9 @@ router.post('/save', function (req, res, next) {
       return next(uploadErr);
     }
 
-    var title = cleanText(req.body.brdtitle, 200); // 보안 강화 추가
-    var content = cleanText(req.body.brdmemo, 4000); // 보안 강화 추가
-    var writer = req.session.user.id; // 보안 강화 추가
+    var title = cleanText(req.body.brdtitle, 200); // 입력값 검증
+    var content = cleanText(req.body.brdmemo, 4000); // 입력값 검증
+    var writer = req.session.user.id; // 로그인 사용자 ID 사용
 
     if (!title || !content || !writer) {
       renderBadRequest(res, '제목, 내용, 작성자는 필수입니다.');
@@ -651,7 +651,7 @@ router.post('/save', function (req, res, next) {
 });
 
 router.get('/read', function (req, res, next) {
-  var brdno = toValidNumber(req.query.brdno); // 보안 강화 추가
+  var brdno = toValidNumber(req.query.brdno); // 게시글 번호 검증
 
   if (!brdno) {
     renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
@@ -780,8 +780,8 @@ router.get('/delete', function (req, res, next) {
       return next(err);
     }
 
-    // ?ㅼ젣 DELETE ????곹깭媛믩쭔 ?대젮 怨쇱젣 ?먮쫫??留욌뒗 soft delete瑜??좎??쒕떎.
-    var bbsno = toValidNumber(req.query.brdno); // 보안 강화 추가
+    // 실제 DELETE 대신 상태값만 내려 과제 흐름에 맞는 soft delete를 유지한다.
+    var bbsno = toValidNumber(req.query.brdno); // 게시글 번호 검증
     var writer = req.session.user.id;
 
     if (!bbsno) {
@@ -823,7 +823,7 @@ router.get('/delete', function (req, res, next) {
 
 router.get('/update', function (req, res, next) {
   if (!requireLogin(req, res)) return;
-  var brdno = toValidNumber(req.query.brdno); // 보안 강화 추가
+  var brdno = toValidNumber(req.query.brdno); // 게시글 번호 검증
 
   if (!brdno) {
     renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
@@ -836,7 +836,7 @@ router.get('/update', function (req, res, next) {
       return next(err);
     }
 
-    // ?섏젙 ?붾㈃???쒖꽦 湲留???곸쑝濡??쒗븳?쒕떎.
+    // 수정 화면은 삭제되지 않은 활성 글만 대상으로 제한한다.
     var sql =
       "SELECT NO, TITLE, CONTENT, WRITER, to_char(REGDATE,'yyyy-mm-dd') " +
       'FROM BBS WHERE OK = 1 AND NO = :brdno';
@@ -868,9 +868,9 @@ router.get('/update', function (req, res, next) {
 
 router.post('/updatesave', function (req, res, next) {
   if (!requireLogin(req, res)) return;
-  var brdno = toValidNumber(req.body.brdno); // 보안 강화 추가
-  var title = cleanText(req.body.brdtitle, 200); // 보안 강화 추가
-  var content = cleanText(req.body.brdmemo, 4000); // 보안 강화 추가
+  var brdno = toValidNumber(req.body.brdno); // 게시글 번호 검증
+  var title = cleanText(req.body.brdtitle, 200); // 입력값 검증
+  var content = cleanText(req.body.brdmemo, 4000); // 입력값 검증
   var writer = req.session.user.id;
 
   if (!brdno || !title || !content) {
@@ -912,7 +912,7 @@ router.post('/updatesave', function (req, res, next) {
 
 router.get('/search', function (req, res, next) {
   var choice = req.query.choice || 'TITLE';
-  var searchKeyword = cleanText(req.query.search, 200); // 보안 강화 추가
+  var searchKeyword = cleanText(req.query.search, 200); // 검색어 길이 검증
   var allowedChoices = ['TITLE', 'WRITER', 'CONTENT', 'TITLE_CONTENT'];
 
   if (allowedChoices.indexOf(choice) < 0) {
@@ -929,7 +929,7 @@ router.get('/search', function (req, res, next) {
     var binds = { search: '%' + searchKeyword + '%' };
 
     if (choice == 'TITLE_CONTENT') {
-      // ?쒕ぉ+?댁슜 寃?됱? OR 議곌굔??愿꾪샇濡?臾띠뼱 OK=1 議곌굔怨??④퍡 ?곸슜?쒕떎.
+      // 제목+내용 검색은 OR 조건을 괄호로 묶어 OK=1 조건과 함께 적용한다.
 
       sql =
         "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
@@ -1096,8 +1096,8 @@ router.post('/reaction', function (req, res, next) {
 router.post('/wsave', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var bbsno = toValidNumber(req.body.bbsno); // 보안 강화 추가
-  var content = cleanText(req.body.content, 4000); // 보안 강화 추가
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var content = cleanText(req.body.content, 4000); // 댓글 내용 검증
   var writer = req.session.user.id;
 
   if (!bbsno || !content) {
@@ -1139,9 +1139,9 @@ router.post('/wsave', function (req, res, next) {
 router.post('/wreply', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var bbsno = toValidNumber(req.body.bbsno); // 보안 강화 추가
-  var parentNo = toValidNumber(req.body.parent_no); // 보안 강화 추가
-  var content = cleanText(req.body.content, 4000); // 보안 강화 추가
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var parentNo = toValidNumber(req.body.parent_no); // 부모 댓글 번호 검증
+  var content = cleanText(req.body.content, 4000); // 답글 내용 검증
   var writer = req.session.user.id;
 
   if (!bbsno || !parentNo || !content) {
@@ -1213,8 +1213,8 @@ router.post('/wreply', function (req, res, next) {
 router.get('/wdelete', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var wno = toValidNumber(req.query.wno); // 보안 강화 추가
-  var bbsno = toValidNumber(req.query.bbsno); // 보안 강화 추가
+  var wno = toValidNumber(req.query.wno); // 댓글 번호 검증
+  var bbsno = toValidNumber(req.query.bbsno); // 게시글 번호 검증
   var writer = req.session.user.id;
 
   if (!wno || !bbsno) {
@@ -1252,7 +1252,7 @@ router.get('/wdelete', function (req, res, next) {
 });
 
 router.get('/download', function (req, res, next) {
-  var fno = toValidNumber(req.query.fno); // 보안 강화 추가
+  var fno = toValidNumber(req.query.fno); // 파일 번호 검증
 
   if (!fno) {
     renderBadRequest(res, '파일 번호가 올바르지 않습니다.');
