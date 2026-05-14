@@ -50,7 +50,11 @@ app.use(function (err, req, res, _next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render('error');
+  res.render('error', {
+    message: err.message,
+    error: req.app.get('env') === 'development' ? err : {},
+    errcode: 0
+  });
 });
 
 module.exports = app;

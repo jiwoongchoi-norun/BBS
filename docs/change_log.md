@@ -2,6 +2,15 @@
 
 ## 2026-05-14
 
+### 교수님 최종본 비교 분석
+
+- `C:\BBS\BBS\BBS_pro_Ver`의 최종 프로젝트 파일을 현재 프로젝트와 비교했다.
+- 비교 범위는 `app.js`, `routes/bbs.js`, `routes/index.js`, `views/bbs/*.ejs`, DB 생성 SQL, session 설정, crypto/hash 코드, OracleDB query 구조이다.
+- 현재 프로젝트에 이미 구현된 CRUD, 검색, 인증, 세션, 조회수, Bootstrap UI를 완료 항목으로 재확인했다.
+- 교수님 최종본에 있고 현재 프로젝트에 부족한 페이징, `BBSW` 댓글 테이블/댓글 작성, `LOGIN.SALT` 기반 로그인 검증, `COUNT` 기반 조회수 방식을 TODO로 정리했다.
+- 파일 업로드는 교수님 최종본에도 `<input type="file">`만 있고 서버 처리 코드가 없어 별도 구현 필요 항목으로 표시했다.
+- 과제 제출 요구사항인 테이블 생성 SQL, 모든 기능 화면 캡처, 소스코드 압축 체크리스트를 문서에 반영했다.
+
 ### 문서 최신화
 
 - `README.md`를 실제 코드 기준으로 재작성했다.

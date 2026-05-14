@@ -1,7 +1,7 @@
 var express = require('express');
 var router = express.Router();
-
 var oracledb = require('oracledb');
+var crypto = require('crypto');
 oracledb.autoCommit = true;
 
 var dbconfig = require('../config/dbconfig');
@@ -90,8 +90,8 @@ router.get('/signup', function (req, res) {
 
 router.post('/signupsave', function (req, res, next) {
   var id = req.body.id,
-    pw1 = req.body.pw1,
-    pw2 = req.body.pw2;
+    pw1 = req.body.pw1, //비밀번호
+    pw2 = req.body.pw2; //비밀번호 확인
   var name = req.body.name;
   var email = req.body.email;
 
@@ -109,10 +109,31 @@ router.post('/signupsave', function (req, res, next) {
     return;
   }
 
-  var sql =
-    "INSERT INTO LOGIN VALUES('" + id + "','" + pw1 + "','" + name + "','" + email + "', 1)";
+  var salt = Math.round(new Date().valueOf() * Math.random()) + '';
+  var hashPassword = crypto
+    .createHash('sha512')
+    .update(pw1 + salt)
+    .digest('base64');
 
-  console.log('sql : ' + sql);
+  console.log('salt : ' + salt);
+  console.log('hashPassword : ' + hashPassword);
+
+  var sql =
+    'INSERT INTO LOGIN(ID,PASSWORD,NAME,EMAIL,SALT) ' +
+    "VALUES('" +
+    id +
+    "','" +
+    hashPassword +
+    "','" +
+    name +
+    "','" +
+    email +
+    "','" +
+    salt +
+    "')";
+
+  console.log('sql :' + sql);
+
   oracledb.getConnection(dbconfig, function (err, connection) {
     if (err) {
       console.error('err : ' + err);

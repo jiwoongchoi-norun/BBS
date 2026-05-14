@@ -3,7 +3,14 @@ const globals = require('globals');
 
 module.exports = [
   {
-    ignores: ['node_modules/**', 'public/**', 'views/**', 'docs/**']
+    ignores: [
+      'node_modules/**',
+      'public/**',
+      'views/**',
+      'docs/**',
+      'BBS_pro_Ver/**',
+      'routes/bbs_lec.js'
+    ]
   },
   js.configs.recommended,
   {

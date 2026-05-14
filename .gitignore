@@ -26,6 +26,9 @@ build/
 uploads/
 public/uploads/
 
+BBS_pro_Ver/
+routes/bbs_lec.js
+docs/todo.md
 
 docs/*.pdf
 docs/*.ppt     
