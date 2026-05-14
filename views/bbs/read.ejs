@@ -8,6 +8,9 @@
     <main class="container py-4 py-lg-5">
         <%
             var column = rows[0];
+            var commentRows = typeof comments !== 'undefined' ? comments : [];
+            var fileRows = typeof files !== 'undefined' ? files : [];
+            var loginUser = typeof currentUser !== 'undefined' ? currentUser : null;
         %>
         <div class="card board-card mx-auto content-card">
             <div class="card-header bg-white">
@@ -34,6 +37,103 @@
                 <a href="/bbs/delete?brdno=<%=column[0]%>" class="btn btn-danger btn-action">삭제</a>
             </div>
         </div>
+
+        <section class="card board-card mx-auto content-card mt-4">
+            <div class="card-header bg-white">
+                <h2 class="h5 fw-bold mb-0">첨부파일</h2>
+            </div>
+            <div class="card-body">
+                <% if (fileRows.length) { %>
+                    <div class="list-group">
+                        <% for (var f = 0; f < fileRows.length; f++) {
+                            var file = fileRows[f];
+                            var fileSizeKb = Math.ceil((file[5] || 0) / 1024);
+                        %>
+                            <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                                <div>
+                                    <div class="fw-semibold"><%= file[2] %></div>
+                                    <div class="text-secondary small"><%= fileSizeKb %> KB · <%= file[7] %></div>
+                                </div>
+                                <a class="btn btn-sm btn-outline-primary" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
+                            </div>
+                        <% } %>
+                    </div>
+                <% } else { %>
+                    <div class="text-secondary">첨부파일 없음</div>
+                <% } %>
+            </div>
+        </section>
+
+        <section class="card board-card mx-auto content-card mt-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h2 class="h5 fw-bold mb-0">댓글</h2>
+                <span class="badge text-bg-light border"><%= commentRows.length %>개</span>
+            </div>
+            <div class="card-body">
+                <% if (loginUser) { %>
+                    <form action="/bbs/wsave" method="post" class="mb-4">
+                        <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                        <label class="form-label fw-semibold" for="commentContent">댓글 작성</label>
+                        <textarea class="form-control mb-2" id="commentContent" name="content" rows="3" maxlength="4000" required></textarea>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary btn-action">댓글 작성</button>
+                        </div>
+                    </form>
+                <% } else { %>
+                    <div class="alert alert-light border mb-4">댓글 작성은 로그인 후 가능합니다.</div>
+                <% } %>
+
+                <% if (commentRows.length) { %>
+                    <div class="d-flex flex-column gap-2">
+                        <% for (var i = 0; i < commentRows.length; i++) {
+                            var comment = commentRows[i];
+                            var depth = comment[5] || 0;
+                            var depthClass = depth === 0 ? '' : depth === 1 ? 'ms-4' : 'ms-5';
+                            var isMine = loginUser && loginUser.id === comment[3];
+                        %>
+                            <div class="border rounded p-3 <%= depthClass %> <%= isMine ? 'border-primary' : '' %>">
+                                <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-2">
+                                    <div>
+                                        <span class="fw-semibold"><%= comment[3] %></span>
+                                        <% if (isMine) { %>
+                                            <span class="badge text-bg-primary ms-1">내 댓글</span>
+                                        <% } %>
+                                        <span class="text-secondary small ms-2"><%= comment[8] %></span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <% if (loginUser) { %>
+                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm<%= comment[0] %>">답글달기</button>
+                                        <% } %>
+                                        <% if (isMine) { %>
+                                            <a class="btn btn-sm btn-outline-danger" href="/bbs/wdelete?wno=<%=comment[0]%>&bbsno=<%=column[0]%>">삭제</a>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <div class="mb-2"><%= comment[4] %></div>
+                                <div class="text-secondary small">
+                                    좋아요 <%= comment[6] %> · 싫어요 <%= comment[7] %>
+                                </div>
+
+                                <% if (loginUser) { %>
+                                    <div class="collapse mt-3" id="replyForm<%= comment[0] %>">
+                                        <form action="/bbs/wreply" method="post">
+                                            <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                            <input type="hidden" name="parent_no" value="<%=comment[0]%>">
+                                            <textarea class="form-control mb-2" name="content" rows="2" maxlength="4000" required></textarea>
+                                            <div class="text-end">
+                                                <button type="submit" class="btn btn-sm btn-primary">답글 저장</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                <% } %>
+                            </div>
+                        <% } %>
+                    </div>
+                <% } else { %>
+                    <div class="text-center text-secondary py-4">등록된 댓글이 없습니다.</div>
+                <% } %>
+            </div>
+        </section>
     </main>
 </body>
 </html>

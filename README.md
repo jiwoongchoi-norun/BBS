@@ -1,91 +1,52 @@
 # BBS 게시판 프로젝트
 
-Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트이다. 교수님 수업자료 요구사항을 기준으로 게시판 기본 흐름을 복구하고, 제출 전 필수 기능과 보안 개선을 단계적으로 보완하는 것을 목표로 한다.
+Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수님 PPT 요구사항을 기준으로 게시판 기본 흐름을 복구하고, 보안/편의 기능을 단계적으로 보강한다.
 
-## 현재 프로젝트 상태 분석
+## 현재 상태
 
-현재 코드 기준으로 게시글 CRUD, 검색, 로그인, 로그아웃, 회원가입, 회원정보 수정, 세션 처리, 조회수 기능이 구현되어 있다. `routes/bbs.js` 하나에 게시판과 회원 기능이 집중되어 있으며, 화면은 `views/bbs/*.ejs`와 `views/bbs/partials/*.ejs`로 구성되어 있다.
+현재 코드 기준으로 게시글 CRUD, 검색, 로그인/로그아웃, 회원가입, 회원정보 수정, 세션 처리, 비밀번호 해시 저장, 조회수, 페이징, 댓글/대댓글, 파일 업로드/다운로드가 구현되어 있다. 주요 SQL은 Oracle bind variable 방식으로 정리되어 있고, 글/댓글 삭제와 게시글 수정/삭제에는 작성자 권한 체크가 적용되어 있다.
 
-아직 bcrypt 비밀번호 암호화는 실제 라우트에 적용되지 않았다. `bcrypt` 패키지는 설치되어 있고 회원가입에는 SHA-512 + salt 저장 코드가 일부 들어가 있지만, 로그인 검증은 salt를 사용하지 않는 비교 구조라 신규 가입 계정 로그인 흐름을 재점검해야 한다. 회원정보 수정은 여전히 평문 저장 가능성이 있다. SQL은 대부분 문자열 결합 방식으로 작성되어 있어 SQL Injection 위험이 남아 있다.
+아직 bcrypt 전환, 댓글 수정, 좋아요/싫어요 실제 처리, 관리자 기능, 자동화 테스트는 남은 개선 후보이다.
 
-댓글, 파일 업로드, 페이징은 아직 라우트, 뷰, DB 구조가 구현되지 않았다. `multer` 패키지는 설치되어 있지만 업로드 폴더와 업로드 라우트는 없다.
+## 사용 기술
 
-## 교수님 최종본 비교 분석
+| 구분            | 기술                                 |
+| --------------- | ------------------------------------ |
+| Runtime         | Node.js                              |
+| Web Framework   | Express                              |
+| Template Engine | EJS                                  |
+| Database        | OracleDB                             |
+| Session         | express-session                      |
+| Environment     | dotenv                               |
+| Logging         | morgan                               |
+| UI              | Bootstrap 5 CDN, custom CSS          |
+| Upload          | multer                               |
+| Password        | SHA-512 + salt, bcrypt 패키지 설치됨 |
+| Dev Tooling     | ESLint, Prettier, nodemon            |
 
-분석 기준일: 2026-05-14
+## 구현 기능
 
-비교 대상:
-
-- 현재 프로젝트: `C:\BBS\BBS`
-- 교수님 최종 프로젝트: `C:\BBS\BBS\BBS_pro_Ver`
-
-확인 결과, 교수님 최종본에는 현재 프로젝트에 없는 페이징, 댓글 테이블(`BBSW`), 댓글 작성 라우트(`/bbs/wsave`), 댓글 표시 화면, SHA-512 + salt 기반 로그인 검증, `COUNT` 컬럼 기반 조회수 증가용 `/bbs/read_count` 라우트가 포함되어 있다.
-
-현재 프로젝트는 교수님 최종본보다 `.env` 기반 DB 설정, `SESSION_SECRET` 필수화, Bootstrap partial 분리, custom CSS, 활성 글 필터링(`OK=1`), `VIEW_COUNT` 기반 상세 진입 시 조회수 증가, 로그인 필요 라우트 보호가 더 정리되어 있다.
-
-### 교수님 최종본 대비 추가 필요 기능
-
-| 기능            | 현재 프로젝트 | 교수님 최종본                                  | 보완 판단          |
-| --------------- | ------------- | ---------------------------------------------- | ------------------ |
-| 페이징          | 미구현        | 구현, `OFFSET ... FETCH NEXT`                  | 추가 필요          |
-| 댓글            | 미구현        | `BBSW` 테이블, `/bbs/wsave`, 상세 화면 목록    | 추가 필요          |
-| 댓글 수정/삭제  | 미구현        | 화면 링크만 있고 실제 라우트 불명확            | 선택 보완          |
-| 대댓글          | 미구현        | 링크만 있고 DB/라우트 없음                     | 가산점 후보        |
-| 좋아요/싫어요   | 미구현        | 화면 링크만 있고 실제 라우트 불명확            | 가산점 후보        |
-| 파일 업로드     | 미구현        | 파일 input만 있고 `multipart/multer` 처리 없음 | 별도 구현 필요     |
-| 파일 다운로드   | 미구현        | 미구현                                         | 별도 구현 필요     |
-| 비밀번호 암호화 | 부분/불완전   | SHA-512 + salt 가입/로그인                     | bcrypt로 보완 권장 |
-
-### 이미 구현된 기능
-
-게시글 목록, 작성, 조회, 수정, soft delete, 검색, 로그인, 로그아웃, 회원가입, 회원정보 수정 화면/저장, 세션 처리, 조회수 표시/증가, Bootstrap 기반 UI는 현재 프로젝트에 구현되어 있다.
-
-### 제출 준비 체크리스트
-
-- `scripts/schema.sql`을 제출용 테이블 생성 SQL로 최신화해야 한다.
-- 제출 SQL에는 `LOGIN`, `BBS`, `BBSW`, `BBS_SEQ`, `BBSW_SEQ`, 향후 파일 업로드 테이블이 포함되어야 한다.
-- 게시판 모든 기능 화면 캡처가 필요하다.
-- 화면 캡처 대상은 목록, 작성, 조회, 수정, 삭제 후 목록, 검색, 로그인, 로그아웃, 회원가입, 회원정보 수정, 조회수, 페이징, 댓글, 파일 업로드/다운로드이다.
-- 소스코드 압축 전 `.env`, `node_modules`, `.git`, 실제 업로드 파일은 제외해야 한다.
-
-## 사용 기술 스택
-
-| 구분            | 사용 기술                                   |
-| --------------- | ------------------------------------------- |
-| Runtime         | Node.js                                     |
-| Web Framework   | Express                                     |
-| Template Engine | EJS                                         |
-| Database        | OracleDB                                    |
-| Session         | express-session                             |
-| Environment     | dotenv                                      |
-| Logging         | morgan                                      |
-| UI              | Bootstrap 5 CDN, custom CSS                 |
-| Password 후보   | bcrypt 설치됨, 미적용                       |
-| Upload 후보     | multer 설치됨, 미적용                       |
-| Dev Tooling     | ESLint, Prettier, nodemon                   |
-| 개발 환경       | Windows, WSL2, VSCode Remote-SSH, Codex CLI |
-| Version Control | Git, GitHub 사용 예정                       |
-
-## 현재 구현 기능
-
-| 기능            | 상태   | 코드 기준                                 |
-| --------------- | ------ | ----------------------------------------- |
-| 게시글 목록     | 완료   | `GET /bbs/list`                           |
-| 게시글 작성     | 완료   | `GET /bbs/form`, `POST /bbs/save`         |
-| 게시글 읽기     | 완료   | `GET /bbs/read?brdno={no}`                |
-| 게시글 수정     | 완료   | `GET /bbs/update`, `POST /bbs/updatesave` |
-| 게시글 삭제     | 완료   | `GET /bbs/delete`, soft delete            |
-| 게시글 검색     | 완료   | `GET /bbs/search`                         |
-| 조회수          | 완료   | `BBS.VIEW_COUNT`, read 진입 시 증가       |
-| 로그인          | 완료   | `POST /bbs/logincheck`                    |
-| 로그아웃        | 완료   | `GET /bbs/logout`                         |
-| 회원가입        | 완료   | `POST /bbs/signupsave`                    |
-| 회원정보 수정   | 완료   | `POST /bbs/updatesignsave`                |
-| 세션 처리       | 완료   | `req.session.user`                        |
-| 비밀번호 암호화 | 미완료 | bcrypt 설치만 됨                          |
-| 페이징          | 미완료 | 라우트/뷰 없음                            |
-| 댓글            | 미완료 | 테이블/라우트/뷰 없음                     |
-| 파일 업로드     | 미완료 | multer 설치만 됨                          |
+| 기능            | 상태 | 주요 경로                                           |
+| --------------- | ---- | --------------------------------------------------- |
+| 게시글 목록     | 완료 | `GET /bbs/list`                                     |
+| 글쓰기          | 완료 | `GET /bbs/form`, `POST /bbs/save`                   |
+| 글읽기          | 완료 | `GET /bbs/read?brdno={no}`                          |
+| 글수정          | 완료 | `GET /bbs/update`, `POST /bbs/updatesave`           |
+| 글삭제          | 완료 | `GET /bbs/delete`, soft delete                      |
+| 검색            | 완료 | `GET /bbs/search`                                   |
+| 로그인          | 완료 | `GET /bbs/login`, `POST /bbs/logincheck`            |
+| 로그아웃        | 완료 | `GET /bbs/logout`                                   |
+| 회원가입        | 완료 | `GET /bbs/signup`, `POST /bbs/signupsave`           |
+| 회원정보 수정   | 완료 | `GET /bbs/updatesignup`, `POST /bbs/updatesignsave` |
+| 세션 처리       | 완료 | `req.session.user`                                  |
+| 비밀번호 암호화 | 완료 | SHA-512 + salt                                      |
+| 조회수          | 완료 | `BBS.VIEW_COUNT`                                    |
+| 페이징          | 완료 | 목록/검색 `page` query                              |
+| 댓글            | 완료 | `POST /bbs/wsave`                                   |
+| 대댓글          | 완료 | `POST /bbs/wreply`                                  |
+| 댓글 삭제       | 완료 | `GET /bbs/wdelete`                                  |
+| 파일 업로드     | 완료 | `POST /bbs/save`                                    |
+| 파일 다운로드   | 완료 | `GET /bbs/download`                                 |
 
 ## 설치 방법
 
@@ -111,8 +72,6 @@ DB_CONNECT_STRING=localhost/XEPDB1
 - `DB_PASSWORD`
 - `DB_CONNECT_STRING`
 
-`SESSION_SECRET`이 없으면 `app.js`에서 실행을 중단한다. DB 환경변수가 없으면 `config/dbconfig.js`에서 실행을 중단한다.
-
 ## OracleDB 스키마 생성
 
 신규 DB에는 다음 순서로 실행한다.
@@ -122,11 +81,16 @@ DB_CONNECT_STRING=localhost/XEPDB1
 @scripts/sample-data.sql
 ```
 
-이미 기존 `BBS` 테이블이 있고 조회수 컬럼만 추가해야 한다면 다음 스크립트를 실행한다.
+기존 DB에 기능별로 보강할 때는 필요한 스크립트를 실행한다.
 
 ```sql
 @scripts/add-view-count.sql
+@scripts/add-login-salt.sql
+@scripts/add-bbsw.sql
+@scripts/add-bbs-file.sql
 ```
+
+`sample-data.sql`의 기본 관리자 계정은 SHA-512 + salt 해시 예시를 사용한다.
 
 ## 실행 방법
 
@@ -151,7 +115,7 @@ http://localhost:3000/bbs/list
 | 명령                       | 설명                                 |
 | -------------------------- | ------------------------------------ |
 | `npm start`                | Express 서버 실행                    |
-| `npm run dev`              | nodemon으로 개발 서버 실행           |
+| `npm run dev`              | nodemon 개발 서버 실행               |
 | `npm run lint`             | JS 코드 ESLint 검사                  |
 | `npm run format`           | Prettier 전체 포맷                   |
 | `npm run format:check`     | Prettier 포맷 검사                   |
@@ -161,192 +125,45 @@ http://localhost:3000/bbs/list
 | `npm run security:secrets` | gitleaks 설치 환경에서 secret scan   |
 | `npm run security:semgrep` | semgrep 설치 환경에서 보안 패턴 scan |
 
-## 디렉토리 구조
+## 디렉터리 구조
 
 ```text
 BBS/
 |- app.js
-|- bin/
-|  `- www
-|- config/
-|  `- dbconfig.js
+|- bin/www
+|- config/dbconfig.js
 |- docs/
-|  |- architecture.md
-|  |- change_log.md
-|  |- codex_workflow.md
-|  |- dev_setup_report.md
-|  |- progress_report.md
-|  |- requirements_summary.md
-|  |- security_notes.md
-|  |- test_plan.md
-|  `- troubleshooting.md
-|- public/
-|  `- stylesheets/
-|     `- style.css
-|- routes/
-|  |- bbs.js
-|  |- index.js
-|  `- users.js
+|- public/stylesheets/style.css
+|- routes/bbs.js
 |- scripts/
+|  |- add-bbs-file.sql
+|  |- add-bbsw.sql
+|  |- add-login-salt.sql
 |  |- add-view-count.sql
 |  |- sample-data.sql
 |  `- schema.sql
-|- views/
-|  |- bbs/
-|  |  |- form.ejs
-|  |  |- list.ejs
-|  |  |- login.ejs
-|  |  |- read.ejs
-|  |  |- signup.ejs
-|  |  |- updateform.ejs
-|  |  |- updatesignform.ejs
-|  |  `- partials/
-|  |     |- head.ejs
-|  |     `- nav.ejs
-|  |- error.ejs
-|  |- error.jade
-|  |- index.jade
-|  `- layout.jade
-|- .env.example
-|- .prettierignore
-|- .prettierrc
-|- .vscode/
-|  |- extensions.json
-|  |- launch.json
-|  `- settings.json
-|- eslint.config.js
-|- NOTION.md
+|- uploads/bbs/
+|- views/bbs/
 |- package.json
 `- README.md
 ```
 
-현재 `middleware/`, `uploads/`, `public/uploads/` 디렉토리는 없다. Jade 템플릿 파일은 Express 기본 생성 파일로 남아 있지만 현재 뷰 엔진은 EJS이다.
+`uploads/bbs/`에는 실제 업로드 파일이 저장된다. 제출물이나 git 관리 대상에는 실제 업로드 파일을 포함하지 않는다.
 
-## 주요 파일 역할
+## 주요 문서
 
-| 파일                           | 역할                                                |
-| ------------------------------ | --------------------------------------------------- |
-| `app.js`                       | Express 앱 초기화, EJS 설정, 세션 설정, 라우터 연결 |
-| `bin/www`                      | 서버 실행 진입점                                    |
-| `config/dbconfig.js`           | OracleDB 환경변수 검증 및 접속 설정                 |
-| `routes/bbs.js`                | 게시판, 검색, 인증, 회원정보 수정 핵심 라우터       |
-| `views/bbs/*.ejs`              | 게시판 및 회원 화면                                 |
-| `views/bbs/partials/*.ejs`     | 공통 head, navigation                               |
-| `public/stylesheets/style.css` | Bootstrap 보완용 CSS                                |
-| `scripts/schema.sql`           | `LOGIN`, `BBS`, `BBS_SEQ` 생성                      |
-| `scripts/sample-data.sql`      | 과제 테스트용 초기 데이터                           |
-| `.vscode/launch.json`          | VSCode Express 디버깅 설정                          |
-
-## DB 구조
-
-### LOGIN
-
-| 컬럼       | 설명                     |
-| ---------- | ------------------------ |
-| `ID`       | 회원 ID, PK              |
-| `PASSWORD` | 비밀번호, 현재 평문 저장 |
-| `NAME`     | 이름                     |
-| `EMAIL`    | 이메일                   |
-| `OK`       | 회원 활성 상태           |
-
-### BBS
-
-| 컬럼         | 설명             |
-| ------------ | ---------------- |
-| `NO`         | 게시글 번호, PK  |
-| `TITLE`      | 제목             |
-| `CONTENT`    | 본문             |
-| `WRITER`     | 작성자           |
-| `REGDATE`    | 작성일           |
-| `VIEW_COUNT` | 조회수           |
-| `OK`         | 게시글 활성 상태 |
-
-### BBS_SEQ
-
-게시글 번호 생성을 위한 Oracle sequence이다.
-
-## 보안 적용 사항
-
-현재 적용된 사항:
-
-- `.env` 기반 DB 정보 분리
-- `SESSION_SECRET` 환경변수 필수화
-- 세션에는 사용자 ID와 인증 상태만 저장
-- 비로그인 사용자의 글쓰기, 글 저장, 글수정, 글삭제, 회원정보 수정 저장 접근 제한
-- `.gitignore`에 `.env`, 업로드 폴더, 로그 파일 제외
-- secret scan과 Semgrep 실행용 npm script 추가
-
-현재 남은 보안 문제:
-
-- 비밀번호가 평문 저장 및 평문 비교 구조이다.
-- SQL 문자열 직접 결합이 다수 남아 있다.
-- 게시글 수정/삭제 시 작성자 권한 검사가 없다.
-- 삭제가 `GET /bbs/delete`로 처리된다.
-- CSRF 방어가 없다.
-- 입력값 검증과 길이 제한이 서버 측에서 충분하지 않다.
-- session cookie의 `httpOnly`, `secure`, `sameSite` 옵션이 명시되어 있지 않다.
-
-## 개발 환경
-
-- Windows 작업 디렉토리: `C:\BBS\BBS`
-- WSL2 사용 가능
-- VSCode Remote-SSH 사용
-- Codex CLI로 코드 분석, 수정, 검증 진행
-- Git 기반 변경 관리
-- `rg` 중심 검색 권장
-
-VSCode 권장 확장은 `.vscode/extensions.json`에 정리되어 있다. Node 디버깅은 VSCode의 `Debug Express` 구성을 사용한다.
-
-## Git/GitHub 사용 방법
-
-현재 변경 상태 확인:
-
-```powershell
-git status --short
-```
-
-변경 내용 확인:
-
-```powershell
-git diff
-```
-
-검증 후 커밋:
-
-```powershell
-npm run lint
-npm run verify:app
-git add README.md NOTION.md docs package.json .vscode
-git commit -m "docs: sync project documentation with current implementation"
-```
-
-GitHub 원격 저장소가 연결되어 있으면 다음 명령으로 업로드한다.
-
-```powershell
-git push
-```
-
-## 추후 개발 예정 기능
-
-우선순위:
-
-1. bcrypt 비밀번호 암호화 적용
-2. 로그인/회원가입/회원정보 수정 SQL bind variable 적용
-3. 게시판 CRUD/검색/조회수 SQL bind variable 적용
-4. 페이징 구현
-5. 댓글 테이블과 댓글 작성/목록 구현
-6. 파일 업로드 폼, multer 설정, 첨부파일 저장 구현
-7. 작성자 권한 체크
-8. 입력값 검증
-9. 삭제 요청을 POST 방식으로 변경
-10. 최소 자동 테스트 추가
-
-## 관련 문서
-
-- `NOTION.md`: 현재 진행 상황과 작업 메모
-- `docs/architecture.md`: 구조 분석
-- `docs/security_notes.md`: 보안 현황과 개선 계획
-- `docs/test_plan.md`: 검증 계획
-- `docs/troubleshooting.md`: 오류 해결 기록
+- `docs/requirements_summary.md`: 과제 요구사항과 현재 충족 상태
+- `docs/progress_report.md`: 진행 보고서
 - `docs/change_log.md`: 변경 이력
-- `docs/codex_workflow.md`: Codex 작업 루틴
+- `docs/security_report.md`: 보안 보강 내용
+- `docs/password_hash_test.md`: 비밀번호 해시 수동 테스트 절차
+- `docs/test_plan.md`: 제출 전 테스트 계획
+- `docs/todo.md`: 남은 작업 목록
+
+## 제출 전 확인
+
+- `npm run lint`
+- `npm run format:check`
+- `npm run verify:app`
+- OracleDB 신규 스키마 생성 확인
+- 회원가입, 로그인, 글 작성, 파일 업로드, 댓글/대댓글, 검색, 페이징, 수정, 삭제 수동 테스트

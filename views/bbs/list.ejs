@@ -8,6 +8,12 @@
     <%
         var selectedChoice = typeof searchChoice !== 'undefined' ? searchChoice : 'TITLE';
         var selectedKeyword = typeof searchKeyword !== 'undefined' ? searchKeyword : '';
+        var pageCurrent = typeof currentPage !== 'undefined' ? currentPage : 1;
+        var pageTotal = typeof totalPage !== 'undefined' ? totalPage : 0;
+        var pageStart = typeof startPage !== 'undefined' ? startPage : 1;
+        var pageEnd = typeof endPage !== 'undefined' ? endPage : pageTotal;
+        var pageBase = typeof paginationBaseUrl !== 'undefined' ? paginationBaseUrl : '';
+        var showPagination = pageBase && pageTotal > 1;
     %>
 
     <main class="container py-4 py-lg-5">
@@ -107,6 +113,26 @@
                 </div>
             </div>
         </section>
+
+        <% if (showPagination) { %>
+            <nav class="mt-4" aria-label="게시글 페이지">
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item <%= pageCurrent <= 1 ? 'disabled' : '' %>">
+                        <a class="page-link" href="<%= pageCurrent <= 1 ? '#' : pageBase + (pageCurrent - 1) %>">이전</a>
+                    </li>
+
+                    <% for (var pageNo = pageStart; pageNo <= pageEnd; pageNo++) { %>
+                        <li class="page-item <%= pageNo === pageCurrent ? 'active' : '' %>">
+                            <a class="page-link" href="<%= pageBase + pageNo %>"><%= pageNo %></a>
+                        </li>
+                    <% } %>
+
+                    <li class="page-item <%= pageCurrent >= pageTotal ? 'disabled' : '' %>">
+                        <a class="page-link" href="<%= pageCurrent >= pageTotal ? '#' : pageBase + (pageCurrent + 1) %>">다음</a>
+                    </li>
+                </ul>
+            </nav>
+        <% } %>
 
         <div class="d-flex flex-wrap gap-2 mt-4">
             <a href="/bbs/form" class="btn btn-primary btn-action">글쓰기</a>
