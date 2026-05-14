@@ -45,7 +45,7 @@
 | 로깅        | `morgan`          | 사용 중                |
 | 쿠키        | `cookie-parser`   | 사용 중                |
 | 에러        | `http-errors`     | 사용 중                |
-| 비밀번호    | `bcrypt`          | 설치됨, 런타임 미적용  |
+| 비밀번호    | `bcrypt`          | 런타임 사용 중         |
 | 파일 업로드 | `multer`          | 사용 중                |
 | 개발 서버   | `nodemon`         | `npm run dev`에서 사용 |
 | Lint        | `eslint`          | 사용 중                |

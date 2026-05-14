@@ -79,6 +79,8 @@
                                 <th>내용</th>
                                 <th class="board-date">등록일</th>
                                 <th class="text-center board-hit">조회수</th>
+                                <th class="text-center">좋아요</th>
+                                <th class="text-center">싫어요</th>
                                 <th class="text-center board-status">상태</th>
                             </tr>
                         </thead>
@@ -100,12 +102,14 @@
                                         <td class="text-truncate board-content"><%=column[3]%></td>
                                         <td><%=column[4]%></td>
                                         <td class="text-center"><%=column[5]%></td>
+                                        <td class="text-center"><%=column[7] || 0%></td>
+                                        <td class="text-center"><%=column[8] || 0%></td>
                                         <td class="text-center"><%=column[6]%></td>
                                     </tr>
                                 <% } %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="7" class="text-center text-secondary py-5">등록된 게시글이 없습니다.</td>
+                                    <td colspan="9" class="text-center text-secondary py-5">등록된 게시글이 없습니다.</td>
                                 </tr>
                             <% } %>
                         </tbody>

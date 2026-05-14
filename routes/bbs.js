@@ -2,12 +2,14 @@
 var router = express.Router();
 var oracledb = require('oracledb');
 var crypto = require('crypto');
+var bcrypt = require('bcrypt');
 var fs = require('fs');
 var path = require('path');
 var multer = require('multer');
 oracledb.autoCommit = true;
 
 var dbconfig = require('../config/dbconfig');
+var bcryptSaltRounds = 12;
 var uploadDir = path.join(__dirname, '..', 'uploads', 'bbs');
 var allowedFileExts = [
   '.jpg',
@@ -47,7 +49,7 @@ var upload = multer({
     var ext = path.extname(file.originalname || '').toLowerCase();
 
     if (blockedFileExts.indexOf(ext) >= 0 || allowedFileExts.indexOf(ext) < 0) {
-      cb(new Error('?덉슜?섏? ?딆? ?뚯씪 ?뺤떇?낅땲??'));
+      cb(new Error('허용되지 않는 파일 형식입니다.'));
       return;
     }
 
@@ -65,16 +67,19 @@ function requireLogin(req, res) {
 }
 
 // 鍮꾨?踰덊샇 ?뷀샇??異붽?
-function createPasswordSalt() {
-  return Math.round(new Date().valueOf() * Math.random()) + '';
-}
-
-// 鍮꾨?踰덊샇 ?뷀샇??異붽?
 function createPasswordHash(password, salt) {
   return crypto
     .createHash('sha512')
     .update(password + salt)
     .digest('base64');
+}
+
+function isBcryptPassword(algo, storedPassword) {
+  return algo === 'bcrypt' || /^\$2[aby]\$/.test(storedPassword || '');
+}
+
+function createBcryptPassword(password, callback) {
+  bcrypt.hash(password, bcryptSaltRounds, callback);
 }
 
 function getPaging(req) {
@@ -145,13 +150,17 @@ function isValidEmail(value) {
 // 蹂댁븞 媛뺥솕 異붽?
 function renderForbidden(res) {
   res.status(403);
-  res.send('沅뚰븳???놁뒿?덈떎.');
+  res.send('권한이 없습니다.');
 }
 
 // 蹂댁븞 媛뺥솕 異붽?
 function renderBadRequest(res, message) {
   res.status(400);
-  res.send(message || '?섎せ???붿껌?낅땲??');
+  res.send(message || '잘못된 요청입니다.');
+}
+
+function isValidReactionType(value) {
+  return value === 'LIKE' || value === 'DISLIKE';
 }
 
 router.get('/', function (req, res) {
@@ -180,7 +189,7 @@ router.post('/logincheck', function (req, res, next) {
       return next(err);
     }
 
-    var sql = 'SELECT OK, PASSWORD, SALT FROM LOGIN WHERE ID = :id';
+    var sql = 'SELECT OK, PASSWORD, SALT, PASSWORD_ALGO FROM LOGIN WHERE ID = :id';
 
     connection.execute(sql, { id: id }, function (err, result) {
       if (err) {
@@ -199,18 +208,9 @@ router.post('/logincheck', function (req, res, next) {
 
       var storedPassword = result.rows[0][1];
       var storedSalt = result.rows[0][2];
+      var storedAlgo = result.rows[0][3] || 'sha512';
 
-      if (!storedSalt) {
-        console.log('password salt missing.');
-        code = 2;
-        connection.release();
-        res.render('bbs/login', { errcode: code });
-        return;
-      }
-
-      var inputHashPassword = createPasswordHash(pw, storedSalt); // 鍮꾨?踰덊샇 ?뷀샇??異붽?
-
-      if (storedPassword == inputHashPassword) {
+      function finishLogin() {
         var paramID = id;
 
         if (req.session.user) {
@@ -222,7 +222,43 @@ router.post('/logincheck', function (req, res, next) {
             authorized: true
           };
         }
-      } else {
+
+        connection.release();
+        res.redirect('/bbs/list');
+      }
+
+      if (isBcryptPassword(storedAlgo, storedPassword)) {
+        bcrypt.compare(pw, storedPassword, function (err, isMatch) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          if (!isMatch) {
+            console.log('password mismatch.');
+            code = 2;
+            connection.release();
+            res.render('bbs/login', { errcode: code });
+            return;
+          }
+
+          finishLogin();
+        });
+        return;
+      }
+
+      if (!storedSalt) {
+        console.log('password salt missing.');
+        code = 2;
+        connection.release();
+        res.render('bbs/login', { errcode: code });
+        return;
+      }
+
+      var inputHashPassword = createPasswordHash(pw, storedSalt);
+
+      if (storedPassword != inputHashPassword) {
         console.log('password mismatch.');
         code = 2;
         connection.release();
@@ -230,8 +266,27 @@ router.post('/logincheck', function (req, res, next) {
         return;
       }
 
-      connection.release();
-      res.redirect('/bbs/list');
+      createBcryptPassword(pw, function (err, bcryptPassword) {
+        if (err) {
+          connection.release();
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        var migrateSql =
+          "UPDATE LOGIN SET PASSWORD = :password, SALT = NULL, PASSWORD_ALGO = 'bcrypt', PASSWORD_UPDATED_AT = SYSDATE " +
+          'WHERE ID = :id';
+
+        connection.execute(migrateSql, { password: bcryptPassword, id: id }, function (err) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          finishLogin();
+        });
+      });
     });
   });
 });
@@ -268,38 +323,42 @@ router.post('/signupsave', function (req, res, next) {
     return;
   }
 
-  var salt = createPasswordSalt(); // 鍮꾨?踰덊샇 ?뷀샇??異붽?
-  var hashPassword = createPasswordHash(pw1, salt); // 鍮꾨?踰덊샇 ?뷀샇??異붽?
-
   var sql =
-    'INSERT INTO LOGIN(ID,PASSWORD,NAME,EMAIL,SALT) VALUES(:id,:password,:name,:email,:salt)';
+    'INSERT INTO LOGIN(ID,PASSWORD,NAME,EMAIL,SALT,PASSWORD_ALGO,PASSWORD_UPDATED_AT) ' +
+    "VALUES(:id,:password,:name,:email,NULL,'bcrypt',SYSDATE)";
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
+  createBcryptPassword(pw1, function (err, hashPassword) {
     if (err) {
       console.error('err : ' + err);
       return next(err);
     }
 
-    connection.execute(
-      sql,
-      {
-        id: id,
-        password: hashPassword,
-        name: name,
-        email: email,
-        salt: salt
-      },
-      function (err) {
-        if (err) {
-          connection.release();
-          code = 3;
-          res.render('error', { errcode: code });
-          return;
-        }
-        connection.release();
-        res.redirect('/bbs/login');
+    oracledb.getConnection(dbconfig, function (err, connection) {
+      if (err) {
+        console.error('err : ' + err);
+        return next(err);
       }
-    );
+
+      connection.execute(
+        sql,
+        {
+          id: id,
+          password: hashPassword,
+          name: name,
+          email: email
+        },
+        function (err) {
+          if (err) {
+            connection.release();
+            code = 3;
+            res.render('error', { errcode: code });
+            return;
+          }
+          connection.release();
+          res.redirect('/bbs/login');
+        }
+      );
+    });
   });
 });
 
@@ -353,38 +412,41 @@ router.post('/updatesignsave', function (req, res, next) {
     return;
   }
 
-  var salt = createPasswordSalt(); // 鍮꾨?踰덊샇 ?뷀샇??異붽?
-  var hashPassword = createPasswordHash(pw, salt); // 鍮꾨?踰덊샇 ?뷀샇??異붽?
-
   var oldId = req.session.user.id;
-  oracledb.getConnection(dbconfig, function (err, connection) {
+  createBcryptPassword(pw, function (err, hashPassword) {
     if (err) {
       console.error('err : ' + err);
       return next(err);
     }
-    var sql =
-      'UPDATE LOGIN SET ID = :id, PASSWORD = :password, NAME = :name, EMAIL = :email, SALT = :salt WHERE ID = :oldId';
-    connection.execute(
-      sql,
-      {
-        id: id,
-        password: hashPassword,
-        name: name,
-        email: email,
-        salt: salt,
-        oldId: oldId
-      },
-      function (err) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
-        req.session.user.id = id;
-        connection.release();
-        res.redirect('/bbs/list');
+
+    oracledb.getConnection(dbconfig, function (err, connection) {
+      if (err) {
+        console.error('err : ' + err);
+        return next(err);
       }
-    );
+      var sql =
+        "UPDATE LOGIN SET ID = :id, PASSWORD = :password, NAME = :name, EMAIL = :email, SALT = NULL, PASSWORD_ALGO = 'bcrypt', PASSWORD_UPDATED_AT = SYSDATE WHERE ID = :oldId";
+      connection.execute(
+        sql,
+        {
+          id: id,
+          password: hashPassword,
+          name: name,
+          email: email,
+          oldId: oldId
+        },
+        function (err) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
+          req.session.user.id = id;
+          connection.release();
+          res.redirect('/bbs/list');
+        }
+      );
+    });
   });
 });
 
@@ -414,7 +476,8 @@ router.get('/list', function (req, res, next) {
 
       var offset = (paging.currentPage - 1) * paging.pageSize;
       var sql =
-        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), VIEW_COUNT, OK " +
+        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
         'FROM BBS WHERE OK = 1 ORDER BY NO DESC OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
 
       connection.execute(
@@ -561,7 +624,8 @@ router.get('/read', function (req, res, next) {
       'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
     var sql =
       'SELECT NO, TITLE, CONTENT, ' +
-      "WRITER, to_char(REGDATE,'yyyy-mm-dd'), VIEW_COUNT " +
+      "WRITER, to_char(REGDATE,'yyyy-mm-dd'), VIEW_COUNT, " +
+      'NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
       ' FROM BBS' +
       ' WHERE OK = 1 AND NO = :brdno';
     var commentSql =
@@ -611,13 +675,44 @@ router.get('/read', function (req, res, next) {
               return next(err);
             }
 
-            res.render('bbs/read', {
-              rows: rows.rows,
-              comments: commentRows.rows,
-              files: fileRows.rows,
-              currentUser: req.session.user || null
-            });
-            connection.release();
+            if (!req.session.user) {
+              res.render('bbs/read', {
+                rows: rows.rows,
+                comments: commentRows.rows,
+                files: fileRows.rows,
+                currentUser: null,
+                userReaction: ''
+              });
+              connection.release();
+              return;
+            }
+
+            var reactionSql =
+              'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
+
+            connection.execute(
+              reactionSql,
+              {
+                bbsno: brdno,
+                userId: req.session.user.id
+              },
+              function (err, reactionRows) {
+                if (err) {
+                  connection.release();
+                  console.error('err : ' + err);
+                  return next(err);
+                }
+
+                res.render('bbs/read', {
+                  rows: rows.rows,
+                  comments: commentRows.rows,
+                  files: fileRows.rows,
+                  currentUser: req.session.user,
+                  userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : ''
+                });
+                connection.release();
+              }
+            );
           });
         });
       });
@@ -786,12 +881,14 @@ router.get('/search', function (req, res, next) {
       // ?쒕ぉ+?댁슜 寃?됱? OR 議곌굔??愿꾪샇濡?臾띠뼱 OK=1 議곌굔怨??④퍡 ?곸슜?쒕떎.
 
       sql =
-        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), VIEW_COUNT, OK " +
+        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
         'FROM BBS WHERE OK=1 AND (TITLE LIKE :search OR CONTENT LIKE :search) ' +
         'ORDER BY NO DESC';
     } else {
       sql =
-        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), VIEW_COUNT, OK " +
+        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
         'FROM BBS WHERE OK=1 AND ' +
         choice +
         ' LIKE :search ORDER BY NO DESC';
@@ -809,6 +906,135 @@ router.get('/search', function (req, res, next) {
         searchKeyword: searchKeyword
       });
       connection.release();
+    });
+  });
+});
+
+router.post('/reaction', function (req, res, next) {
+  if (!requireLogin(req, res)) return;
+
+  var bbsno = toValidNumber(req.body.bbsno);
+  var reactionType = cleanText(req.body.reaction_type, 10).toUpperCase();
+  var userId = req.session.user.id;
+
+  if (!bbsno || !isValidReactionType(reactionType)) {
+    renderBadRequest(res, '추천 입력값을 확인하세요.');
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var postSql = 'SELECT NO FROM BBS WHERE NO = :bbsno AND OK = 1';
+
+    connection.execute(postSql, { bbsno: bbsno }, function (err, postRows) {
+      if (err) {
+        connection.release();
+        console.error('err : ' + err);
+        return next(err);
+      }
+
+      if (postRows.rows.length < 1) {
+        connection.release();
+        renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
+        return;
+      }
+
+      var selectSql =
+        'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
+
+      connection.execute(selectSql, { bbsno: bbsno, userId: userId }, function (err, reactionRows) {
+        if (err) {
+          connection.release();
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
+
+        if (!currentReaction) {
+          var insertReactionSql =
+            reactionType === 'LIKE'
+              ? 'BEGIN ' +
+                'INSERT INTO BBS_REACTION (BBSNO, USER_ID, REACTION_TYPE, REGDATE) VALUES (:bbsno, :userId, :reactionType, SYSDATE); ' +
+                'UPDATE BBS SET LIKE_COUNT = NVL(LIKE_COUNT, 0) + 1 WHERE NO = :bbsno; ' +
+                'END;'
+              : 'BEGIN ' +
+                'INSERT INTO BBS_REACTION (BBSNO, USER_ID, REACTION_TYPE, REGDATE) VALUES (:bbsno, :userId, :reactionType, SYSDATE); ' +
+                'UPDATE BBS SET DISLIKE_COUNT = NVL(DISLIKE_COUNT, 0) + 1 WHERE NO = :bbsno; ' +
+                'END;';
+
+          connection.execute(
+            insertReactionSql,
+            { bbsno: bbsno, userId: userId, reactionType: reactionType },
+            function (err) {
+              if (err) {
+                connection.release();
+                console.error('err : ' + err);
+                return next(err);
+              }
+
+              connection.release();
+              res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+            }
+          );
+          return;
+        }
+
+        if (currentReaction === reactionType) {
+          var cancelReactionSql =
+            reactionType === 'LIKE'
+              ? 'BEGIN ' +
+                'DELETE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
+                'UPDATE BBS SET LIKE_COUNT = GREATEST(NVL(LIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
+                'END;'
+              : 'BEGIN ' +
+                'DELETE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
+                'UPDATE BBS SET DISLIKE_COUNT = GREATEST(NVL(DISLIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
+                'END;';
+
+          connection.execute(cancelReactionSql, { bbsno: bbsno, userId: userId }, function (err) {
+            if (err) {
+              connection.release();
+              console.error('err : ' + err);
+              return next(err);
+            }
+
+            connection.release();
+            res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+          });
+          return;
+        }
+
+        var switchReactionSql =
+          reactionType === 'LIKE'
+            ? 'BEGIN ' +
+              'UPDATE BBS_REACTION SET REACTION_TYPE = :reactionType, UPDATEDATE = SYSDATE WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
+              'UPDATE BBS SET LIKE_COUNT = NVL(LIKE_COUNT, 0) + 1, DISLIKE_COUNT = GREATEST(NVL(DISLIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
+              'END;'
+            : 'BEGIN ' +
+              'UPDATE BBS_REACTION SET REACTION_TYPE = :reactionType, UPDATEDATE = SYSDATE WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
+              'UPDATE BBS SET DISLIKE_COUNT = NVL(DISLIKE_COUNT, 0) + 1, LIKE_COUNT = GREATEST(NVL(LIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
+              'END;';
+
+        connection.execute(
+          switchReactionSql,
+          { bbsno: bbsno, userId: userId, reactionType: reactionType },
+          function (err) {
+            if (err) {
+              connection.release();
+              console.error('err : ' + err);
+              return next(err);
+            }
+
+            connection.release();
+            res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+          }
+        );
+      });
     });
   });
 });
@@ -949,7 +1175,7 @@ router.get('/wdelete', function (req, res, next) {
     }
 
     var sql =
-      "UPDATE BBSW SET OK = 0, CONTENT = '??젣???볤??낅땲??', UPDATEDATE = SYSDATE " +
+      "UPDATE BBSW SET OK = 0, CONTENT = '삭제된 댓글입니다.', UPDATEDATE = SYSDATE " +
       'WHERE NO = :wno AND WRITER = :writer';
 
     connection.execute(sql, { wno: wno, writer: writer }, function (err, result) {

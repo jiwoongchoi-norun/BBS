@@ -21,10 +21,12 @@
 - 회원가입
 - 회원정보 수정
 - 세션 처리
-- SHA-512 + salt 비밀번호 저장 및 로그인 검증
+- bcrypt 비밀번호 저장 및 로그인 검증
+- 기존 SHA-512 + salt 계정 로그인 성공 시 bcrypt 자동 전환
 - 댓글 작성
 - 대댓글 작성
 - 본인 댓글 삭제
+- 게시글 좋아요/싫어요 및 추천 취소
 - 파일 업로드
 - 파일 다운로드
 - Bootstrap 5 기반 반응형 UI
@@ -47,10 +49,10 @@
 
 ### 3.2 비밀번호 저장
 
-- 회원가입과 회원정보 수정 시 salt를 생성한다.
-- `password + salt` 값을 SHA-512로 해시해 `LOGIN.PASSWORD`에 저장한다.
-- `LOGIN.SALT`를 사용해 로그인 입력값을 같은 방식으로 검증한다.
-- bcrypt 패키지는 설치되어 있으나 현재 런타임 로직은 SHA-512 + salt 방식이다.
+- 회원가입과 회원정보 수정 시 bcrypt hash를 생성한다.
+- 신규 계정은 `LOGIN.PASSWORD_ALGO = 'bcrypt'`, `LOGIN.SALT = NULL`로 저장한다.
+- 기존 SHA-512 + salt 계정은 로그인 성공 시 bcrypt로 자동 재저장한다.
+- `PASSWORD_ALGO`로 기존 계정과 신규 bcrypt 계정을 구분한다.
 
 ### 3.3 SQL Injection 완화
 
@@ -73,9 +75,16 @@
 
 - `BBSW` 테이블을 기준으로 댓글을 저장한다.
 - `PARENT_NO`와 `DEPTH`를 사용해 대댓글을 표시한다.
-- 현재 댓글 수정과 좋아요/싫어요 처리 라우트는 미구현이다.
+- 현재 댓글 수정은 미구현이다.
 
-### 3.7 파일 업로드
+### 3.7 좋아요/싫어요
+
+- `BBS.LIKE_COUNT`, `BBS.DISLIKE_COUNT`에 게시글별 카운트를 저장한다.
+- `BBS_REACTION` 테이블의 `(BBSNO, USER_ID)` 기본키로 동일 사용자의 중복 추천을 방지한다.
+- 같은 버튼을 다시 누르면 추천이 취소된다.
+- 반대 버튼을 누르면 기존 추천이 전환된다.
+
+### 3.8 파일 업로드
 
 - `multer`를 사용해 `uploads/bbs`에 파일을 저장한다.
 - `BBS_FILE` 테이블에 원본 파일명, 저장 파일명, 경로, 크기, MIME 타입을 저장한다.
@@ -103,11 +112,11 @@
 | 댓글               | 완료   |
 | 대댓글             | 완료   |
 | 댓글 삭제          | 완료   |
+| 좋아요/싫어요 처리 | 완료   |
 | 파일 업로드        | 완료   |
 | 파일 다운로드      | 완료   |
 | Bootstrap UI 개선  | 완료   |
 | 댓글 수정          | 미완료 |
-| 좋아요/싫어요 처리 | 미완료 |
 | 관리자 기능        | 미완료 |
 | 자동화 테스트      | 미완료 |
 
@@ -118,22 +127,23 @@
 - `LOGIN`
 - `BBS`
 - `BBSW`
+- `BBS_REACTION`
 - `BBS_FILE`
 - `BBS_SEQ`
 - `BBSW_SEQ`
 - `BBS_FILE_SEQ`
 
-신규 DB에는 `scripts/schema.sql`을 실행하고, 샘플 데이터가 필요하면 `scripts/sample-data.sql`을 실행한다. 기존 DB에는 `scripts/add-view-count.sql`, `scripts/add-login-salt.sql`, `scripts/add-bbsw.sql`, `scripts/add-bbs-file.sql`을 상황에 맞게 실행한다.
+신규 DB에는 `scripts/schema.sql`을 실행하고, 샘플 데이터가 필요하면 `scripts/sample-data.sql`을 실행한다. 기존 DB는 `scripts/migration.sql`로 통합 보강한다.
 
 ## 6. 남은 과제
 
 1. `npm run lint`, `npm run format:check`, `npm run verify:app` 검증
 2. OracleDB에서 스키마 스크립트 실행 확인
-3. bcrypt 전환 또는 현재 SHA-512 + salt 방식 유지 여부 결정
-4. 댓글 수정 기능 구현
-5. 좋아요/싫어요 처리 구현
+3. 기존 SHA-512 계정의 bcrypt 자동 전환 확인
+4. 좋아요/싫어요 수동 테스트
+5. 댓글 수정 기능 구현
 6. 제출용 화면 캡처 정리
 
 ## 7. 종합 평가
 
-현재 프로젝트는 과제 필수 기능 대부분을 시연 가능한 상태까지 구현했다. 특히 기존 미완료 항목이던 페이징, 댓글, 파일 업로드가 추가되었고, SQL bind variable과 작성자 권한 체크도 반영되어 제출용 완성도가 높아졌다. 남은 작업은 추가 점수 후보와 검증/문서 정리에 가깝다.
+현재 프로젝트는 과제 필수 기능 대부분과 주요 가산점 후보를 시연 가능한 상태까지 구현했다. 페이징, 댓글, 파일 업로드, bcrypt, 좋아요/싫어요, SQL bind variable, 작성자 권한 체크가 반영되어 제출용 완성도가 높아졌다. 남은 작업은 댓글 수정, 관리자 기능, 자동화 테스트와 실제 OracleDB 실행 검증이다.

@@ -27,7 +27,7 @@ npm run security:semgrep
 2. OracleDB 실행 확인
 3. 신규 DB라면 `scripts/schema.sql` 실행
 4. 샘플 데이터가 필요하면 `scripts/sample-data.sql` 실행
-5. 기존 DB라면 필요한 보강 스크립트 실행
+5. 기존 DB라면 `scripts/migration.sql` 실행
 6. 서버 실행
 
 ```powershell
@@ -37,13 +37,10 @@ npm start
 ## 기존 DB 보강 스크립트
 
 ```sql
-@scripts/add-view-count.sql
-@scripts/add-login-salt.sql
-@scripts/add-bbsw.sql
-@scripts/add-bbs-file.sql
+@scripts/migration.sql
 ```
 
-기존 평문 비밀번호 계정은 `SALT`와 해시값이 없어 로그인에 실패할 수 있다. 테스트는 새로 회원가입한 계정으로 진행한다.
+기존 SHA-512 + salt 계정은 로그인 성공 시 bcrypt로 자동 전환된다. 기존 평문 비밀번호 계정은 별도 마이그레이션 데이터가 없으면 로그인에 실패할 수 있다.
 
 ## 수동 기능 테스트
 
@@ -65,8 +62,13 @@ npm start
 | 대댓글           | 댓글의 답글달기 사용                           | 들여쓰기된 답글 표시                   |
 | 댓글 삭제        | 본인 댓글 삭제                                 | 댓글 soft delete                       |
 | 댓글 권한 체크   | 다른 사용자 댓글 삭제 시도                     | 403 응답                               |
+| 좋아요           | 로그인 후 상세 화면에서 좋아요 클릭            | 좋아요 +1, 버튼이 취소 상태로 표시     |
+| 좋아요 취소      | 같은 계정으로 좋아요 다시 클릭                 | 좋아요 -1, 추천 기록 삭제              |
+| 싫어요 전환      | 좋아요 상태에서 싫어요 클릭                    | 좋아요 -1, 싫어요 +1                   |
+| 비로그인 추천    | 로그아웃 상태에서 추천 영역 확인               | 로그인 후 추천 안내 표시               |
 | 로그인 실패      | 없는 ID 또는 틀린 비밀번호 입력                | 오류 alert 표시                        |
 | 로그인 성공      | 새 계정으로 로그인                             | 목록으로 이동                          |
+| bcrypt 전환      | SHA-512 계정으로 로그인                        | 로그인 성공 후 `PASSWORD_ALGO=bcrypt`  |
 | 로그아웃         | `/bbs/logout` 호출                             | 세션 삭제 후 목록 이동                 |
 | 회원가입         | 신규 ID 입력                                   | 로그인 화면 이동                       |
 | 회원정보 수정    | 로그인 후 ID/비밀번호/이름/이메일 수정         | 세션 ID 및 DB 값 변경                  |
@@ -88,7 +90,9 @@ npm start
 
 ```sql
 SELECT ID, NAME, EMAIL, OK FROM LOGIN;
-SELECT NO, TITLE, WRITER, VIEW_COUNT, OK FROM BBS ORDER BY NO;
+SELECT ID, PASSWORD_ALGO, SALT, PASSWORD_UPDATED_AT, OK FROM LOGIN;
+SELECT NO, TITLE, WRITER, VIEW_COUNT, LIKE_COUNT, DISLIKE_COUNT, OK FROM BBS ORDER BY NO;
+SELECT BBSNO, USER_ID, REACTION_TYPE FROM BBS_REACTION ORDER BY BBSNO, USER_ID;
 SELECT NO, BBSNO, PARENT_NO, WRITER, DEPTH, OK FROM BBSW ORDER BY NO;
 SELECT NO, BBSNO, ORG_FILENAME, FILESIZE, OK FROM BBS_FILE ORDER BY NO;
 ```
@@ -103,6 +107,7 @@ SELECT NO, BBSNO, ORG_FILENAME, FILESIZE, OK FROM BBS_FILE ORDER BY NO;
 | 인증   | 로그인 성공, 로그인 실패, 로그아웃                |
 | 회원   | 회원가입, 회원정보 수정                           |
 | 댓글   | 댓글 작성, 대댓글 작성, 댓글 삭제                 |
+| 추천   | 좋아요, 좋아요 취소, 싫어요 전환, 비로그인 안내   |
 | 파일   | 파일 첨부 글쓰기, 상세 첨부파일 목록, 다운로드    |
 | 보안   | 다른 사용자 수정/삭제 차단 또는 설명 캡처         |
 

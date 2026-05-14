@@ -4,25 +4,25 @@ Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수�
 
 ## 현재 상태
 
-현재 코드 기준으로 게시글 CRUD, 검색, 로그인/로그아웃, 회원가입, 회원정보 수정, 세션 처리, 비밀번호 해시 저장, 조회수, 페이징, 댓글/대댓글, 파일 업로드/다운로드가 구현되어 있다. 주요 SQL은 Oracle bind variable 방식으로 정리되어 있고, 글/댓글 삭제와 게시글 수정/삭제에는 작성자 권한 체크가 적용되어 있다.
+현재 코드 기준으로 게시글 CRUD, 검색, 로그인/로그아웃, 회원가입, 회원정보 수정, 세션 처리, bcrypt 비밀번호 저장, 기존 SHA-512 계정 자동 마이그레이션, 조회수, 페이징, 댓글/대댓글, 게시글 좋아요/싫어요, 파일 업로드/다운로드가 구현되어 있다. 주요 SQL은 Oracle bind variable 방식으로 정리되어 있고, 글/댓글 삭제와 게시글 수정/삭제에는 작성자 권한 체크가 적용되어 있다.
 
-아직 bcrypt 전환, 댓글 수정, 좋아요/싫어요 실제 처리, 관리자 기능, 자동화 테스트는 남은 개선 후보이다.
+아직 댓글 수정, 관리자 기능, 자동화 테스트는 남은 개선 후보이다.
 
 ## 사용 기술
 
-| 구분            | 기술                                 |
-| --------------- | ------------------------------------ |
-| Runtime         | Node.js                              |
-| Web Framework   | Express                              |
-| Template Engine | EJS                                  |
-| Database        | OracleDB                             |
-| Session         | express-session                      |
-| Environment     | dotenv                               |
-| Logging         | morgan                               |
-| UI              | Bootstrap 5 CDN, custom CSS          |
-| Upload          | multer                               |
-| Password        | SHA-512 + salt, bcrypt 패키지 설치됨 |
-| Dev Tooling     | ESLint, Prettier, nodemon            |
+| 구분            | 기술                                          |
+| --------------- | --------------------------------------------- |
+| Runtime         | Node.js                                       |
+| Web Framework   | Express                                       |
+| Template Engine | EJS                                           |
+| Database        | OracleDB                                      |
+| Session         | express-session                               |
+| Environment     | dotenv                                        |
+| Logging         | morgan                                        |
+| UI              | Bootstrap 5 CDN, custom CSS                   |
+| Upload          | multer                                        |
+| Password        | bcrypt, 기존 SHA-512 + salt 자동 마이그레이션 |
+| Dev Tooling     | ESLint, Prettier, nodemon                     |
 
 ## 구현 기능
 
@@ -39,12 +39,13 @@ Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수�
 | 회원가입        | 완료 | `GET /bbs/signup`, `POST /bbs/signupsave`           |
 | 회원정보 수정   | 완료 | `GET /bbs/updatesignup`, `POST /bbs/updatesignsave` |
 | 세션 처리       | 완료 | `req.session.user`                                  |
-| 비밀번호 암호화 | 완료 | SHA-512 + salt                                      |
+| 비밀번호 암호화 | 완료 | bcrypt, 기존 SHA-512 자동 전환                      |
 | 조회수          | 완료 | `BBS.VIEW_COUNT`                                    |
 | 페이징          | 완료 | 목록/검색 `page` query                              |
 | 댓글            | 완료 | `POST /bbs/wsave`                                   |
 | 대댓글          | 완료 | `POST /bbs/wreply`                                  |
 | 댓글 삭제       | 완료 | `GET /bbs/wdelete`                                  |
+| 좋아요/싫어요   | 완료 | `POST /bbs/reaction`                                |
 | 파일 업로드     | 완료 | `POST /bbs/save`                                    |
 | 파일 다운로드   | 완료 | `GET /bbs/download`                                 |
 
@@ -84,13 +85,19 @@ DB_CONNECT_STRING=localhost/XEPDB1
 기존 DB에 기능별로 보강할 때는 필요한 스크립트를 실행한다.
 
 ```sql
+@scripts/migration.sql
+```
+
+개별 보강 스크립트가 필요한 경우:
+
+```sql
 @scripts/add-view-count.sql
 @scripts/add-login-salt.sql
 @scripts/add-bbsw.sql
 @scripts/add-bbs-file.sql
 ```
 
-`sample-data.sql`의 기본 관리자 계정은 SHA-512 + salt 해시 예시를 사용한다.
+`sample-data.sql`의 기본 관리자 계정은 SHA-512 + salt 예시이며, 로그인 성공 시 bcrypt로 자동 전환된다.
 
 ## 실행 방법
 
@@ -140,6 +147,8 @@ BBS/
 |  |- add-bbsw.sql
 |  |- add-login-salt.sql
 |  |- add-view-count.sql
+|  |- migration.sql
+|  |- rollback.sql
 |  |- sample-data.sql
 |  `- schema.sql
 |- uploads/bbs/
@@ -157,6 +166,7 @@ BBS/
 - `docs/change_log.md`: 변경 이력
 - `docs/security_report.md`: 보안 보강 내용
 - `docs/password_hash_test.md`: 비밀번호 해시 수동 테스트 절차
+- `docs/schema_summary.md`: OracleDB 스키마 및 마이그레이션 요약
 - `docs/test_plan.md`: 제출 전 테스트 계획
 - `docs/todo.md`: 남은 작업 목록
 
@@ -165,5 +175,5 @@ BBS/
 - `npm run lint`
 - `npm run format:check`
 - `npm run verify:app`
-- OracleDB 신규 스키마 생성 확인
-- 회원가입, 로그인, 글 작성, 파일 업로드, 댓글/대댓글, 검색, 페이징, 수정, 삭제 수동 테스트
+- OracleDB 신규 스키마 또는 migration 실행 확인
+- 회원가입, 로그인, 글 작성, 파일 업로드, 댓글/대댓글, 좋아요/싫어요, 검색, 페이징, 수정, 삭제 수동 테스트

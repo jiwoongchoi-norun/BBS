@@ -2,6 +2,18 @@
 
 ## 2026-05-15
 
+### bcrypt 및 추천 기능 보강
+
+- 신규 회원가입과 회원정보 수정 비밀번호 저장을 bcrypt로 전환했다.
+- 기존 SHA-512 + salt 계정은 로그인 성공 시 bcrypt로 자동 마이그레이션되도록 처리했다.
+- `LOGIN.PASSWORD_ALGO`, `LOGIN.PASSWORD_UPDATED_AT` 기반 해시 버전 관리를 반영했다.
+- 게시글 좋아요/싫어요 기능을 추가했다.
+- `BBS_REACTION` 기록 테이블로 동일 사용자 중복 추천을 방지했다.
+- 같은 추천을 다시 누르면 취소되고, 반대 추천을 누르면 전환되도록 구현했다.
+- 목록/상세 화면에 좋아요/싫어요 count를 표시했다.
+- 기존 DB 통합 보강용 `scripts/migration.sql`과 비파괴 `scripts/rollback.sql`을 추가했다.
+- `docs/schema_summary.md`와 `docs/password_hash_test.md`를 최신화했다.
+
 ### 기능 보강
 
 - 목록과 검색 결과에 페이징을 추가했다.
@@ -80,8 +92,6 @@
 
 ## 남은 주요 변경 예정
 
-- bcrypt 비밀번호 암호화 전환
 - 댓글 수정
-- 좋아요/싫어요 처리
 - 관리자 기능
 - 자동화 테스트 추가

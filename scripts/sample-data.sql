@@ -1,8 +1,10 @@
-INSERT INTO LOGIN (ID, PASSWORD, SALT, NAME, EMAIL, OK)
+INSERT INTO LOGIN (ID, PASSWORD, SALT, PASSWORD_ALGO, PASSWORD_UPDATED_AT, NAME, EMAIL, OK)
 VALUES (
   'admin',
   'zACoQfcn9zAU7FfnIcxLVH0Uo0fyQLu0V6MUCli6gOubrRi9RXDhT2M/NMAsAQ+6OyLPB3Pp13cjv1quBlZw5w==',
   'sample-salt',
+  'sha512',
+  SYSDATE,
   '관리자',
   'admin@example.com',
   1

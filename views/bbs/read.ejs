@@ -11,6 +11,9 @@
             var commentRows = typeof comments !== 'undefined' ? comments : [];
             var fileRows = typeof files !== 'undefined' ? files : [];
             var loginUser = typeof currentUser !== 'undefined' ? currentUser : null;
+            var selectedReaction = typeof userReaction !== 'undefined' ? userReaction : '';
+            var likeCount = column[6] || 0;
+            var dislikeCount = column[7] || 0;
         %>
         <div class="card board-card mx-auto content-card">
             <div class="card-header bg-white">
@@ -23,6 +26,10 @@
                             작성일 <%=column[4]%>
                             <span class="mx-2">|</span>
                             조회수 <%=column[5]%>
+                            <span class="mx-2">|</span>
+                            좋아요 <%=likeCount%>
+                            <span class="mx-2">|</span>
+                            싫어요 <%=dislikeCount%>
                         </div>
                     </div>
                     <span class="badge text-bg-light border">NO. <%=column[0]%></span>
@@ -30,6 +37,31 @@
             </div>
             <div class="card-body">
                 <div class="board-read-content"><%=column[2]%></div>
+            </div>
+            <div class="card-body border-top">
+                <div class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+                    <div class="text-secondary small me-sm-auto">
+                        추천 현황: 좋아요 <span class="fw-semibold"><%=likeCount%></span> · 싫어요 <span class="fw-semibold"><%=dislikeCount%></span>
+                    </div>
+                    <% if (loginUser) { %>
+                        <form action="/bbs/reaction" method="post" class="d-inline">
+                            <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                            <input type="hidden" name="reaction_type" value="LIKE">
+                            <button type="submit" class="btn btn-sm <%= selectedReaction === 'LIKE' ? 'btn-primary' : 'btn-outline-primary' %>">
+                                좋아요 <%= selectedReaction === 'LIKE' ? '취소' : '' %>
+                            </button>
+                        </form>
+                        <form action="/bbs/reaction" method="post" class="d-inline">
+                            <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                            <input type="hidden" name="reaction_type" value="DISLIKE">
+                            <button type="submit" class="btn btn-sm <%= selectedReaction === 'DISLIKE' ? 'btn-danger' : 'btn-outline-danger' %>">
+                                싫어요 <%= selectedReaction === 'DISLIKE' ? '취소' : '' %>
+                            </button>
+                        </form>
+                    <% } else { %>
+                        <a href="/bbs/login" class="btn btn-sm btn-outline-primary">로그인 후 추천</a>
+                    <% } %>
+                </div>
             </div>
             <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-end gap-2">
                 <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>

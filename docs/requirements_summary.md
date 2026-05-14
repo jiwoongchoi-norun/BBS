@@ -31,10 +31,12 @@ Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수�
 - 제목/내용/작성자/제목+내용 검색
 - 로그인, 로그아웃, 회원가입, 회원정보 수정
 - `req.session.user` 기반 세션 처리
-- SHA-512 + salt 기반 비밀번호 저장 및 로그인 검증
+- bcrypt 기반 비밀번호 저장 및 로그인 검증
+- 기존 SHA-512 + salt 계정 로그인 성공 시 bcrypt 자동 마이그레이션
 - 조회수 증가 및 화면 표시
 - 목록/검색 페이징
 - 댓글 작성, 대댓글 작성, 본인 댓글 삭제
+- 게시글 좋아요/싫어요, 중복 추천 방지, 추천 취소
 - 첨부파일 업로드 및 다운로드
 - 작성자 기준 게시글 수정/삭제 권한 체크
 - 주요 SQL bind variable 적용
@@ -44,9 +46,7 @@ Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수�
 
 ## 현재 미완료 또는 개선 후보
 
-- bcrypt 실제 적용: 패키지는 설치되어 있으나 현재 코드는 SHA-512 + salt 방식이다.
 - 댓글 수정 기능
-- 좋아요/싫어요 실제 처리 라우트
 - 관리자 기능
 - 자동화 테스트
 - 업로드 파일 정리 정책
@@ -55,7 +55,10 @@ Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수�
 ## DB 스크립트 현황
 
 - 신규 DB: `scripts/schema.sql`, `scripts/sample-data.sql`
-- 기존 DB 보강:
+- 기존 DB 통합 보강:
+  - `scripts/migration.sql`
+  - `scripts/rollback.sql`
+- 기존 DB 기능별 보강:
   - `scripts/add-view-count.sql`
   - `scripts/add-login-salt.sql`
   - `scripts/add-bbsw.sql`
@@ -63,15 +66,15 @@ Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트다. 교수�
 
 ## 제출 준비 체크리스트
 
-- `scripts/schema.sql`에 `LOGIN`, `BBS`, `BBSW`, `BBS_FILE` 및 각 시퀀스가 포함되어 있는지 확인한다.
-- 화면 캡처 대상: 목록, 페이징, 검색, 글쓰기, 파일업로드, 글읽기, 다운로드, 댓글, 대댓글, 수정, 삭제, 로그인, 로그아웃, 회원가입, 회원정보 수정.
+- `scripts/schema.sql`에 `LOGIN`, `BBS`, `BBSW`, `BBS_REACTION`, `BBS_FILE` 및 각 시퀀스가 포함되어 있는지 확인한다.
+- 화면 캡처 대상: 목록, 페이징, 검색, 글쓰기, 파일업로드, 글읽기, 다운로드, 댓글, 대댓글, 좋아요/싫어요, 수정, 삭제, 로그인, 로그아웃, 회원가입, 회원정보 수정.
 - `.env`, `node_modules`, `.git`, 실제 업로드 파일은 제출물에서 제외한다.
 - 새 계정으로 회원가입 후 로그인, 글 작성, 댓글 작성, 파일 다운로드까지 수동 테스트한다.
 
 ## 다음 작업 우선순위
 
-1. 현재 변경분 lint/format/app load 검증
-2. OracleDB에서 신규 스키마 및 기존 DB 보강 스크립트 실행 확인
-3. 댓글 수정 또는 좋아요/싫어요 중 하나를 선택해 추가 구현
-4. bcrypt 마이그레이션 방식 결정 및 적용
+1. OracleDB에서 신규 스키마 또는 `scripts/migration.sql` 실행 확인
+2. 기존 SHA-512 계정 로그인 후 bcrypt 자동 전환 확인
+3. 좋아요/싫어요 중복 방지 및 취소 수동 테스트
+4. 댓글 수정 또는 관리자 기능 중 하나를 선택해 추가 구현
 5. 제출용 화면 캡처 정리
