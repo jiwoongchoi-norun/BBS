@@ -1,49 +1,44 @@
 <!DOCTYPE html>
 <html>
-
-<%- include('partials/head', { title: 'Edit Post' }) %>
+<%- include('partials/head', { title: '글수정' }) %>
 
 <body>
     <%- include('partials/nav') %>
 
-    <main class="container py-4">
-        <% var column=rows[0]; %>
-            <div class="card form-card mx-auto">
-                <div class="card-header bg-white">
-                    <h1 class="h4 mb-0">글수정</h1>
-                </div>
-                <div class="card-body">
-                    <form name="form1" action="/bbs/updatesave" method="post">
-                        <div class="mb-3">
-                            <label class="form-label" for="brdwriter">작성자</label>
-                            <input class="form-control" type="text" id="brdwriter" name="brdwriter" size="20"
-                                maxlength="20" value="<%=column[3]%>">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="brdtitle">제목</label>
-                            <input class="form-control" type="text" id="brdtitle" name="brdtitle" size="70"
-                                maxlength="250" value="<%=column[1]%>">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="brdmemo">내용</label>
-                            <textarea class="form-control" id="brdmemo" name="brdmemo" rows="8"
-                                cols="60"><%=column[2]%></textarea>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label">작성일</label>
-                            <div class="form-control bg-light">
-                                <%=column[4]%>
-                            </div>
-                        </div>
-                        <input type="hidden" name="brdno" value="<%=column[0]%>">
-                        <div class="d-flex justify-content-end gap-2">
-                            <a href="/bbs/read?brdno=<%=column[0]%>" class="btn btn-secondary">취소</a>
-                            <button type="submit" class="btn btn-primary">저장</button>
-                        </div>
-                    </form>
-                </div>
+    <main class="container py-4 py-lg-5">
+        <% var column = rows[0]; %>
+        <div class="card board-card form-card mx-auto">
+            <div class="card-header bg-white">
+                <h1 class="h4 fw-bold mb-0">글수정</h1>
             </div>
+            <div class="card-body">
+                <form name="form1" action="/bbs/updatesave" method="post">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="brdwriter">작성자</label>
+                        <input class="form-control" type="text" id="brdwriter" name="brdwriter"
+                            maxlength="20" value="<%=column[3]%>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="brdtitle">제목</label>
+                        <input class="form-control" type="text" id="brdtitle" name="brdtitle"
+                            maxlength="250" value="<%=column[1]%>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="brdmemo">내용</label>
+                        <textarea class="form-control" id="brdmemo" name="brdmemo" rows="8"><%=column[2]%></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">작성일</label>
+                        <div class="form-control bg-light"><%=column[4]%></div>
+                    </div>
+                    <input type="hidden" name="brdno" value="<%=column[0]%>">
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                        <a href="/bbs/read?brdno=<%=column[0]%>" class="btn btn-outline-secondary btn-action">취소</a>
+                        <button type="submit" class="btn btn-primary btn-action">저장</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </main>
 </body>
-
 </html>

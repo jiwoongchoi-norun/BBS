@@ -45,8 +45,18 @@ Node.js, Express, EJS, OracleDB를 사용한 게시판 과제 프로젝트이다
 - 작성자 권한 체크
 - 관리자 기능
 - 입력값 검증
-- Bootstrap UI 개선
+- Bootstrap UI 개선: 반영됨
 - README 정리
+
+## 최근 반영 사항
+
+- Bootstrap 5 기반 반응형 UI 정리
+- 모바일 내비게이션 접힘 메뉴 적용
+- 카드형 게시판 목록 적용
+- hover 효과 적용
+- 버튼 스타일 통일
+- 게시글 테이블 overflow 대응
+- 주요 EJS 화면 한글 문구 복구
 
 ## 작업 우선순위
 

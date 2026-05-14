@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 
-<%- include('partials/head', { title: 'BBS List' }) %>
+<%- include('partials/head', { title: '게시글 목록' }) %>
 
 <body>
     <%- include('partials/nav') %>
@@ -10,16 +10,16 @@
         var selectedKeyword = typeof searchKeyword !== 'undefined' ? searchKeyword : '';
     %>
 
-    <main class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+    <main class="container py-4 py-lg-5">
+        <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <div>
-                <h1 class="h3 mb-1">게시글 목록</h1>
-                <p class="text-secondary mb-0">게시글을 확인하고 검색할 수 있습니다.</p>
+                <h1 class="h3 fw-bold mb-1">게시글 목록</h1>
+                <p class="text-secondary mb-0">등록된 게시글을 확인하고 검색할 수 있습니다.</p>
             </div>
-            <a href="/bbs/form" class="btn btn-primary">글쓰기</a>
+            <a href="/bbs/form" class="btn btn-primary btn-action">글쓰기</a>
         </div>
 
-        <section class="card mb-4">
+        <section class="card board-card mb-4">
             <div class="card-body">
                 <form action="/bbs/search">
                     <div class="row g-3 align-items-end">
@@ -61,52 +61,57 @@
             </div>
         </section>
 
-        <div class="table-responsive">
-            <table class="table table-hover table-bordered align-middle">
-                <thead class="table-light">
-                    <tr>
-                        <th class="text-center board-no">번호</th>
-                        <th>제목</th>
-                        <th class="board-writer">작성자</th>
-                        <th>내용</th>
-                        <th class="board-date">등록일</th>
-                        <th class="text-center board-status">상태</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% for(var i=0; i<rows.length; i++){ var column=rows[i]; %>
-                        <tr>
-                            <td class="text-center"><a class="text-decoration-none"
-                                    href="/bbs/read?brdno=<%=column[0]%>">
-                                    <%=column[0]%>
-                                </a></td>
-                            <td><a class="text-decoration-none fw-semibold" href="/bbs/read?brdno=<%=column[0]%>">
-                                    <%=column[1]%>
-                                </a></td>
-                            <td>
-                                <%=column[2]%>
-                            </td>
-                            <td class="text-truncate board-content">
-                                <%=column[3]%>
-                            </td>
-                            <td>
-                                <%=column[4]%>
-                            </td>
-                            <td class="text-center">
-                                <%=column[5]%>
-                            </td>
-                        </tr>
-                        <% } %>
-                </tbody>
-            </table>
-        </div>
+        <section class="card board-card">
+            <div class="card-body p-0">
+                <div class="table-responsive board-table-wrap">
+                    <table class="table table-hover align-middle mb-0 board-table">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center board-no">번호</th>
+                                <th>제목</th>
+                                <th class="board-writer">작성자</th>
+                                <th>내용</th>
+                                <th class="board-date">등록일</th>
+                                <th class="text-center board-status">상태</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (rows && rows.length) { %>
+                                <% for(var i=0; i<rows.length; i++){ var column=rows[i]; %>
+                                    <tr>
+                                        <td class="text-center">
+                                            <a class="text-decoration-none" href="/bbs/read?brdno=<%=column[0]%>">
+                                                <%=column[0]%>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <a class="text-decoration-none fw-semibold" href="/bbs/read?brdno=<%=column[0]%>">
+                                                <%=column[1]%>
+                                            </a>
+                                        </td>
+                                        <td><%=column[2]%></td>
+                                        <td class="text-truncate board-content"><%=column[3]%></td>
+                                        <td><%=column[4]%></td>
+                                        <td class="text-center"><%=column[5]%></td>
+                                    </tr>
+                                <% } %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center text-secondary py-5">등록된 게시글이 없습니다.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
 
-        <div class="d-flex flex-wrap gap-2 mt-3">
-            <a href="/bbs/form" class="btn btn-primary">글쓰기</a>
-            <a href="/bbs/login" class="btn btn-outline-primary">로그인</a>
-            <a href="/bbs/logout" class="btn btn-outline-secondary">로그아웃</a>
-            <a href="/bbs/signup" class="btn btn-outline-primary">회원가입</a>
-            <a href="/bbs/updatesignup" class="btn btn-outline-primary">회원정보수정</a>
+        <div class="d-flex flex-wrap gap-2 mt-4">
+            <a href="/bbs/form" class="btn btn-primary btn-action">글쓰기</a>
+            <a href="/bbs/login" class="btn btn-outline-primary btn-action">로그인</a>
+            <a href="/bbs/logout" class="btn btn-outline-secondary btn-action">로그아웃</a>
+            <a href="/bbs/signup" class="btn btn-outline-primary btn-action">회원가입</a>
+            <a href="/bbs/updatesignup" class="btn btn-outline-primary btn-action">회원정보 수정</a>
         </div>
     </main>
 </body>

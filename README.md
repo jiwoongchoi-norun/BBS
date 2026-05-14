@@ -32,11 +32,12 @@ Node.js, Express, EJS, OracleDB로 구현한 게시판 과제 프로젝트이다
 - 회원가입
 - 회원정보 수정
 - 세션 처리
-- Bootstrap 기반 기본 UI
+- Bootstrap 5 기반 반응형 UI
 - `.env` 기반 DB 설정 분리
 - `SESSION_SECRET` 환경변수 필수화
 - 게시글 soft delete 방식 적용
 - 비로그인 사용자의 글쓰기 / 수정 / 삭제 접근 제한
+- 카드형 게시판, hover 효과, 일관된 버튼 스타일, 테이블 overflow 대응
 
 ### 미완료 또는 추가 보완 필요
 
@@ -61,7 +62,7 @@ Node.js, Express, EJS, OracleDB로 구현한 게시판 과제 프로젝트이다
 | Session | express-session |
 | Environment | dotenv |
 | Logging | morgan |
-| UI | Bootstrap |
+| UI | Bootstrap 5, custom CSS |
 | Prepared Dependencies | bcrypt, multer |
 
 `bcrypt`, `multer`는 설치되어 있지만 현재 핵심 라우트에는 아직 본격 적용되지 않았다.
@@ -77,7 +78,8 @@ BBS/
 |  `- dbconfig.js
 |- docs/
 |  |- requirements_summary.md
-|  `- progress_report.md
+|  |- progress_report.md
+|  `- dev_setup_report.md
 |- public/
 |  `- stylesheets/
 |- routes/
@@ -298,6 +300,9 @@ http://localhost:3000/bbs/list
 | 회원정보 수정 | `views/bbs/updatesignform.ejs` |
 
 공통 헤더와 내비게이션은 `partials/head.ejs`, `partials/nav.ejs`로 분리되어 있다.
+현재 화면은 Bootstrap 5 기반으로 정리되어 있으며, 모바일 접속 시 내비게이션이 접힘 메뉴로 동작한다.
+게시글 목록은 카드형 영역 안에 배치되어 있고, 테이블은 작은 화면에서 가로 스크롤로 overflow를 처리한다.
+주요 버튼은 `btn-action` 클래스로 최소 너비와 모바일 전체 폭 표시를 맞췄다.
 
 ## 12. 요구사항 대응 현황
 
@@ -319,6 +324,7 @@ http://localhost:3000/bbs/list
 | 페이징 | 미완료 |
 | 댓글 | 미완료 |
 | 파일 업로드 | 미완료 |
+| Bootstrap UI 개선 | 완료 |
 
 ## 13. 현재 기술 부채
 

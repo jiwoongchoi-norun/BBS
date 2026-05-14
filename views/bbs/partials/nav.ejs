@@ -1,13 +1,19 @@
-<nav class="navbar navbar-expand-lg bg-body-tertiary border-bottom">
+<nav class="navbar navbar-expand-lg bg-white border-bottom sticky-top">
     <div class="container">
-        <a class="navbar-brand fw-semibold" href="/bbs/list">BBS 게시판</a>
-        <div class="navbar-nav flex-row gap-3">
-            <a class="nav-link" href="/bbs/list">목록</a>
-            <a class="nav-link" href="/bbs/form">글쓰기</a>
-            <a class="nav-link" href="/bbs/login">로그인</a>
-            <a class="nav-link" href="/bbs/logout">로그아웃</a>
-            <a class="nav-link" href="/bbs/signup">회원가입</a>
-            <a class="nav-link" href="/bbs/updatesignup">회원정보수정</a>
+        <a class="navbar-brand fw-bold" href="/bbs/list">BBS 게시판</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#bbsNavbar"
+            aria-controls="bbsNavbar" aria-expanded="false" aria-label="메뉴 열기">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="bbsNavbar">
+            <div class="navbar-nav ms-auto gap-lg-1">
+                <a class="nav-link" href="/bbs/list">목록</a>
+                <a class="nav-link" href="/bbs/form">글쓰기</a>
+                <a class="nav-link" href="/bbs/login">로그인</a>
+                <a class="nav-link" href="/bbs/logout">로그아웃</a>
+                <a class="nav-link" href="/bbs/signup">회원가입</a>
+                <a class="nav-link" href="/bbs/updatesignup">회원정보 수정</a>
+            </div>
         </div>
     </div>
 </nav>

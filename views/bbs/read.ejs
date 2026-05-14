@@ -1,20 +1,19 @@
 <!DOCTYPE html>
 <html>
-<%- include('partials/head', { title: 'Read Post' }) %>
+<%- include('partials/head', { title: '게시글 읽기' }) %>
+
 <body>
     <%- include('partials/nav') %>
 
-    <main class="container py-4">
-<%
-    console.log("rows : " + JSON.stringify(rows));
-    console.log("rows : " + rows.length);
-    var column = rows[0];
-%>
-        <div class="card mx-auto content-card">
+    <main class="container py-4 py-lg-5">
+        <%
+            var column = rows[0];
+        %>
+        <div class="card board-card mx-auto content-card">
             <div class="card-header bg-white">
-                <div class="d-flex justify-content-between align-items-start gap-3">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
                     <div>
-                        <h1 class="h4 mb-2"><%=column[1]%></h1>
+                        <h1 class="h4 fw-bold mb-2"><%=column[1]%></h1>
                         <div class="text-secondary small">
                             작성자 <span class="fw-semibold"><%=column[3]%></span>
                             <span class="mx-2">|</span>
@@ -27,10 +26,10 @@
             <div class="card-body">
                 <div class="board-read-content"><%=column[2]%></div>
             </div>
-            <div class="card-footer bg-white d-flex justify-content-end gap-2">
-                <a href="/bbs/list" class="btn btn-secondary">목록</a>
-                <a href="/bbs/update?brdno=<%=column[0]%>" class="btn btn-primary">수정</a>
-                <a href="/bbs/delete?brdno=<%=column[0]%>" class="btn btn-danger">삭제</a>
+            <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-end gap-2">
+                <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
+                <a href="/bbs/update?brdno=<%=column[0]%>" class="btn btn-primary btn-action">수정</a>
+                <a href="/bbs/delete?brdno=<%=column[0]%>" class="btn btn-danger btn-action">삭제</a>
             </div>
         </div>
     </main>

@@ -1,17 +1,48 @@
-
 body {
-  background: #f8f9fa;
+  background: #f5f7fb;
   color: #212529;
   font-family: Arial, "Noto Sans KR", sans-serif;
 }
 
-.navbar .nav-link {
-  white-space: nowrap;
+.navbar {
+  box-shadow: 0 1px 8px rgba(15, 23, 42, 0.06);
 }
 
-.card,
-.table {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+.navbar-brand {
+  letter-spacing: 0;
+}
+
+.navbar .nav-link {
+  white-space: nowrap;
+  border-radius: 6px;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.navbar .nav-link:hover {
+  background: #f1f5f9;
+  color: #0d6efd;
+}
+
+.page-header {
+  min-height: 68px;
+}
+
+.board-card {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease;
+}
+
+.board-card:hover {
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
+}
+
+.card-header,
+.card-footer {
+  border-color: rgba(15, 23, 42, 0.08);
 }
 
 .form-card,
@@ -21,6 +52,43 @@ body {
 
 .auth-card {
   max-width: 520px;
+}
+
+.btn {
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.btn-action {
+  min-width: 92px;
+}
+
+.form-control,
+.form-select,
+.input-group .btn {
+  min-height: 42px;
+}
+
+.form-control:focus {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.12);
+}
+
+.board-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.board-table {
+  min-width: 820px;
+}
+
+.board-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.board-table tbody tr:hover {
+  background: #f8fbff;
 }
 
 .board-no {
@@ -46,4 +114,29 @@ body {
 .board-read-content {
   min-height: 220px;
   white-space: pre-wrap;
+  line-height: 1.7;
+}
+
+@media (max-width: 575.98px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .btn-action,
+  .card-footer .btn,
+  form .btn {
+    width: 100%;
+  }
+
+  .input-group {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .input-group > .form-control,
+  .input-group > .btn {
+    width: 100%;
+    border-radius: 6px !important;
+  }
 }

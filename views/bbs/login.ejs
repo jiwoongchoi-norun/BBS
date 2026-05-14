@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html>
-<%- include('partials/head', { title: 'Login' }) %>
+<%- include('partials/head', { title: '로그인' }) %>
 
 <body>
     <%- include('partials/nav') %>
@@ -13,7 +13,7 @@
 
     <% if(errcode == 2) { %>
         <script>
-            alert('패스워드가 틀립니다.');
+            alert('비밀번호가 틀립니다.');
         </script>
     <% } %>
 
@@ -26,24 +26,24 @@
         </script>
     <% } %>
 
-    <main class="container py-4">
-        <div class="card auth-card mx-auto">
+    <main class="container py-4 py-lg-5">
+        <div class="card board-card auth-card mx-auto">
             <div class="card-header bg-white">
-                <h1 class="h4 mb-0">로그인</h1>
+                <h1 class="h4 fw-bold mb-0">로그인</h1>
             </div>
             <div class="card-body">
                 <form name="form1" action="/bbs/logincheck" method="post">
                     <div class="mb-3">
-                        <label class="form-label" for="id">아이디</label>
+                        <label class="form-label fw-semibold" for="id">아이디</label>
                         <input class="form-control" type="text" id="id" name="id" placeholder="id" value="">
                     </div>
                     <div class="mb-4">
-                        <label class="form-label" for="password">패스워드</label>
+                        <label class="form-label fw-semibold" for="password">비밀번호</label>
                         <input class="form-control" type="password" id="password" name="password" placeholder="password" value="">
                     </div>
-                    <div class="d-flex justify-content-end gap-2">
-                        <a href="/bbs/list" class="btn btn-secondary">목록</a>
-                        <button type="submit" class="btn btn-primary">로그인</button>
+                    <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                        <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
+                        <button type="submit" class="btn btn-primary btn-action">로그인</button>
                     </div>
                 </form>
             </div>
