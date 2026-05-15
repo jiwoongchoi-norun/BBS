@@ -33,6 +33,10 @@ app.use(
     saveUninitialized: false
   })
 );
+app.use(function (req, res, next) {
+  res.locals.currentUser = req.session.user || null;
+  next();
+});
 
 app.use('/', indexRouter);
 app.use('/users', usersRouter);

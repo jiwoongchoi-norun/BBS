@@ -14,6 +14,7 @@
             var selectedReaction = typeof userReaction !== 'undefined' ? userReaction : '';
             var likeCount = column[6] || 0;
             var dislikeCount = column[7] || 0;
+            var isPostOwner = loginUser && (loginUser.id === column[3] || loginUser.name === column[3]);
         %>
         <div class="card board-card mx-auto content-card">
             <div class="card-header bg-white">
@@ -166,6 +167,83 @@
                 <% } %>
             </div>
         </section>
+        <% if (isPostOwner) { %>
+            <div class="modal fade" id="updateConfirmModal" tabindex="-1" aria-labelledby="updateConfirmModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title h6 fw-bold" id="updateConfirmModalLabel">게시글 수정</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                        </div>
+                        <div class="modal-body">
+                            게시글을 수정하시겠습니까?
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+                            <a href="/bbs/update?brdno=<%=column[0]%>" class="btn btn-primary btn-sm">확인</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="modal-title h6 fw-bold text-danger" id="deleteConfirmModalLabel">게시글 삭제</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-1">정말 이 게시글을 삭제하시겠습니까?</p>
+                            <p class="text-secondary small mb-0">삭제 후에는 복구할 수 없습니다.</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+                            <a href="/bbs/delete?brdno=<%=column[0]%>" class="btn btn-danger btn-sm">삭제</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% } %>
     </main>
+
+    <% if (isPostOwner) { %>
+        <script>
+            (function() {
+                document.addEventListener('DOMContentLoaded', function() {
+                    var updateLink = document.querySelector('a[href="/bbs/update?brdno=<%=column[0]%>"]');
+                    var deleteLink = document.querySelector('a[href="/bbs/delete?brdno=<%=column[0]%>"]');
+                    var updateModal = new bootstrap.Modal(document.getElementById('updateConfirmModal'));
+                    var deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+
+                    if (updateLink) {
+                        updateLink.addEventListener('click', function(event) {
+                            event.preventDefault();
+                            updateModal.show();
+                        });
+                    }
+
+                    if (deleteLink) {
+                        deleteLink.addEventListener('click', function(event) {
+                            event.preventDefault();
+                            deleteModal.show();
+                        });
+                    }
+                });
+            })();
+        </script>
+    <% } else { %>
+        <script>
+            (function() {
+                document.addEventListener('DOMContentLoaded', function() {
+                    var updateLink = document.querySelector('a[href="/bbs/update?brdno=<%=column[0]%>"]');
+                    var deleteLink = document.querySelector('a[href="/bbs/delete?brdno=<%=column[0]%>"]');
+
+                    if (updateLink) updateLink.remove();
+                    if (deleteLink) deleteLink.remove();
+                });
+            })();
+        </script>
+    <% } %>
 </body>
 </html>

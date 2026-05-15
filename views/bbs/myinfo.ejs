@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<%- include('partials/head', { title: '내 정보' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="container py-4 py-lg-5">
+        <div class="card board-card auth-card mx-auto">
+            <div class="card-header bg-white">
+                <h1 class="h4 fw-bold mb-0">내 정보</h1>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4 text-secondary">아이디</dt>
+                    <dd class="col-sm-8 fw-semibold"><%= userInfo.id %></dd>
+
+                    <dt class="col-sm-4 text-secondary">이름</dt>
+                    <dd class="col-sm-8"><%= userInfo.name %></dd>
+
+                    <dt class="col-sm-4 text-secondary">전화번호</dt>
+                    <dd class="col-sm-8"><%= userInfo.phone || '-' %></dd>
+
+                    <dt class="col-sm-4 text-secondary">정보 갱신일</dt>
+                    <dd class="col-sm-8"><%= userInfo.passwordUpdatedAt || '-' %></dd>
+                </dl>
+            </div>
+            <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-end gap-2">
+                <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
+                <a href="/bbs/updatesignup" class="btn btn-primary btn-action">회원정보 수정</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

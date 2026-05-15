@@ -6,13 +6,20 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="bbsNavbar">
-            <div class="navbar-nav ms-auto gap-lg-1">
+            <div class="navbar-nav ms-auto gap-lg-1 align-items-lg-center">
                 <a class="nav-link" href="/bbs/list">목록</a>
                 <a class="nav-link" href="/bbs/form">글쓰기</a>
-                <a class="nav-link" href="/bbs/login">로그인</a>
-                <a class="nav-link" href="/bbs/logout">로그아웃</a>
-                <a class="nav-link" href="/bbs/signup">회원가입</a>
-                <a class="nav-link" href="/bbs/updatesignup">회원정보 수정</a>
+                <% if (currentUser) { %>
+                    <span class="navbar-text small text-secondary px-lg-2">
+                        <%= currentUser.name || currentUser.id %>님
+                    </span>
+                    <a class="nav-link" href="/bbs/myinfo">내 정보</a>
+                    <a class="nav-link" href="/bbs/logout">로그아웃</a>
+                    <a class="nav-link" href="/bbs/updatesignup">회원정보 수정</a>
+                <% } else { %>
+                    <a class="nav-link" href="/bbs/login">로그인</a>
+                    <a class="nav-link" href="/bbs/signup">회원가입</a>
+                <% } %>
             </div>
         </div>
     </div>

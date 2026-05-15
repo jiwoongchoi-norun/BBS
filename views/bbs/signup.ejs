@@ -5,12 +5,18 @@
 <body>
     <%- include('partials/nav') %>
 
+    <%
+        var savedForm = typeof formData !== 'undefined' ? formData : {};
+        var savedIdMessage = typeof idCheckMessage !== 'undefined' ? idCheckMessage : '';
+        var savedIdAvailable = typeof idCheckAvailable !== 'undefined' ? idCheckAvailable : null;
+    %>
+
     <% if(code == 1) { %>
         <script>
             alert('이미 로그인되어 있습니다.');
 
             setTimeout(function() {
-                location.href='http://localhost:3000/bbs/';
+                location.href='/bbs/';
             }, 1000);
         </script>
     <% } %>
@@ -21,10 +27,21 @@
                 <h1 class="h4 fw-bold mb-0">회원가입</h1>
             </div>
             <div class="card-body">
-                <form name="form1" action="/bbs/signupsave" method="post">
+                <form name="form1" action="/bbs/signupsave" method="post" id="signupForm">
+                    <input type="hidden" id="idChecked" name="idChecked" value="N">
+                    <input type="hidden" id="checkedId" name="checkedId" value="">
+
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="id">아이디</label>
-                        <input class="form-control" type="text" id="id" name="id" maxlength="20" value="">
+                        <div class="input-group">
+                            <input class="form-control" type="text" id="id" name="id" maxlength="20"
+                                value="<%= savedForm.id || '' %>">
+                            <button class="btn btn-outline-primary" type="button" id="checkIdButton">중복확인</button>
+                        </div>
+                        <div id="idCheckMessage"
+                            class="form-text <%= savedIdAvailable === true ? 'text-success' : savedIdAvailable === false ? 'text-danger fw-semibold' : '' %>">
+                            <%= savedIdMessage %>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="pw1">비밀번호</label>
@@ -36,11 +53,18 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="name">이름</label>
-                        <input class="form-control" type="text" id="name" name="name" maxlength="20" value="">
+                        <input class="form-control" type="text" id="name" name="name" maxlength="20"
+                            value="<%= savedForm.name || '' %>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="email">이메일</label>
+                        <input class="form-control" type="email" id="email" name="email" maxlength="50"
+                            value="<%= savedForm.email || '' %>">
                     </div>
                     <div class="mb-4">
-                        <label class="form-label fw-semibold" for="email">이메일</label>
-                        <input class="form-control" type="email" id="email" name="email" maxlength="20" value="">
+                        <label class="form-label fw-semibold" for="phone">전화번호</label>
+                        <input class="form-control" type="tel" id="phone" name="phone" maxlength="13"
+                            placeholder="010-1234-5678" value="<%= savedForm.phone || '' %>">
                     </div>
                     <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
                         <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
@@ -50,5 +74,86 @@
             </div>
         </div>
     </main>
+
+    <script>
+        (function() {
+            var idInput = document.getElementById('id');
+            var checkButton = document.getElementById('checkIdButton');
+            var messageBox = document.getElementById('idCheckMessage');
+            var idChecked = document.getElementById('idChecked');
+            var checkedId = document.getElementById('checkedId');
+            var signupForm = document.getElementById('signupForm');
+            var phoneInput = document.getElementById('phone');
+
+            function setMessage(message, isAvailable) {
+                messageBox.textContent = message;
+                messageBox.className = 'form-text ' + (isAvailable ? 'text-success' : 'text-danger fw-semibold');
+            }
+
+            function resetIdCheck() {
+                idChecked.value = 'N';
+                checkedId.value = '';
+                messageBox.textContent = '';
+                messageBox.className = 'form-text';
+            }
+
+            idInput.addEventListener('input', resetIdCheck);
+
+            function formatPhone(value) {
+                var numbers = value.replace(/\D/g, '').slice(0, 11);
+
+                if (numbers.length <= 3) {
+                    return numbers;
+                }
+
+                if (numbers.length <= 7) {
+                    return numbers.slice(0, 3) + '-' + numbers.slice(3);
+                }
+
+                return numbers.slice(0, 3) + '-' + numbers.slice(3, 7) + '-' + numbers.slice(7);
+            }
+
+            phoneInput.value = formatPhone(phoneInput.value);
+            phoneInput.addEventListener('input', function() {
+                phoneInput.value = formatPhone(phoneInput.value);
+            });
+
+            checkButton.addEventListener('click', function() {
+                var userId = idInput.value.trim();
+
+                resetIdCheck();
+
+                if (!userId) {
+                    setMessage('아이디를 입력해주세요.', false);
+                    idInput.focus();
+                    return;
+                }
+
+                fetch('/bbs/check-id?userId=' + encodeURIComponent(userId))
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        setMessage(data.message, data.available);
+
+                        if (data.available) {
+                            idChecked.value = 'Y';
+                            checkedId.value = userId;
+                        }
+                    })
+                    .catch(function() {
+                        setMessage('중복확인 중 오류가 발생했습니다.', false);
+                    });
+            });
+
+            signupForm.addEventListener('submit', function(event) {
+                if (idChecked.value !== 'Y' || checkedId.value !== idInput.value.trim()) {
+                    event.preventDefault();
+                    setMessage('아이디 중복확인을 완료해주세요.', false);
+                    idInput.focus();
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

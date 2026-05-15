@@ -8,26 +8,88 @@
     <%
         var selectedChoice = typeof searchChoice !== 'undefined' ? searchChoice : 'TITLE';
         var selectedKeyword = typeof searchKeyword !== 'undefined' ? searchKeyword : '';
+        var resultTotalCount = typeof totalCount !== 'undefined' ? totalCount : (rows ? rows.length : 0);
         var pageCurrent = typeof currentPage !== 'undefined' ? currentPage : 1;
         var pageTotal = typeof totalPage !== 'undefined' ? totalPage : 0;
         var pageStart = typeof startPage !== 'undefined' ? startPage : 1;
         var pageEnd = typeof endPage !== 'undefined' ? endPage : pageTotal;
         var pageBase = typeof paginationBaseUrl !== 'undefined' ? paginationBaseUrl : '';
         var showPagination = pageBase && pageTotal > 1;
+        var currentPageSize = typeof pageSize !== 'undefined' ? pageSize : 10;
+        var currentSort = typeof sort !== 'undefined' ? sort : '';
+        var currentOrder = typeof order !== 'undefined' ? order : 'desc';
+        var searchMode = typeof isSearch !== 'undefined' ? isSearch : !!selectedKeyword;
+        var today = new Date();
+
+        function padDateNumber(value) {
+            return String(value).padStart(2, '0');
+        }
+
+        function formatListDate(value) {
+            if (!value) return '';
+
+            var match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})/);
+            if (!match) return value;
+
+            var year = Number(match[1]);
+            var month = Number(match[2]);
+            var day = Number(match[3]);
+            var hour = match[4];
+            var minute = match[5];
+
+            if (
+                today.getFullYear() === year &&
+                today.getMonth() + 1 === month &&
+                today.getDate() === day
+            ) {
+                return hour + ':' + minute;
+            }
+
+            return padDateNumber(year % 100) + '.' + padDateNumber(month) + '.' + padDateNumber(day);
+        }
+
+        function nextSortOrder(sortName) {
+            return currentSort === sortName && currentOrder === 'desc' ? 'asc' : 'desc';
+        }
+
+        function sortMark(sortName) {
+            if (currentSort !== sortName) return '';
+            return currentOrder === 'asc' ? '▲' : '▼';
+        }
+
+        function sortLink(sortName) {
+            var params = [];
+
+            if (searchMode) {
+                params.push('choice=' + encodeURIComponent(selectedChoice));
+                params.push('search=' + encodeURIComponent(selectedKeyword));
+            }
+
+            params.push('pageSize=' + encodeURIComponent(currentPageSize));
+            params.push('sort=' + encodeURIComponent(sortName));
+            params.push('order=' + encodeURIComponent(nextSortOrder(sortName)));
+
+            return (searchMode ? '/bbs/search?' : '/bbs/list?') + params.join('&');
+        }
     %>
 
     <main class="container py-4 py-lg-5">
-        <div class="page-header d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
             <div>
                 <h1 class="h3 fw-bold mb-1">자유게시판</h1>
-                <p class="text-secondary mb-0">등록된 게시글을 확인하고 검색할 수 있습니다.</p>
+                <p class="text-secondary mb-0">게시글을 확인하고 원하는 글을 검색할 수 있습니다.</p>
             </div>
-            <a href="/bbs/form" class="btn btn-primary btn-action">글쓰기</a>
+            <a href="/bbs/form" class="btn btn-primary px-4">글쓰기</a>
         </div>
 
         <section class="card board-card mb-4">
             <div class="card-body">
                 <form action="/bbs/search">
+                    <input type="hidden" name="pageSize" value="<%= currentPageSize %>">
+                    <% if (currentSort) { %>
+                        <input type="hidden" name="sort" value="<%= currentSort %>">
+                        <input type="hidden" name="order" value="<%= currentOrder %>">
+                    <% } %>
                     <div class="row g-3 align-items-end">
                         <div class="col-lg-7">
                             <label class="form-label fw-semibold">검색 조건</label>
@@ -58,58 +120,85 @@
                             <label class="form-label fw-semibold" for="searchKeyword">검색어</label>
                             <div class="input-group">
                                 <input class="form-control" type="text" id="searchKeyword" name="search"
-                                    placeholder="검색어 입력" value="<%= selectedKeyword %>">
+                                    placeholder="검색어를 입력하세요" value="<%= selectedKeyword %>">
                                 <button class="btn btn-primary" type="submit">검색</button>
                             </div>
                         </div>
                     </div>
+                </form>
+                <form class="d-flex justify-content-end align-items-center gap-2 mt-3"
+                    action="<%= searchMode ? '/bbs/search' : '/bbs/list' %>">
+                    <% if (searchMode) { %>
+                        <input type="hidden" name="choice" value="<%= selectedChoice %>">
+                        <input type="hidden" name="search" value="<%= selectedKeyword %>">
+                    <% } %>
+                    <% if (currentSort) { %>
+                        <input type="hidden" name="sort" value="<%= currentSort %>">
+                        <input type="hidden" name="order" value="<%= currentOrder %>">
+                    <% } %>
+                    <label class="form-label mb-0 text-secondary small" for="pageSizeSelect">페이지당</label>
+                    <select class="form-select form-select-sm w-auto" id="pageSizeSelect" name="pageSize"
+                        onchange="this.form.submit()">
+                        <% [10, 20, 30, 50].forEach(function(size) { %>
+                            <option value="<%= size %>" <%= Number(currentPageSize) === size ? 'selected' : '' %>>
+                                <%= size %>개
+                            </option>
+                        <% }) %>
+                    </select>
                 </form>
             </div>
         </section>
 
         <section class="card board-card">
             <div class="card-body p-0">
-                <div class="table-responsive board-table-wrap">
-                    <table class="table table-hover align-middle mb-0 board-table">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-center board-no">번호</th>
-                                <th>제목</th>
-                                <th class="board-writer">작성자</th>
-                                <th>내용</th>
-                                <th class="board-date">등록일</th>
-                                <th class="text-center board-hit">조회수</th>
-                                <th class="text-center">좋아요</th>
-                                <th class="text-center">싫어요</th>
-                                <th class="text-center board-status">상태</th>
+                                <th scope="col" class="text-center" style="width: 90px;">번호</th>
+                                <th scope="col">제목</th>
+                                <th scope="col" style="width: 160px;">작성자</th>
+                                <th scope="col" class="text-center" style="width: 110px;">
+                                    <a class="link-dark text-decoration-none" href="<%= sortLink('views') %>">
+                                        조회수 <span class="small text-primary"><%= sortMark('views') %></span>
+                                    </a>
+                                </th>
+                                <th scope="col" class="text-center" style="width: 100px;">
+                                    <a class="link-dark text-decoration-none" href="<%= sortLink('likes') %>">
+                                        좋아요 <span class="small text-primary"><%= sortMark('likes') %></span>
+                                    </a>
+                                </th>
+                                <th scope="col" style="width: 190px;">
+                                    <a class="link-dark text-decoration-none" href="<%= sortLink('created_at') %>">
+                                        작성일 <span class="small text-primary"><%= sortMark('created_at') %></span>
+                                    </a>
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             <% if (rows && rows.length) { %>
-                                <% for(var i=0; i<rows.length; i++){ var column=rows[i]; %>
+                                <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; %>
                                     <tr>
-                                        <td class="text-center">
-                                            <a class="text-decoration-none" href="/bbs/read?brdno=<%=column[0]%>">
-                                                <%=column[0]%>
-                                            </a>
-                                        </td>
+                                        <td class="text-center text-secondary"><%=displayNo%></td>
                                         <td>
-                                            <a class="text-decoration-none fw-semibold" href="/bbs/read?brdno=<%=column[0]%>">
+                                            <a class="d-inline-block text-truncate text-decoration-none fw-semibold text-dark"
+                                                style="max-width: min(520px, 55vw);"
+                                                href="/bbs/read?brdno=<%=postId%>"
+                                                title="<%=column[1]%>">
                                                 <%=column[1]%>
                                             </a>
                                         </td>
-                                        <td><%=column[2]%></td>
-                                        <td class="text-truncate board-content"><%=column[3]%></td>
-                                        <td><%=column[4]%></td>
+                                        <td class="text-secondary"><%=column[2]%></td>
                                         <td class="text-center"><%=column[5]%></td>
                                         <td class="text-center"><%=column[7] || 0%></td>
-                                        <td class="text-center"><%=column[8] || 0%></td>
-                                        <td class="text-center"><%=column[6]%></td>
+                                        <td class="text-secondary"><%=formatListDate(column[4])%></td>
                                     </tr>
                                 <% } %>
                             <% } else { %>
                                 <tr>
-                                    <td colspan="9" class="text-center text-secondary py-5">등록된 게시글이 없습니다.</td>
+                                    <td colspan="6" class="text-center text-secondary py-5">
+                                        등록된 게시글이 없습니다.
+                                    </td>
                                 </tr>
                             <% } %>
                         </tbody>
@@ -137,14 +226,6 @@
                 </ul>
             </nav>
         <% } %>
-
-        <div class="d-flex flex-wrap gap-2 mt-4">
-            <a href="/bbs/form" class="btn btn-primary btn-action">글쓰기</a>
-            <a href="/bbs/login" class="btn btn-outline-primary btn-action">로그인</a>
-            <a href="/bbs/logout" class="btn btn-outline-primary btn-action">로그아웃</a>
-            <a href="/bbs/signup" class="btn btn-outline-primary btn-action">회원가입</a>
-            <a href="/bbs/updatesignup" class="btn btn-outline-primary btn-action">회원정보 수정</a>
-        </div>
     </main>
 </body>
 
