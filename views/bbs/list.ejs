@@ -19,6 +19,15 @@
         var currentSort = typeof sort !== 'undefined' ? sort : '';
         var currentOrder = typeof order !== 'undefined' ? order : 'desc';
         var searchMode = typeof isSearch !== 'undefined' ? isSearch : !!selectedKeyword;
+        var mineMode = typeof myPostsOnly !== 'undefined' ? myPostsOnly : false;
+        var hasRows = rows && rows.length;
+        var searchChoiceLabels = {
+            TITLE: '제목',
+            WRITER: '작성자',
+            CONTENT: '내용',
+            TITLE_CONTENT: '제목 + 내용'
+        };
+        var selectedChoiceLabel = searchChoiceLabels[selectedChoice] || '검색';
         var today = new Date();
 
         function padDateNumber(value) {
@@ -65,9 +74,35 @@
                 params.push('search=' + encodeURIComponent(selectedKeyword));
             }
 
+            if (mineMode) {
+                params.push('mine=1');
+            }
+
             params.push('pageSize=' + encodeURIComponent(currentPageSize));
             params.push('sort=' + encodeURIComponent(sortName));
             params.push('order=' + encodeURIComponent(nextSortOrder(sortName)));
+
+            return (searchMode ? '/bbs/search?' : '/bbs/list?') + params.join('&');
+        }
+
+        function filterLink(includeMine) {
+            var params = [];
+
+            if (searchMode) {
+                params.push('choice=' + encodeURIComponent(selectedChoice));
+                params.push('search=' + encodeURIComponent(selectedKeyword));
+            }
+
+            params.push('pageSize=' + encodeURIComponent(currentPageSize));
+
+            if (includeMine) {
+                params.push('mine=1');
+            }
+
+            if (currentSort) {
+                params.push('sort=' + encodeURIComponent(currentSort));
+                params.push('order=' + encodeURIComponent(currentOrder));
+            }
 
             return (searchMode ? '/bbs/search?' : '/bbs/list?') + params.join('&');
         }
@@ -79,13 +114,25 @@
                 <h1 class="h3 fw-bold mb-1">자유게시판</h1>
                 <p class="text-secondary mb-0">게시글을 확인하고 원하는 글을 검색할 수 있습니다.</p>
             </div>
-            <a href="/bbs/form" class="btn btn-primary px-4">글쓰기</a>
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <% if (currentUser) { %>
+                    <% if (mineMode) { %>
+                        <a href="<%= filterLink(false) %>" class="btn btn-outline-secondary px-4">전체 글 보기</a>
+                    <% } else { %>
+                        <a href="<%= filterLink(true) %>" class="btn btn-outline-primary px-4">내 글만 보기</a>
+                    <% } %>
+                <% } %>
+                <a href="/bbs/form" class="btn btn-primary px-4">글쓰기</a>
+            </div>
         </div>
 
         <section class="card board-card mb-4">
             <div class="card-body">
                 <form action="/bbs/search">
                     <input type="hidden" name="pageSize" value="<%= currentPageSize %>">
+                    <% if (mineMode) { %>
+                        <input type="hidden" name="mine" value="1">
+                    <% } %>
                     <% if (currentSort) { %>
                         <input type="hidden" name="sort" value="<%= currentSort %>">
                         <input type="hidden" name="order" value="<%= currentOrder %>">
@@ -132,6 +179,9 @@
                         <input type="hidden" name="choice" value="<%= selectedChoice %>">
                         <input type="hidden" name="search" value="<%= selectedKeyword %>">
                     <% } %>
+                    <% if (mineMode) { %>
+                        <input type="hidden" name="mine" value="1">
+                    <% } %>
                     <% if (currentSort) { %>
                         <input type="hidden" name="sort" value="<%= currentSort %>">
                         <input type="hidden" name="order" value="<%= currentOrder %>">
@@ -150,6 +200,7 @@
         </section>
 
         <section class="card board-card">
+            <% if (hasRows) { %>
             <div class="card-body p-0">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
@@ -176,8 +227,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <% if (rows && rows.length) { %>
-                                <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; %>
+                            <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; var commentCount = column[9] || 0; %>
                                     <tr>
                                         <td class="text-center text-secondary"><%=displayNo%></td>
                                         <td>
@@ -187,6 +237,7 @@
                                                 title="<%=column[1]%>">
                                                 <%=column[1]%>
                                             </a>
+                                            <span class="ms-1 small <%= commentCount > 0 ? 'text-primary fw-semibold' : 'text-secondary' %>">[<%=commentCount%>]</span>
                                         </td>
                                         <td class="text-secondary"><%=column[2]%></td>
                                         <td class="text-center"><%=column[5]%></td>
@@ -194,17 +245,31 @@
                                         <td class="text-secondary"><%=formatListDate(column[4])%></td>
                                     </tr>
                                 <% } %>
-                            <% } else { %>
-                                <tr>
-                                    <td colspan="6" class="text-center text-secondary py-5">
-                                        등록된 게시글이 없습니다.
-                                    </td>
-                                </tr>
-                            <% } %>
                         </tbody>
                     </table>
                 </div>
             </div>
+            <% } else { %>
+            <div class="card-body text-center py-5 px-4">
+                <% if (searchMode && selectedKeyword) { %>
+                    <p class="fw-semibold mb-2">검색 결과가 없습니다.</p>
+                    <p class="text-secondary mb-4">
+                        <% if (mineMode) { %>내 글 중 <% } %>
+                        <span class="fw-semibold text-dark"><%= selectedChoiceLabel %></span>에서
+                        "<span class="fw-semibold text-dark"><%= selectedKeyword %></span>"에 대한 게시글을 찾지 못했습니다.
+                    </p>
+                    <a href="/bbs/list" class="btn btn-outline-primary">전체 목록 보기</a>
+                <% } else if (mineMode) { %>
+                    <p class="fw-semibold mb-2">작성한 게시글이 없습니다.</p>
+                    <p class="text-secondary mb-4">내가 작성한 글만 이 화면에 표시됩니다.</p>
+                    <a href="/bbs/list" class="btn btn-outline-primary">전체 글 보기</a>
+                <% } else { %>
+                    <p class="fw-semibold mb-2">등록된 게시글이 없습니다.</p>
+                    <p class="text-secondary mb-4">첫 번째 게시글을 작성해 보세요.</p>
+                    <a href="/bbs/form" class="btn btn-primary">글쓰기</a>
+                <% } %>
+            </div>
+            <% } %>
         </section>
 
         <% if (showPagination) { %>
@@ -227,6 +292,7 @@
             </nav>
         <% } %>
     </main>
+    <%- include('partials/footer') %>
 </body>
 
 </html>

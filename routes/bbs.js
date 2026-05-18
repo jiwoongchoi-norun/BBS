@@ -916,15 +916,25 @@ router.post('/updatesignsave', function (req, res, next) {
 router.get('/list', function (req, res, next) {
   var paging = getPaging(req);
   var sortInfo = getSort(req);
+  var myPostsOnly = req.query.mine === '1' && req.session.user;
+  var whereSql = 'OK = 1';
+  var binds = {};
+
+  if (myPostsOnly) {
+    whereSql += ' AND (WRITER = :writerId OR WRITER = :writerName)';
+    binds.writerId = req.session.user.id;
+    binds.writerName = req.session.user.name || req.session.user.id;
+  }
+
   oracledb.getConnection(dbconfig, function (err, connection) {
     if (err) {
       console.error('err : ' + err);
       return next(err);
     }
     // soft delete된 글은 목록에서 제외하고 최신 글이 먼저 보이도록 정렬한다.
-    var countSql = 'SELECT COUNT(*) FROM BBS WHERE OK = 1';
+    var countSql = 'SELECT COUNT(*) FROM BBS WHERE ' + whereSql;
 
-    connection.execute(countSql, function (err, countResult) {
+    connection.execute(countSql, binds, function (err, countResult) {
       if (err) {
         connection.release();
         console.error('err : ' + err);
@@ -939,28 +949,32 @@ router.get('/list', function (req, res, next) {
       }
 
       var offset = (paging.currentPage - 1) * paging.pageSize;
+      var listBaseParams = 'pageSize=' + paging.pageSize + (myPostsOnly ? '&mine=1' : '');
       var paginationBaseUrl = sortInfo.sort
-        ? '/bbs/list?pageSize=' +
-          paging.pageSize +
+        ? '/bbs/list?' +
+          listBaseParams +
           '&sort=' +
           encodeURIComponent(sortInfo.sort) +
           '&order=' +
           encodeURIComponent(sortInfo.order) +
           '&page='
-        : '/bbs/list?pageSize=' + paging.pageSize + '&page=';
+        : '/bbs/list?' + listBaseParams + '&page=';
       var sql =
         "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
-        'FROM BBS WHERE OK = 1 ORDER BY ' +
+        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
+        '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
+        'FROM BBS WHERE ' +
+        whereSql +
+        ' ORDER BY ' +
         sortInfo.orderBy +
         ' OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
 
       connection.execute(
         sql,
-        {
+        Object.assign({}, binds, {
           offset: offset,
           pageSize: paging.pageSize
-        },
+        }),
         function (err, rows) {
           if (err) {
             connection.release();
@@ -975,6 +989,7 @@ router.get('/list', function (req, res, next) {
               searchChoice: 'TITLE',
               searchKeyword: '',
               isSearch: false,
+              myPostsOnly: !!myPostsOnly,
               sort: sortInfo.sort,
               order: sortInfo.order,
               paginationBaseUrl: paginationBaseUrl
@@ -1371,6 +1386,7 @@ router.get('/search', function (req, res, next) {
   var paging = getPaging(req);
   var sortInfo = getSort(req);
   var searchKeyword = cleanText(req.query.search, 200); // 검색어 길이 검증
+  var myPostsOnly = req.query.mine === '1' && req.session.user;
 
   if (allowedChoices.indexOf(choice) < 0) {
     choice = 'TITLE';
@@ -1392,6 +1408,12 @@ router.get('/search', function (req, res, next) {
       whereSql = 'OK=1 AND (TITLE LIKE :search OR CONTENT LIKE :search)';
     } else {
       whereSql = 'OK=1 AND ' + choice + ' LIKE :search';
+    }
+
+    if (myPostsOnly) {
+      whereSql += ' AND (WRITER = :writerId OR WRITER = :writerName)';
+      binds.writerId = req.session.user.id;
+      binds.writerName = req.session.user.name || req.session.user.id;
     }
 
     connection.execute('SELECT COUNT(*) FROM BBS WHERE ' + whereSql, binds, function (err, countResult) {
@@ -1416,6 +1438,7 @@ router.get('/search', function (req, res, next) {
         encodeURIComponent(searchKeyword) +
         '&pageSize=' +
         paging.pageSize +
+        (myPostsOnly ? '&mine=1' : '') +
         (sortInfo.sort
           ? '&sort=' +
             encodeURIComponent(sortInfo.sort) +
@@ -1426,7 +1449,8 @@ router.get('/search', function (req, res, next) {
 
       sql =
         "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
+        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
+        '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
         'FROM BBS WHERE ' +
         whereSql +
         ' ORDER BY ' +
@@ -1453,6 +1477,7 @@ router.get('/search', function (req, res, next) {
               searchChoice: choice,
               searchKeyword: searchKeyword,
               isSearch: true,
+              myPostsOnly: !!myPostsOnly,
               sort: sortInfo.sort,
               order: sortInfo.order,
               paginationBaseUrl: paginationBaseUrl
