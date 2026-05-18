@@ -10,11 +10,26 @@ const MAX_RICH_TEXT_LENGTH = 1900;
 const DOCS_DIR = path.join(process.cwd(), 'docs');
 
 const notionToken = process.env.NOTION_TOKEN;
-const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
+const parentPageId = normalizeNotionPageId(process.env.NOTION_PARENT_PAGE_ID);
 
 if (!notionToken || !parentPageId) {
   console.error('Missing NOTION_TOKEN or NOTION_PARENT_PAGE_ID environment variable.');
   process.exit(1);
+}
+
+function normalizeNotionPageId(value) {
+  if (!value) {
+    return '';
+  }
+
+  const cleanValue = value.trim();
+  const urlMatch = cleanValue.match(/([0-9a-fA-F]{32})(?:[?#]|$)/);
+
+  if (urlMatch) {
+    return urlMatch[1];
+  }
+
+  return cleanValue.replace(/-/g, '');
 }
 
 function maskPageId(pageId) {
