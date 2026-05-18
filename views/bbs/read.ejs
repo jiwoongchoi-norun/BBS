@@ -15,6 +15,13 @@
             var likeCount = column[6] || 0;
             var dislikeCount = column[7] || 0;
             var isPostOwner = loginUser && (loginUser.id === column[3] || loginUser.name === column[3]);
+
+            function formatFileSize(bytes) {
+                bytes = Number(bytes || 0);
+                if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+                if (bytes >= 1024) return Math.ceil(bytes / 1024) + ' KB';
+                return bytes + ' B';
+            }
         %>
         <div class="card board-card mx-auto content-card">
             <div class="card-header bg-white">
@@ -78,19 +85,23 @@
             </div>
             <div class="card-body">
                 <% if (fileRows.length) { %>
-                    <div class="list-group">
+                    <div class="list-group list-group-flush border rounded">
                         <% for (var f = 0; f < fileRows.length; f++) {
                             var file = fileRows[f];
-                            var fileSizeKb = Math.ceil((file[5] || 0) / 1024);
+                            var fileSize = formatFileSize(file[5]);
                             var fileType = file[6] || '파일 형식 정보 없음';
                         %>
-                            <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                <div>
-                                    <div class="fw-semibold text-break"><%= file[2] %></div>
-                                    <div class="text-secondary small"><%= fileSizeKb %> KB · <%= fileType %> · 등록 <%= file[7] %></div>
+                            <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                <div class="min-w-0">
+                                    <div class="fw-semibold text-break mb-1"><%= file[2] %></div>
+                                    <div class="d-flex flex-wrap align-items-center gap-2 text-secondary small">
+                                        <span class="badge text-bg-light border"><%= fileSize %></span>
+                                        <span><%= fileType %></span>
+                                        <span>등록 <%= file[7] %></span>
+                                    </div>
                                 </div>
-                                <div class="text-md-end">
-                                    <a class="btn btn-sm btn-outline-primary" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
+                                <div class="text-md-end flex-shrink-0">
+                                    <a class="btn btn-sm btn-primary" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
                                 </div>
                             </div>
                         <% } %>
@@ -262,6 +273,7 @@
             </div>
         <% } %>
     </main>
+    <%- include('partials/footer') %>
 
     <% if (isPostOwner) { %>
         <script>

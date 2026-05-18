@@ -9,6 +9,13 @@
         <%
             var column = rows[0];
             var fileRows = typeof files !== 'undefined' ? files : [];
+
+            function formatFileSize(bytes) {
+                bytes = Number(bytes || 0);
+                if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+                if (bytes >= 1024) return Math.ceil(bytes / 1024) + ' KB';
+                return bytes + ' B';
+            }
         %>
         <div class="card board-card form-card mx-auto">
             <div class="card-header bg-white">
@@ -35,26 +42,36 @@
                         <div class="form-control bg-light"><%=column[4]%></div>
                     </div>
                     <div class="mb-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label fw-semibold mb-0">현재 첨부파일</label>
-                            <span class="badge text-bg-light border"><%= fileRows.length %>개</span>
+                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-2">
+                            <div>
+                                <label class="form-label fw-semibold mb-0">현재 첨부파일</label>
+                                <div class="form-text mb-0">저장해도 기존 첨부파일은 그대로 유지됩니다.</div>
+                            </div>
+                            <span class="badge text-bg-light border align-self-start align-self-sm-center"><%= fileRows.length %>개</span>
                         </div>
                         <% if (fileRows.length) { %>
-                            <div class="list-group">
+                            <div class="list-group list-group-flush border rounded">
                                 <% for (var f = 0; f < fileRows.length; f++) {
                                     var file = fileRows[f];
-                                    var fileSizeKb = Math.ceil((file[5] || 0) / 1024);
+                                    var fileSize = formatFileSize(file[5]);
+                                    var fileType = file[6] || '파일 형식 정보 없음';
                                 %>
-                                    <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                        <div>
-                                            <div class="fw-semibold"><%= file[2] %></div>
-                                            <div class="text-secondary small"><%= fileSizeKb %> KB · <%= file[7] %></div>
+                                    <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                                        <div class="min-w-0">
+                                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                                <span class="fw-semibold text-break"><%= file[2] %></span>
+                                                <span class="badge text-bg-success">유지됨</span>
+                                            </div>
+                                            <div class="d-flex flex-wrap align-items-center gap-2 text-secondary small">
+                                                <span class="badge text-bg-light border"><%= fileSize %></span>
+                                                <span><%= fileType %></span>
+                                                <span>등록 <%= file[7] %></span>
+                                            </div>
                                         </div>
-                                        <a class="btn btn-sm btn-outline-primary" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
+                                        <a class="btn btn-sm btn-outline-primary flex-shrink-0" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
                                     </div>
                                 <% } %>
                             </div>
-                            <div class="form-text mt-2">현재 수정 화면에서는 본문과 제목을 수정할 수 있으며, 첨부파일은 상세 화면에서 다운로드할 수 있습니다.</div>
                         <% } else { %>
                             <div class="border rounded bg-light p-3 text-secondary">등록된 첨부파일이 없습니다.</div>
                         <% } %>
@@ -68,5 +85,6 @@
             </div>
         </div>
     </main>
+    <%- include('partials/footer') %>
 </body>
 </html>
