@@ -300,6 +300,22 @@ async function createToggle(parentId, title) {
   return result.results[0];
 }
 
+async function createChildPageBlock(parentId, title) {
+  const result = await notionRequest('PATCH', `/blocks/${parentId}/children`, {
+    children: [
+      {
+        object: 'block',
+        type: 'child_page',
+        child_page: {
+          title
+        }
+      }
+    ]
+  });
+
+  return result.results[0].id;
+}
+
 async function getOrCreateToggle(parentId, title) {
   const existing = await findChildToggle(parentId, title);
 
@@ -327,6 +343,10 @@ function buildPageParent(parentId, parentType) {
 }
 
 async function createChildPage(parentId, parentType, title) {
+  if (parentType === 'block') {
+    return createChildPageBlock(parentId, title);
+  }
+
   const page = await notionRequest('POST', '/pages', {
     parent: buildPageParent(parentId, parentType),
     properties: {
