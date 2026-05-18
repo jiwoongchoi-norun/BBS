@@ -9,6 +9,9 @@
         <%
             var column = rows[0];
             var commentRows = typeof comments !== 'undefined' ? comments : [];
+            var activeCommentCount = commentRows.filter(function(comment) {
+                return Number(comment[10]) !== 0;
+            }).length;
             var fileRows = typeof files !== 'undefined' ? files : [];
             var loginUser = typeof currentUser !== 'undefined' ? currentUser : null;
             var selectedReaction = typeof userReaction !== 'undefined' ? userReaction : '';
@@ -121,7 +124,7 @@
         <section class="card board-card mx-auto content-card mt-4" id="comments">
             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h2 class="h5 fw-bold mb-0">댓글</h2>
-                <span class="badge text-bg-light border"><%= commentRows.length %>개</span>
+                <span class="badge text-bg-light border"><%= activeCommentCount %>개</span>
             </div>
             <div class="card-body">
                 <% if (loginUser) { %>
@@ -146,9 +149,12 @@
                             var depthLabel = depth === 0 ? '댓글' : '답글';
                             var commentLikeCount = comment[6] || 0;
                             var commentDislikeCount = comment[7] || 0;
-                            var isMine = loginUser && loginUser.id === comment[3];
+                            var updatedAt = comment[9] || '';
+                            var isDeletedComment = Number(comment[10]) === 0;
+                            var isEditedComment = !!updatedAt && !isDeletedComment;
+                            var isMine = !isDeletedComment && loginUser && loginUser.id === comment[3];
                         %>
-                            <div class="border rounded p-3 <%= depthClass %> <%= depth > 0 ? 'border-start border-3 bg-light bg-opacity-50' : '' %> <%= isMine ? 'border-primary' : '' %>">
+                            <div class="border rounded p-3 <%= depthClass %> <%= depth > 0 ? 'border-start border-3 bg-light bg-opacity-50' : '' %> <%= isMine ? 'border-primary' : '' %> <%= isDeletedComment ? 'bg-light bg-opacity-75' : '' %>">
                                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
                                     <div class="min-w-0">
                                         <div class="d-flex flex-wrap align-items-center gap-2">
@@ -157,14 +163,25 @@
                                             <% } %>
                                             <span class="badge <%= depth > 0 ? 'text-bg-light border' : 'text-bg-secondary' %>"><%= depthLabel %></span>
                                             <span class="fw-semibold"><%= comment[3] %></span>
+                                            <% if (isEditedComment) { %>
+                                                <span class="badge text-bg-light border">수정됨</span>
+                                            <% } %>
+                                            <% if (isDeletedComment) { %>
+                                                <span class="badge text-bg-light border">삭제됨</span>
+                                            <% } %>
                                         </div>
-                                        <div class="text-secondary small mt-1"><%= comment[8] %></div>
+                                        <div class="text-secondary small mt-1">
+                                            작성 <%= comment[8] %>
+                                            <% if (isEditedComment) { %>
+                                                <span class="mx-1">·</span>수정 <%= updatedAt %>
+                                            <% } %>
+                                        </div>
                                         <% if (isMine) { %>
                                             <span class="badge text-bg-primary mt-2">내 댓글</span>
                                         <% } %>
                                     </div>
                                     <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                                        <% if (loginUser) { %>
+                                        <% if (loginUser && !isDeletedComment) { %>
                                             <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm<%= comment[0] %>">답글</button>
                                         <% } %>
                                         <% if (isMine) { %>
@@ -174,14 +191,18 @@
                                     </div>
                                 </div>
                                 <div class="collapse show commentEditToggle<%= comment[0] %>" id="commentContent<%= comment[0] %>">
-                                    <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
-                                    <div class="text-secondary small d-flex flex-wrap gap-2">
-                                        <span>좋아요 <%= commentLikeCount %></span>
-                                        <span>싫어요 <%= commentDislikeCount %></span>
-                                    </div>
+                                    <% if (isDeletedComment) { %>
+                                        <div class="comment-content mb-0 text-secondary fst-italic text-break">사용자가 삭제한 댓글입니다.</div>
+                                    <% } else { %>
+                                        <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
+                                        <div class="text-secondary small d-flex flex-wrap gap-2">
+                                            <span>좋아요 <%= commentLikeCount %></span>
+                                            <span>싫어요 <%= commentDislikeCount %></span>
+                                        </div>
+                                    <% } %>
                                 </div>
 
-                                <% if (loginUser) { %>
+                                <% if (loginUser && !isDeletedComment) { %>
                                     <div class="collapse mt-3" id="replyForm<%= comment[0] %>">
                                         <form action="/bbs/wreply" method="post" class="border-top pt-3">
                                             <input type="hidden" name="bbsno" value="<%=column[0]%>">

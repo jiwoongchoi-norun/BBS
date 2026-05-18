@@ -1128,9 +1128,10 @@ router.get('/read', function (req, res, next) {
       ' WHERE OK = 1 AND NO = :brdno';
     var commentSql =
       'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
-      "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
+      "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
+      "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK " +
       'FROM BBSW ' +
-      'WHERE BBSNO = :bbsno AND OK = 1 ' +
+      'WHERE BBSNO = :bbsno ' +
       'START WITH PARENT_NO IS NULL ' +
       'CONNECT BY PRIOR NO = PARENT_NO ' +
       'ORDER SIBLINGS BY NO ASC';
