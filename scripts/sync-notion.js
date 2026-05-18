@@ -316,6 +316,40 @@ async function createChildPageBlock(parentId, title) {
   return result.results[0].id;
 }
 
+async function ensureLinkToPage(parentBlockId, pageId, title) {
+  const blocks = await getChildBlocks(parentBlockId);
+  const existingLink = blocks.find(
+    (block) =>
+      block.type === 'link_to_page' &&
+      block.link_to_page &&
+      block.link_to_page.type === 'page_id' &&
+      block.link_to_page.page_id === pageId
+  );
+
+  if (existingLink) {
+    return;
+  }
+
+  const existingChildPage = blocks.find((block) => block.type === 'child_page' && block.child_page.title === title);
+
+  if (existingChildPage) {
+    await notionRequest('DELETE', `/blocks/${existingChildPage.id}`);
+  }
+
+  await notionRequest('PATCH', `/blocks/${parentBlockId}/children`, {
+    children: [
+      {
+        object: 'block',
+        type: 'link_to_page',
+        link_to_page: {
+          type: 'page_id',
+          page_id: pageId
+        }
+      }
+    ]
+  });
+}
+
 async function getOrCreateToggle(parentId, title) {
   const existing = await findChildToggle(parentId, title);
 
@@ -376,6 +410,20 @@ async function getOrCreateChildPage(parentId, parentType, title) {
 
   const pageId = await createChildPage(parentId, parentType, title);
   console.log(`Created Notion project page: ${title}`);
+  return pageId;
+}
+
+async function getOrCreateProjectPage(parentPageIdValue, toggleId, title) {
+  const pages = await getChildPages(parentPageIdValue);
+  let pageId = pages.get(title);
+
+  if (!pageId) {
+    pageId = await createChildPage(parentPageIdValue, 'page', title);
+    console.log(`Created Notion project page: ${title}`);
+  }
+
+  await ensureLinkToPage(toggleId, pageId, title);
+
   return pageId;
 }
 
@@ -455,11 +503,11 @@ async function main() {
   }
 
   const toggleId = await getOrCreateToggle(parentPageId, targetToggleTitle);
-  const projectPageId = await getOrCreateChildPage(toggleId, 'block', projectPageTitle);
+  const projectPageId = await getOrCreateProjectPage(parentPageId, toggleId, projectPageTitle);
   const existingPages = await getChildPages(projectPageId);
 
   existingPages.parentId = projectPageId;
-  existingPages.parentType = 'block';
+  existingPages.parentType = 'page';
 
   for (const file of files) {
     await syncFile(file, existingPages);

@@ -10,21 +10,22 @@
 - 워크플로 파일: `.github/workflows/sync-notion.yml`
 - Notion 대상 부모 페이지: GitHub Secret `NOTION_PARENT_PAGE_ID`
 - Notion API 토큰: GitHub Secret `NOTION_TOKEN`
-- 기본 동기화 위치: `데이터베이스실습` 토글 아래의 `BBS_project` 페이지
+- 기본 동기화 위치: `BBS_project` 페이지 아래
 
 각 Markdown 파일은 Notion 부모 페이지 아래의 하위 페이지로 생성된다. 하위 페이지 제목은 Markdown 파일의 첫 번째 H1 제목을 우선 사용하고, H1이 없으면 파일명을 사용한다.
 
 이미 같은 제목의 하위 페이지가 있으면 새로 만들지 않고 기존 페이지 내용을 지운 뒤 최신 Markdown 내용으로 다시 업로드한다.
 
-현재 기본 구조는 다음과 같다.
+현재 기본 구조는 다음과 같다. Notion API는 토글 안에 실제 페이지 본문을 직접 생성하는 흐름에 제한이 있으므로, `BBS_project` 실제 페이지는 부모 페이지 아래에 만들고 `데이터베이스실습` 토글 안에는 해당 페이지 링크를 자동으로 추가한다.
 
 ```text
 NOTION_PARENT_PAGE_ID로 지정한 페이지
-└─ 데이터베이스실습 토글
-   └─ BBS_project 페이지
-      ├─ 11week 개발 진행 보고서
-      ├─ architecture
-      └─ ...
+├─ 데이터베이스실습 토글
+│  └─ BBS_project 링크
+└─ BBS_project 페이지
+   ├─ 11week 개발 진행 보고서
+   ├─ architecture
+   └─ ...
 ```
 
 `데이터베이스실습` 토글이나 `BBS_project` 페이지가 없으면 스크립트가 자동으로 생성한다.
@@ -134,4 +135,4 @@ node scripts/sync-notion.js
 - 복잡한 Markdown 표는 Notion 표가 아니라 코드블록 형태로 동기화될 수 있다.
 - 이미지 파일 업로드까지 자동 변환하지는 않는다.
 
-마지막 동기화 테스트: 2026-05-18 재실행
+마지막 동기화 테스트: 2026-05-18 링크 방식 재실행
