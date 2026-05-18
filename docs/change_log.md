@@ -2,6 +2,10 @@
 
 ## 2026-05-18
 
+- SQL Injection 방지 점검
+  - `routes/bbs.js` 주요 사용자 입력 쿼리의 Oracle bind variable 사용 여부 확인
+  - 검색 컬럼 선택을 허용 목록 배열 검증에서 SQL 컬럼 매핑 객체 방식으로 보강
+  - 정렬 컬럼/방향은 기존 `getSort()` 화이트리스트 방식 유지
 - 좋아요/싫어요 오류 수정
   - 추천 후 read 화면으로 돌아올 때 `skipViewCount` 분기에서 bind placeholder가 없는 `BEGIN NULL; END;`에 `{ brdno }`를 넘겨 `NJS-098`이 발생하던 문제 수정
   - 조회수 증가를 건너뛰는 경우 빈 bind `{}`를 넘기도록 정리

@@ -1383,13 +1383,18 @@ router.post('/updatesave', function (req, res, next) {
 
 router.get('/search', function (req, res, next) {
   var choice = req.query.choice || 'TITLE';
-  var allowedChoices = ['TITLE', 'WRITER', 'CONTENT', 'TITLE_CONTENT'];
+  var searchColumns = {
+    TITLE: 'TITLE',
+    WRITER: 'WRITER',
+    CONTENT: 'CONTENT',
+    TITLE_CONTENT: 'TITLE_CONTENT'
+  };
   var paging = getPaging(req);
   var sortInfo = getSort(req);
   var searchKeyword = cleanText(req.query.search, 200); // 검색어 길이 검증
   var myPostsOnly = req.query.mine === '1' && req.session.user;
 
-  if (allowedChoices.indexOf(choice) < 0) {
+  if (!searchColumns[choice]) {
     choice = 'TITLE';
   }
 
@@ -1408,7 +1413,7 @@ router.get('/search', function (req, res, next) {
 
       whereSql = 'OK=1 AND (TITLE LIKE :search OR CONTENT LIKE :search)';
     } else {
-      whereSql = 'OK=1 AND ' + choice + ' LIKE :search';
+      whereSql = 'OK=1 AND ' + searchColumns[choice] + ' LIKE :search';
     }
 
     if (myPostsOnly) {
