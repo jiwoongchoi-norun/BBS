@@ -263,6 +263,59 @@ router.get('/login', function (req, res) {
   res.render('bbs/login', { errcode: 0 });
 });
 
+router.get('/find-id', function (req, res) {
+  if (req.session.user) {
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
+    res.redirect('/bbs/list');
+    return;
+  }
+
+  res.render('bbs/findid', {
+    formData: {},
+    foundId: '',
+    message: ''
+  });
+});
+
+router.post('/find-id', function (req, res, next) {
+  var name = cleanText(req.body.name, 100);
+  var email = cleanText(req.body.email, 200);
+  var formData = { name: name, email: email };
+
+  if (!name || !isValidEmail(email)) {
+    res.render('bbs/findid', {
+      formData: formData,
+      foundId: '',
+      message: '가입 시 입력한 이름과 이메일을 정확히 입력해주세요.'
+    });
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var sql = 'SELECT ID FROM LOGIN WHERE NAME = :name AND EMAIL = :email AND OK = 1';
+
+    connection.execute(sql, { name: name, email: email }, function (err, result) {
+      connection.release();
+
+      if (err) {
+        console.error('err : ' + err);
+        return next(err);
+      }
+
+      res.render('bbs/findid', {
+        formData: formData,
+        foundId: result.rows.length ? result.rows[0][0] : '',
+        message: result.rows.length ? '' : '일치하는 회원 정보를 찾지 못했습니다.'
+      });
+    });
+  });
+});
+
 router.post('/logincheck', function (req, res, next) {
   var id = cleanText(req.body.id, 50); // 입력값 검증
   var pw = cleanText(req.body.password, 100); // 입력값 검증
@@ -312,6 +365,19 @@ router.post('/logincheck', function (req, res, next) {
       var storedSalt = result.rows[0][2];
       var storedAlgo = result.rows[0][3] || 'sha512';
       var userName = result.rows[0][4];
+      var isActiveUser = result.rows[0][0] === 1;
+
+      if (!isActiveUser) {
+        connection.release();
+        res.render('bbs/login', {
+          errcode: 1,
+          flashMessage: {
+            type: 'danger',
+            text: '탈퇴 처리된 계정입니다.'
+          }
+        });
+        return;
+      }
 
       function finishLogin() {
         var paramID = id;
@@ -437,7 +503,7 @@ router.get('/myinfo', function (req, res, next) {
     var sql =
       'SELECT ID, NAME, PHONE, ' +
       "TO_CHAR(PASSWORD_UPDATED_AT, 'yyyy-mm-dd') AS PASSWORD_UPDATED_AT " +
-      'FROM LOGIN WHERE ID = :id';
+      'FROM LOGIN WHERE ID = :id AND OK = 1';
 
     connection.execute(sql, { id: req.session.user.id }, function (err, result) {
       connection.release();
@@ -463,6 +529,97 @@ router.get('/myinfo', function (req, res, next) {
           passwordUpdatedAt: row[3]
         }
       });
+    });
+  });
+});
+
+router.post('/withdraw', function (req, res, next) {
+  if (!requireLogin(req, res)) return;
+
+  var password = cleanText(req.body.password, 100);
+  var confirmText = cleanText(req.body.confirmText, 20);
+  var userId = req.session.user.id;
+
+  if (!password || confirmText !== '탈퇴') {
+    setFlash(req, 'warning', '회원 탈퇴 확인 문구와 비밀번호를 입력해주세요.');
+    res.redirect('/bbs/myinfo');
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var sql = 'SELECT PASSWORD, SALT, PASSWORD_ALGO FROM LOGIN WHERE ID = :id AND OK = 1';
+
+    connection.execute(sql, { id: userId }, function (err, result) {
+      if (err) {
+        connection.release();
+        console.error('err : ' + err);
+        return next(err);
+      }
+
+      if (result.rows.length < 1) {
+        connection.release();
+        req.session.destroy(function () {
+          res.redirect('/bbs/login');
+        });
+        return;
+      }
+
+      var storedPassword = result.rows[0][0];
+      var storedSalt = result.rows[0][1];
+      var storedAlgo = result.rows[0][2] || 'sha512';
+
+      function deactivateUser() {
+        var updateSql = 'UPDATE LOGIN SET OK = 0 WHERE ID = :id AND OK = 1';
+
+        connection.execute(updateSql, { id: userId }, function (err) {
+          connection.release();
+
+          if (err) {
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          req.session.destroy(function () {
+            res.redirect('/bbs/list');
+          });
+        });
+      }
+
+      function rejectPassword() {
+        connection.release();
+        setFlash(req, 'danger', '비밀번호가 일치하지 않습니다.');
+        res.redirect('/bbs/myinfo');
+      }
+
+      if (isBcryptPassword(storedAlgo, storedPassword)) {
+        bcrypt.compare(password, storedPassword, function (err, isMatch) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          if (!isMatch) {
+            rejectPassword();
+            return;
+          }
+
+          deactivateUser();
+        });
+        return;
+      }
+
+      if (!storedSalt || createPasswordHash(password, storedSalt) !== storedPassword) {
+        rejectPassword();
+        return;
+      }
+
+      deactivateUser();
     });
   });
 });

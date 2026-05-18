@@ -89,6 +89,20 @@ BEGIN
 END;
 /
 
+DECLARE
+  v_count NUMBER;
+BEGIN
+  SELECT COUNT(*) INTO v_count
+  FROM USER_TAB_COLUMNS
+  WHERE TABLE_NAME = 'LOGIN'
+    AND COLUMN_NAME = 'OK';
+
+  IF v_count = 0 THEN
+    EXECUTE IMMEDIATE 'ALTER TABLE LOGIN ADD (OK NUMBER(1) DEFAULT 1 NOT NULL)';
+  END IF;
+END;
+/
+
 -- bcrypt hashes are currently 60 chars, but 255 leaves room for future algorithm prefixes.
 -- LOGIN.ID is widened to match BBS.WRITER/BBSW.WRITER before writer FKs are added.
 ALTER TABLE LOGIN MODIFY (ID VARCHAR2(100));
