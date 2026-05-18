@@ -72,8 +72,9 @@
         </div>
 
         <section class="card board-card mx-auto content-card mt-4">
-            <div class="card-header bg-white">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
                 <h2 class="h5 fw-bold mb-0">첨부파일</h2>
+                <span class="badge text-bg-light border"><%= fileRows.length %>개</span>
             </div>
             <div class="card-body">
                 <% if (fileRows.length) { %>
@@ -81,18 +82,21 @@
                         <% for (var f = 0; f < fileRows.length; f++) {
                             var file = fileRows[f];
                             var fileSizeKb = Math.ceil((file[5] || 0) / 1024);
+                            var fileType = file[6] || '파일 형식 정보 없음';
                         %>
                             <div class="list-group-item d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
                                 <div>
-                                    <div class="fw-semibold"><%= file[2] %></div>
-                                    <div class="text-secondary small"><%= fileSizeKb %> KB · <%= file[7] %></div>
+                                    <div class="fw-semibold text-break"><%= file[2] %></div>
+                                    <div class="text-secondary small"><%= fileSizeKb %> KB · <%= fileType %> · 등록 <%= file[7] %></div>
                                 </div>
-                                <a class="btn btn-sm btn-outline-primary" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
+                                <div class="text-md-end">
+                                    <a class="btn btn-sm btn-outline-primary" href="/bbs/download?fno=<%=file[0]%>">다운로드</a>
+                                </div>
                             </div>
                         <% } %>
                     </div>
                 <% } else { %>
-                    <div class="text-secondary">첨부파일 없음</div>
+                    <div class="border rounded bg-light p-3 text-secondary">첨부파일이 없습니다.</div>
                 <% } %>
             </div>
         </section>
@@ -121,42 +125,94 @@
                         <% for (var i = 0; i < commentRows.length; i++) {
                             var comment = commentRows[i];
                             var depth = comment[5] || 0;
-                            var depthClass = depth === 0 ? '' : depth === 1 ? 'ms-4' : 'ms-5';
+                            var depthClass = depth === 0 ? '' : depth === 1 ? 'ms-md-4' : 'ms-md-5';
+                            var depthLabel = depth === 0 ? '댓글' : '답글';
+                            var commentLikeCount = comment[6] || 0;
+                            var commentDislikeCount = comment[7] || 0;
                             var isMine = loginUser && loginUser.id === comment[3];
                         %>
-                            <div class="border rounded p-3 <%= depthClass %> <%= isMine ? 'border-primary' : '' %>">
-                                <div class="d-flex flex-column flex-md-row justify-content-between gap-2 mb-2">
-                                    <div>
-                                        <span class="fw-semibold"><%= comment[3] %></span>
+                            <div class="border rounded p-3 <%= depthClass %> <%= depth > 0 ? 'border-start border-3 bg-light bg-opacity-50' : '' %> <%= isMine ? 'border-primary' : '' %>">
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
+                                    <div class="min-w-0">
+                                        <div class="d-flex flex-wrap align-items-center gap-2">
+                                            <% if (depth > 0) { %>
+                                                <span class="text-primary small fw-semibold">&rdsh;</span>
+                                            <% } %>
+                                            <span class="badge <%= depth > 0 ? 'text-bg-light border' : 'text-bg-secondary' %>"><%= depthLabel %></span>
+                                            <span class="fw-semibold"><%= comment[3] %></span>
+                                        </div>
+                                        <div class="text-secondary small mt-1"><%= comment[8] %></div>
                                         <% if (isMine) { %>
-                                            <span class="badge text-bg-primary ms-1">내 댓글</span>
+                                            <span class="badge text-bg-primary mt-2">내 댓글</span>
                                         <% } %>
-                                        <span class="text-secondary small ms-2"><%= comment[8] %></span>
                                     </div>
-                                    <div class="d-flex gap-2">
+                                    <div class="d-flex flex-wrap justify-content-md-end gap-2">
                                         <% if (loginUser) { %>
-                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm<%= comment[0] %>">답글달기</button>
+                                            <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm<%= comment[0] %>">답글</button>
                                         <% } %>
                                         <% if (isMine) { %>
-                                            <a class="btn btn-sm btn-outline-danger" href="/bbs/wdelete?wno=<%=comment[0]%>&bbsno=<%=column[0]%>">삭제</a>
+                                            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target=".commentEditToggle<%= comment[0] %>" aria-expanded="false" aria-controls="commentContent<%= comment[0] %> editCommentForm<%= comment[0] %>">수정</button>
+                                            <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteCommentModal<%= comment[0] %>">삭제</button>
                                         <% } %>
                                     </div>
                                 </div>
-                                <div class="mb-2"><%= comment[4] %></div>
-                                <div class="text-secondary small">
-                                    좋아요 <%= comment[6] %> · 싫어요 <%= comment[7] %>
+                                <div class="collapse show commentEditToggle<%= comment[0] %>" id="commentContent<%= comment[0] %>">
+                                    <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
+                                    <div class="text-secondary small d-flex flex-wrap gap-2">
+                                        <span>좋아요 <%= commentLikeCount %></span>
+                                        <span>싫어요 <%= commentDislikeCount %></span>
+                                    </div>
                                 </div>
 
                                 <% if (loginUser) { %>
                                     <div class="collapse mt-3" id="replyForm<%= comment[0] %>">
-                                        <form action="/bbs/wreply" method="post">
+                                        <form action="/bbs/wreply" method="post" class="border-top pt-3">
                                             <input type="hidden" name="bbsno" value="<%=column[0]%>">
                                             <input type="hidden" name="parent_no" value="<%=comment[0]%>">
-                                            <textarea class="form-control mb-2" name="content" rows="2" maxlength="4000" required></textarea>
+                                            <label class="form-label small text-secondary" for="replyContent<%= comment[0] %>">답글 작성</label>
+                                            <textarea class="form-control mb-2" id="replyContent<%= comment[0] %>" name="content" rows="2" maxlength="4000" required></textarea>
                                             <div class="text-end">
-                                                <button type="submit" class="btn btn-sm btn-primary">답글 저장</button>
+                                                <button type="submit" class="btn btn-sm btn-primary">저장</button>
                                             </div>
                                         </form>
+                                    </div>
+                                <% } %>
+                                <% if (isMine) { %>
+                                    <div class="collapse commentEditToggle<%= comment[0] %>" id="editCommentForm<%= comment[0] %>">
+                                        <form action="/bbs/wupdate" method="post" class="mt-2">
+                                            <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                            <input type="hidden" name="wno" value="<%=comment[0]%>">
+                                            <label class="form-label small text-secondary" for="editCommentContent<%= comment[0] %>">댓글 수정</label>
+                                            <textarea class="form-control mb-2" id="editCommentContent<%= comment[0] %>" name="content" rows="3" maxlength="4000" required><%= comment[4] %></textarea>
+                                            <div class="d-flex justify-content-end gap-2">
+                                                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target=".commentEditToggle<%= comment[0] %>">취소</button>
+                                                <button type="submit" class="btn btn-sm btn-primary">저장</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                <% } %>
+                                <% if (isMine) { %>
+                                    <div class="modal fade" id="deleteCommentModal<%= comment[0] %>" tabindex="-1" aria-labelledby="deleteCommentModalLabel<%= comment[0] %>" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered modal-sm">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h2 class="modal-title h6 fw-bold text-danger" id="deleteCommentModalLabel<%= comment[0] %>">댓글 삭제</h2>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <p class="mb-1">정말 이 댓글을 삭제하시겠습니까?</p>
+                                                    <p class="text-secondary small mb-0">삭제 후에는 댓글 내용이 숨김 처리됩니다.</p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
+                                                    <form action="/bbs/wdelete" method="post" class="d-inline">
+                                                        <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                                        <input type="hidden" name="wno" value="<%=comment[0]%>">
+                                                        <button type="submit" class="btn btn-danger btn-sm">삭제</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 <% } %>
                             </div>

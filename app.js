@@ -34,7 +34,24 @@ app.use(
   })
 );
 app.use(function (req, res, next) {
+  var noticeMessages = {
+    logout: {
+      type: 'info',
+      text: '로그아웃되었습니다.'
+    }
+  };
+
   res.locals.currentUser = req.session.user || null;
+  res.locals.flashMessage = req.session.flashMessage || noticeMessages[req.query.notice] || null;
+  delete req.session.flashMessage;
+
+  req.flashMessage = function (type, text) {
+    req.session.flashMessage = {
+      type: type || 'info',
+      text: text
+    };
+  };
+
   next();
 });
 

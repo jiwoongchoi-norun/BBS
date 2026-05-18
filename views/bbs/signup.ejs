@@ -11,16 +11,6 @@
         var savedIdAvailable = typeof idCheckAvailable !== 'undefined' ? idCheckAvailable : null;
     %>
 
-    <% if(code == 1) { %>
-        <script>
-            alert('이미 로그인되어 있습니다.');
-
-            setTimeout(function() {
-                location.href='/bbs/';
-            }, 1000);
-        </script>
-    <% } %>
-
     <main class="container py-4 py-lg-5">
         <div class="card board-card auth-card mx-auto">
             <div class="card-header bg-white">

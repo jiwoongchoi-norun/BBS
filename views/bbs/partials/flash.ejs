@@ -1,0 +1,8 @@
+<% if (typeof flashMessage !== 'undefined' && flashMessage && flashMessage.text) { %>
+    <div class="container mt-3">
+        <div class="alert alert-<%= flashMessage.type || 'info' %> alert-dismissible fade show mb-0" role="alert">
+            <%= flashMessage.text %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="닫기"></button>
+        </div>
+    </div>
+<% } %>

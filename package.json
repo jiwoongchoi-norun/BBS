@@ -16,6 +16,7 @@
     "check": "npm run lint && npm run format:check && npm run audit"
   },
   "dependencies": {
+    "@notionhq/client": "^5.21.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",

@@ -1,53 +1,31 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>에러 메세지</title>
-</head>
+<%- include('partials/head', { title: '메시지' }) %>
+
 <body>
-    <% if (typeof errcode !== 'undefined' && errcode == 1) { %>
-        <script>
-            alert('패스워드가 다릅니다.');
-            setTimeout(function() {
-                location.href = 'http://localhost:3000/bbs/signup';
-            }, 1000);
-        </script>
-    <% } %>
+    <%- include('partials/nav') %>
 
-    <% if (typeof errcode !== 'undefined' && errcode == 2) { %>
-        <script>
-            alert('id, 패스워드, 이름은 공백일 수 없습니다.');
-            setTimeout(function() {
-                location.href = 'http://localhost:3000/bbs/signup';
-            }, 1000);
-        </script>
-    <% } %>
+    <%
+        var errorMap = {
+            1: { text: '비밀번호 확인이 일치하지 않습니다.', href: '/bbs/signup', label: '회원가입으로 이동' },
+            2: { text: '아이디, 비밀번호, 이름은 공백일 수 없습니다.', href: '/bbs/signup', label: '회원가입으로 이동' },
+            3: { text: '아이디가 중복되었습니다. 다시 가입해주세요.', href: '/bbs/signup', label: '회원가입으로 이동' },
+            4: { text: '로그인이 필요한 기능입니다.', href: '/bbs/login', label: '로그인으로 이동' },
+            5: { text: '댓글은 로그인 후 작성할 수 있습니다.', href: '/bbs/login', label: '로그인으로 이동' }
+        };
+        var pageMessage = errorMap[typeof errcode !== 'undefined' ? errcode : 0] || {
+            text: '요청 처리 중 문제가 발생했습니다.',
+            href: '/bbs/list',
+            label: '목록으로 이동'
+        };
+    %>
 
-    <% if (typeof errcode !== 'undefined' && errcode == 3) { %>
-        <script>
-            alert('아이디가 중복되었습니다. 다시 가입하세요.');
-            setTimeout(function() {
-                location.href = 'http://localhost:3000/bbs/signup';
-            }, 1000);
-        </script>
-    <% } %>
-
-    <% if (typeof errcode !== 'undefined' && errcode == 4) { %>
-        <script>
-            alert('로그인 되어 있지 않습니다. 로그인부터 하세요.');
-            setTimeout(function() {
-                location.href = 'http://localhost:3000/bbs/list';
-            }, 1000);
-        </script>
-    <% } %>
-
-    <% if (typeof errcode !== 'undefined' && errcode == 5) { %>
-        <script>
-            alert('댓글은 로그인 상태에서 입력 가능합니다. 로그인부터 하세요.');
-            setTimeout(function() {
-                location.href = 'http://localhost:3000/bbs/login';
-            }, 1000);
-        </script>
-    <% } %>
+    <main class="container py-4 py-lg-5">
+        <div class="alert alert-warning mx-auto content-card" role="alert">
+            <h1 class="h5 fw-bold mb-2">요청을 확인해주세요</h1>
+            <p class="mb-3"><%= pageMessage.text %></p>
+            <a href="<%= pageMessage.href %>" class="btn btn-sm btn-outline-primary"><%= pageMessage.label %></a>
+        </div>
+    </main>
 </body>
 </html>

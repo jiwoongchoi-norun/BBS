@@ -61,6 +61,9 @@ var upload = multer({
 // 글쓰기, 수정, 삭제처럼 로그인이 필요한 요청에서 공통으로 사용하는 인증 가드.
 function requireLogin(req, res) {
   if (!req.session.user) {
+    if (req.flashMessage) {
+      req.flashMessage('warning', '로그인이 필요한 기능입니다.');
+    }
     res.redirect('/bbs/login');
     return false;
   }
@@ -236,6 +239,12 @@ function renderBadRequest(res, message) {
   res.send(message || '잘못된 요청입니다.');
 }
 
+function setFlash(req, type, text) {
+  if (req.flashMessage) {
+    req.flashMessage(type, text);
+  }
+}
+
 function isValidReactionType(value) {
   return value === 'LIKE' || value === 'DISLIKE';
 }
@@ -245,9 +254,13 @@ router.get('/', function (req, res) {
 });
 
 router.get('/login', function (req, res) {
-  var code = 0;
-  if (req.session.user) code = 3;
-  res.render('bbs/login', { errcode: code });
+  if (req.session.user) {
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
+    res.redirect('/bbs/list');
+    return;
+  }
+
+  res.render('bbs/login', { errcode: 0 });
 });
 
 router.post('/logincheck', function (req, res, next) {
@@ -256,7 +269,13 @@ router.post('/logincheck', function (req, res, next) {
   var code = 0;
 
   if (!id || !pw) {
-    res.render('bbs/login', { errcode: 1 });
+    res.render('bbs/login', {
+      errcode: 0,
+      flashMessage: {
+        type: 'warning',
+        text: '아이디와 비밀번호를 입력해주세요.'
+      }
+    });
     return;
   }
 
@@ -279,7 +298,13 @@ router.post('/logincheck', function (req, res, next) {
         console.log('login id not found.');
         code = 1;
         connection.release();
-        res.render('bbs/login', { errcode: code });
+        res.render('bbs/login', {
+          errcode: code,
+          flashMessage: {
+            type: 'danger',
+            text: '로그인 아이디가 없습니다.'
+          }
+        });
         return;
       }
 
@@ -303,6 +328,7 @@ router.post('/logincheck', function (req, res, next) {
         }
 
         connection.release();
+        setFlash(req, 'success', '로그인되었습니다.');
         res.redirect('/bbs/list');
       }
 
@@ -318,7 +344,13 @@ router.post('/logincheck', function (req, res, next) {
             console.log('password mismatch.');
             code = 2;
             connection.release();
-            res.render('bbs/login', { errcode: code });
+            res.render('bbs/login', {
+              errcode: code,
+              flashMessage: {
+                type: 'danger',
+                text: '비밀번호가 틀립니다.'
+              }
+            });
             return;
           }
 
@@ -331,7 +363,13 @@ router.post('/logincheck', function (req, res, next) {
         console.log('password salt missing.');
         code = 2;
         connection.release();
-        res.render('bbs/login', { errcode: code });
+        res.render('bbs/login', {
+          errcode: code,
+          flashMessage: {
+            type: 'danger',
+            text: '비밀번호가 틀립니다.'
+          }
+        });
         return;
       }
 
@@ -341,7 +379,13 @@ router.post('/logincheck', function (req, res, next) {
         console.log('password mismatch.');
         code = 2;
         connection.release();
-        res.render('bbs/login', { errcode: code });
+        res.render('bbs/login', {
+          errcode: code,
+          flashMessage: {
+            type: 'danger',
+            text: '비밀번호가 틀립니다.'
+          }
+        });
         return;
       }
 
@@ -371,8 +415,14 @@ router.post('/logincheck', function (req, res, next) {
 });
 
 router.get('/logout', function (req, res) {
-  if (req.session.user) req.session.destroy();
-  res.redirect('/bbs/list');
+  if (!req.session.user) {
+    res.redirect('/bbs/list');
+    return;
+  }
+
+  req.session.destroy(function () {
+    res.redirect('/bbs/list?notice=logout');
+  });
 });
 
 router.get('/myinfo', function (req, res, next) {
@@ -418,9 +468,13 @@ router.get('/myinfo', function (req, res, next) {
 });
 
 router.get('/signup', function (req, res) {
-  var code = 0;
-  if (req.session.user) code = 1;
-  res.render('bbs/signup', { code: code, formData: {}, idCheckMessage: '', idCheckAvailable: null });
+  if (req.session.user) {
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
+    res.redirect('/bbs/list');
+    return;
+  }
+
+  res.render('bbs/signup', { code: 0, formData: {}, idCheckMessage: '', idCheckAvailable: null });
 });
 
 router.get('/check-id', function (req, res, next) {
@@ -543,6 +597,7 @@ router.post('/signupsave', function (req, res, next) {
             }
             connection.release();
             req.session.checkedSignupId = null;
+            setFlash(req, 'success', '회원가입이 완료되었습니다. 로그인해주세요.');
             res.redirect('/bbs/login');
           }
         );
@@ -693,6 +748,7 @@ router.post('/updatesignsave', function (req, res, next) {
           req.session.user.id = id;
           req.session.user.name = name;
           connection.release();
+          setFlash(req, 'success', '회원정보가 수정되었습니다.');
           res.redirect('/bbs/list');
         }
       );
@@ -788,9 +844,6 @@ router.post('/save', function (req, res, next) {
     }
 
     var title = cleanText(req.body.brdtitle, 200); // 입력값 검증
-    var content = cleanText(req.body.brdmemo, 4000); // 입력값 검증
-    var writer = req.session.user.id; // 로그인 사용자 ID 사용
-
     var content = cleanText(req.body.brdmemo, 4000);
     var writer = req.session.user.name || req.session.user.id;
 
@@ -836,6 +889,7 @@ router.post('/save', function (req, res, next) {
 
             if (!req.file) {
               connection.release();
+              setFlash(req, 'success', '게시글이 등록되었습니다.');
               res.redirect('/bbs/list');
               return;
             }
@@ -864,6 +918,7 @@ router.post('/save', function (req, res, next) {
                 }
 
                 connection.release();
+                setFlash(req, 'success', '게시글과 첨부파일이 등록되었습니다.');
                 res.redirect('/bbs/list');
               }
             );
@@ -1007,8 +1062,6 @@ router.get('/delete', function (req, res, next) {
     // 실제 DELETE 대신 상태값만 내려 과제 흐름에 맞는 soft delete를 유지한다.
     var bbsno = toValidNumber(req.query.brdno); // 게시글 번호 검증
     var writer = req.session.user.id;
-
-    var writer = req.session.user.id;
     var writerName = req.session.user.name || req.session.user.id;
 
     if (!bbsno) {
@@ -1042,6 +1095,7 @@ router.get('/delete', function (req, res, next) {
         }
 
         connection.release();
+        setFlash(req, 'success', '게시글이 삭제되었습니다.');
         res.redirect('/bbs/list');
       });
     });
@@ -1067,6 +1121,10 @@ router.get('/update', function (req, res, next) {
     var sql =
       "SELECT NO, TITLE, CONTENT, WRITER, to_char(REGDATE,'yyyy-mm-dd') " +
       'FROM BBS WHERE OK = 1 AND NO = :brdno';
+    var fileSql =
+      'SELECT NO, BBSNO, ORG_FILENAME, SAVE_FILENAME, FILEPATH, FILESIZE, MIMETYPE, ' +
+      "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
+      'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
 
     connection.execute(sql, { brdno: brdno }, function (err, rows) {
       if (err) {
@@ -1087,8 +1145,19 @@ router.get('/update', function (req, res, next) {
         return;
       }
 
-      res.render('bbs/updateform', rows);
-      connection.release();
+      connection.execute(fileSql, { bbsno: brdno }, function (err, fileRows) {
+        if (err) {
+          connection.release();
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        res.render('bbs/updateform', {
+          rows: rows.rows,
+          files: fileRows.rows
+        });
+        connection.release();
+      });
     });
   });
 });
@@ -1098,10 +1167,6 @@ router.post('/updatesave', function (req, res, next) {
   var brdno = toValidNumber(req.body.brdno); // 게시글 번호 검증
   var title = cleanText(req.body.brdtitle, 200); // 입력값 검증
   var content = cleanText(req.body.brdmemo, 4000); // 입력값 검증
-  var writer = req.session.user.id;
-
-  var title = cleanText(req.body.brdtitle, 200);
-  var content = cleanText(req.body.brdmemo, 4000);
   var writer = req.session.user.id;
   var writerName = req.session.user.name || req.session.user.id;
 
@@ -1136,6 +1201,7 @@ router.post('/updatesave', function (req, res, next) {
         }
 
         connection.release();
+        setFlash(req, 'success', '게시글이 수정되었습니다.');
         res.redirect('/bbs/list');
       }
     );
@@ -1411,6 +1477,7 @@ router.post('/wsave', function (req, res, next) {
         }
 
         connection.release();
+        setFlash(req, 'success', '댓글이 등록되었습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
       }
     );
@@ -1447,6 +1514,7 @@ router.post('/wreply', function (req, res, next) {
 
       if (parentRows.rows.length < 1) {
         connection.release();
+        setFlash(req, 'warning', '답글을 달 댓글을 찾을 수 없습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
         return;
       }
@@ -1483,6 +1551,7 @@ router.post('/wreply', function (req, res, next) {
             }
 
             connection.release();
+            setFlash(req, 'success', '답글이 등록되었습니다.');
             res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
           });
         }
@@ -1491,11 +1560,63 @@ router.post('/wreply', function (req, res, next) {
   });
 });
 
-router.get('/wdelete', function (req, res, next) {
+router.post('/wupdate', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var wno = toValidNumber(req.query.wno); // 댓글 번호 검증
-  var bbsno = toValidNumber(req.query.bbsno); // 게시글 번호 검증
+  var wno = toValidNumber(req.body.wno); // 댓글 번호 검증
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var content = cleanText(req.body.content, 4000); // 댓글 내용 검증
+  var writer = req.session.user.id;
+
+  if (!wno || !bbsno || !content) {
+    renderBadRequest(res, '댓글 수정값을 확인하세요.');
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var sql =
+      'UPDATE BBSW SET CONTENT = :content, UPDATEDATE = SYSDATE ' +
+      'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
+
+    connection.execute(
+      sql,
+      {
+        content: content,
+        wno: wno,
+        bbsno: bbsno,
+        writer: writer
+      },
+      function (err, result) {
+        if (err) {
+          connection.release();
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        if (!result.rowsAffected) {
+          connection.release();
+          renderForbidden(res);
+          return;
+        }
+
+        connection.release();
+        setFlash(req, 'success', '댓글이 수정되었습니다.');
+        res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+      }
+    );
+  });
+});
+
+router.post('/wdelete', function (req, res, next) {
+  if (!requireLogin(req, res)) return;
+
+  var wno = toValidNumber(req.body.wno); // 댓글 번호 검증
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
   var writer = req.session.user.id;
 
   if (!wno || !bbsno) {
@@ -1511,9 +1632,9 @@ router.get('/wdelete', function (req, res, next) {
 
     var sql =
       "UPDATE BBSW SET OK = 0, CONTENT = '삭제된 댓글입니다.', UPDATEDATE = SYSDATE " +
-      'WHERE NO = :wno AND WRITER = :writer';
+      'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
 
-    connection.execute(sql, { wno: wno, writer: writer }, function (err, result) {
+    connection.execute(sql, { wno: wno, bbsno: bbsno, writer: writer }, function (err, result) {
       if (err) {
         connection.release();
         console.error('err : ' + err);
@@ -1527,6 +1648,7 @@ router.get('/wdelete', function (req, res, next) {
       }
 
       connection.release();
+      setFlash(req, 'success', '댓글이 삭제되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
     });
   });

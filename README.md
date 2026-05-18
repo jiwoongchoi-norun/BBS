@@ -45,11 +45,24 @@ UI는 Bootstrap 5를 기반으로 하되 `DESIGN.md`의 Linear 디자인 가이�
 | 회원정보 수정 | 완료 | `POST /bbs/updatesignsave` |
 | 댓글 | 완료 | `POST /bbs/wsave` |
 | 대댓글 | 완료 | `POST /bbs/wreply` |
-| 댓글 삭제 | 완료 | `GET /bbs/wdelete` |
+| 댓글 삭제 | 완료 | `POST /bbs/wdelete` |
 | 좋아요/싫어요 | 완료 | `POST /bbs/reaction` |
 | 파일 업로드 | 완료 | `POST /bbs/save` |
 | 파일 다운로드 | 완료 | `GET /bbs/download` |
 | 루트 접속 redirect | 완료 | `GET /` -> `/bbs` |
+
+## 제출용 추가 기능 정리
+
+| 추가 기능 | 구현 상태 | 구현 내용 | 관련 파일 |
+| --- | --- | --- | --- |
+| bcrypt 비밀번호 암호화 | 완료 | 신규 회원가입과 회원정보 수정 시 bcrypt 해시로 비밀번호를 저장한다. 기존 SHA-512 + salt 계정은 로그인 성공 시 bcrypt 방식으로 전환되도록 처리했다. | `routes/bbs.js`, `LOGIN` |
+| 작성자 권한 체크 | 완료 | 게시글 수정/삭제와 댓글 수정/삭제에서 로그인 사용자와 작성자를 비교한다. 권한이 없으면 수정/삭제가 진행되지 않도록 처리했다. | `routes/bbs.js`, `views/bbs/read.ejs` |
+| Notion Sync | 완료 | `docs/**/*.md` 변경이 `main` 브랜치에 push되면 GitHub Actions가 Notion API로 지정 페이지 아래에 문서를 동기화한다. 토큰과 페이지 ID는 GitHub Secrets로 관리한다. | `scripts/sync-notion.js`, `.github/workflows/sync-notion.yml`, `docs/notion-sync.md` |
+| 댓글 수정 | 완료 | 본인이 작성한 댓글에만 수정 버튼을 표시하고, `POST /bbs/wupdate`에서 작성자 검증 후 댓글 내용을 수정한다. | `routes/bbs.js`, `views/bbs/read.ejs`, `BBSW` |
+| 댓글 삭제 | 완료 | GET 삭제 링크 대신 POST 요청과 삭제 확인 modal을 사용한다. 실제 행 삭제가 아니라 `BBSW.OK = 0`으로 soft delete 처리한다. | `routes/bbs.js`, `views/bbs/read.ejs`, `BBSW` |
+| 좋아요/싫어요 | 완료 | 게시글별 사용자 반응을 `BBS_REACTION`에 저장하고, `BBS.LIKE_COUNT`, `BBS.DISLIKE_COUNT`를 갱신한다. 같은 버튼 재클릭 시 취소, 반대 버튼 클릭 시 전환된다. | `routes/bbs.js`, `views/bbs/read.ejs`, `BBS`, `BBS_REACTION` |
+| 파일 업로드 | 완료 | 글 작성 시 `multer`로 파일을 저장하고 `BBS_FILE`에 원본명, 저장명, 경로, 크기, MIME 타입을 기록한다. 상세/수정 화면에서 기존 첨부파일을 확인하고 다운로드할 수 있다. | `routes/bbs.js`, `views/bbs/form.ejs`, `views/bbs/read.ejs`, `views/bbs/updateform.ejs`, `BBS_FILE` |
+| 대댓글 | 완료 | `BBSW.PARENT_NO`, `DEPTH`를 사용해 댓글과 답글을 연결하고, 상세 화면에서 들여쓰기와 배지로 일반 댓글/답글을 구분한다. | `routes/bbs.js`, `views/bbs/read.ejs`, `BBSW` |
 
 ## 설치
 
