@@ -430,11 +430,10 @@ async function syncFile(filePath, existingPages) {
   ];
 
   if (!pageId) {
-    pageId = await createChildPage(existingPages.parentId, 'page', title);
+    pageId = await createChildPage(existingPages.parentId, existingPages.parentType, title);
     existingPages.set(title, pageId);
     console.log(`Created Notion page: ${title}`);
   } else {
-    await updatePageTitle(pageId, title);
     await clearPageChildren(pageId);
     console.log(`Updated Notion page: ${title}`);
   }
@@ -460,6 +459,7 @@ async function main() {
   const existingPages = await getChildPages(projectPageId);
 
   existingPages.parentId = projectPageId;
+  existingPages.parentType = 'block';
 
   for (const file of files) {
     await syncFile(file, existingPages);
