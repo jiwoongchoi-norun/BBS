@@ -17,6 +17,14 @@ if (!notionToken || !parentPageId) {
   process.exit(1);
 }
 
+function maskPageId(pageId) {
+  if (!pageId || pageId.length < 8) {
+    return '(invalid)';
+  }
+
+  return `${pageId.slice(0, 4)}...${pageId.slice(-4)}`;
+}
+
 async function notionRequest(method, endpoint, body) {
   const response = await fetch(`${NOTION_API_BASE}${endpoint}`, {
     method,
@@ -38,6 +46,10 @@ async function notionRequest(method, endpoint, body) {
   }
 
   return response.json();
+}
+
+async function validateParentPage() {
+  await notionRequest('GET', `/pages/${parentPageId}`);
 }
 
 function getMarkdownFiles(dir) {
@@ -345,6 +357,9 @@ async function main() {
     console.log('No markdown files found under docs.');
     return;
   }
+
+  console.log(`Notion sync mode: direct-page (${maskPageId(parentPageId)})`);
+  await validateParentPage();
 
   const existingPages = await getChildPages(parentPageId);
 

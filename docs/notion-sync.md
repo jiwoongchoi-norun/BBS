@@ -125,4 +125,4 @@ node scripts/sync-notion.js
 - 복잡한 Markdown 표는 Notion 표가 아니라 코드블록 형태로 동기화될 수 있다.
 - 이미지 파일 업로드까지 자동 변환하지는 않는다.
 
-마지막 동기화 테스트: 2026-05-18 BBS_Project 직접 동기화
+마지막 동기화 테스트: 2026-05-18 direct-page mode 확인
