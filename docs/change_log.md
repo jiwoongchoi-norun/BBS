@@ -6,6 +6,12 @@
   - 추천 후 read 화면으로 돌아올 때 `skipViewCount` 분기에서 bind placeholder가 없는 `BEGIN NULL; END;`에 `{ brdno }`를 넘겨 `NJS-098`이 발생하던 문제 수정
   - 조회수 증가를 건너뛰는 경우 빈 bind `{}`를 넘기도록 정리
   - `docs/troubleshooting.md`에 원인과 수정 기준 추가
+- 좋아요/싫어요 버튼 UI 개선
+  - `public/images`의 통합 PNG를 기반으로 `reaction-icons-sprite.png` 생성
+  - 상세 화면 추천 버튼을 이미지 아이콘 + 카운트 중심 UI로 변경
+  - LIKE/DISLIKE POST 값과 기존 추천 처리 로직은 유지
+- 공통 상단 표시 정리
+  - 네비게이션 브랜드명을 `BBS 게시판`에서 `자유게시판`으로 변경
 - 회원 기능 보강
   - 이름/이메일 기반 아이디 찾기 `GET/POST /bbs/find-id` 추가
   - 내 정보 화면에서 회원 탈퇴 `POST /bbs/withdraw` 추가

@@ -52,20 +52,26 @@
                         추천 현황: 좋아요 <span class="fw-semibold"><%=likeCount%></span> · 싫어요 <span class="fw-semibold"><%=dislikeCount%></span>
                     </div>
                     <% if (loginUser) { %>
-                        <form action="/bbs/reaction" method="post" class="d-inline">
-                            <input type="hidden" name="bbsno" value="<%=column[0]%>">
-                            <input type="hidden" name="reaction_type" value="LIKE">
-                            <button type="submit" class="btn btn-sm <%= selectedReaction === 'LIKE' ? 'btn-primary' : 'btn-outline-primary' %>">
-                                좋아요 <%= selectedReaction === 'LIKE' ? '취소' : '' %>
-                            </button>
-                        </form>
-                        <form action="/bbs/reaction" method="post" class="d-inline">
-                            <input type="hidden" name="bbsno" value="<%=column[0]%>">
-                            <input type="hidden" name="reaction_type" value="DISLIKE">
-                            <button type="submit" class="btn btn-sm <%= selectedReaction === 'DISLIKE' ? 'btn-danger' : 'btn-outline-danger' %>">
-                                싫어요 <%= selectedReaction === 'DISLIKE' ? '취소' : '' %>
-                            </button>
-                        </form>
+                        <div class="reaction-actions">
+                            <form action="/bbs/reaction" method="post" class="d-inline">
+                                <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                <input type="hidden" name="reaction_type" value="LIKE">
+                                <button type="submit" class="reaction-button reaction-like <%= selectedReaction === 'LIKE' ? 'is-active' : '' %>"
+                                    aria-label="좋아요 <%= selectedReaction === 'LIKE' ? '취소' : '선택' %>">
+                                    <span class="reaction-icon" aria-hidden="true"></span>
+                                    <span class="reaction-count"><%=likeCount%></span>
+                                </button>
+                            </form>
+                            <form action="/bbs/reaction" method="post" class="d-inline">
+                                <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                <input type="hidden" name="reaction_type" value="DISLIKE">
+                                <button type="submit" class="reaction-button reaction-dislike <%= selectedReaction === 'DISLIKE' ? 'is-active' : '' %>"
+                                    aria-label="싫어요 <%= selectedReaction === 'DISLIKE' ? '취소' : '선택' %>">
+                                    <span class="reaction-icon" aria-hidden="true"></span>
+                                    <span class="reaction-count"><%=dislikeCount%></span>
+                                </button>
+                            </form>
+                        </div>
                     <% } else { %>
                         <a href="/bbs/login" class="btn btn-sm btn-outline-primary">로그인 후 추천</a>
                     <% } %>
