@@ -47,6 +47,25 @@ WHERE ID = '확인할ID';
 - `GET /bbs/read`
 - `POST /bbs/reaction`
 
+## 좋아요/싫어요 클릭 시 NJS-098 오류가 날 때
+
+오류 예:
+
+```text
+NJS-098: 0 bind placeholders were used in the SQL statement but 1 bind values were provided
+```
+
+원인:
+
+- 좋아요/싫어요 처리 후 read 화면으로 redirect할 때 조회수 증가를 건너뛰기 위해 `GET /bbs/read`가 no-op SQL인 `BEGIN NULL; END;`를 실행합니다.
+- 이 SQL에는 `:brdno` 같은 bind placeholder가 0개입니다.
+- 그런데 기존 구현은 일반 조회수 증가 SQL에서 쓰던 `{ brdno }` bind 객체를 그대로 넘겨 OracleDB 드라이버가 `placeholder 0개, bind 1개` 불일치로 `NJS-098`을 발생시켰습니다.
+
+수정 기준:
+
+- `skipViewCount`가 true이면 bind를 `{}`로 넘깁니다.
+- 일반 조회이면 기존처럼 `UPDATE BBS ... WHERE NO = :brdno`와 `{ brdno }`를 함께 넘깁니다.
+
 ## 파일 업로드 실패
 
 - 허용 확장자인지 확인합니다.

@@ -1141,7 +1141,7 @@ router.get('/read', function (req, res, next) {
 
     connection.execute(
       skipViewCount ? 'BEGIN NULL; END;' : updateSql,
-      { brdno: brdno },
+      skipViewCount ? {} : { brdno: brdno },
       function (err) {
         if (err) {
           connection.release();
