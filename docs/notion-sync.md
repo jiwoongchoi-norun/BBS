@@ -10,25 +10,22 @@
 - 워크플로 파일: `.github/workflows/sync-notion.yml`
 - Notion 대상 부모 페이지: GitHub Secret `NOTION_PARENT_PAGE_ID`
 - Notion API 토큰: GitHub Secret `NOTION_TOKEN`
-- 기본 동기화 위치: `BBS_project` 페이지 아래
+- 기본 동기화 위치: `NOTION_PARENT_PAGE_ID`로 지정한 `BBS_Project` 페이지 바로 아래
 
 각 Markdown 파일은 Notion 부모 페이지 아래의 하위 페이지로 생성된다. 하위 페이지 제목은 Markdown 파일의 첫 번째 H1 제목을 우선 사용하고, H1이 없으면 파일명을 사용한다.
 
 이미 같은 제목의 하위 페이지가 있으면 새로 만들지 않고 기존 페이지 내용을 지운 뒤 최신 Markdown 내용으로 다시 업로드한다.
 
-현재 기본 구조는 다음과 같다. Notion API는 토글 안에 실제 페이지 본문을 직접 생성하는 흐름에 제한이 있으므로, `BBS_project` 실제 페이지는 부모 페이지 아래에 만들고 `데이터베이스실습` 토글 안에는 해당 페이지 링크를 자동으로 추가한다.
+현재 기본 구조는 다음과 같다.
 
 ```text
-NOTION_PARENT_PAGE_ID로 지정한 페이지
-├─ 데이터베이스실습 토글
-│  └─ BBS_project 링크
-└─ BBS_project 페이지
-   ├─ 11week 개발 진행 보고서
-   ├─ architecture
-   └─ ...
+BBS_Project 페이지
+├─ 11week 개발 진행 보고서
+├─ architecture
+└─ ...
 ```
 
-`데이터베이스실습` 토글이나 `BBS_project` 페이지가 없으면 스크립트가 자동으로 생성한다.
+`NOTION_PARENT_PAGE_ID`는 docs 문서를 넣을 최종 대상 페이지 ID를 사용한다.
 
 ## 1. Notion Integration 생성
 
@@ -72,13 +69,13 @@ aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 현재 연결하려는 Notion URL이 다음과 같다면:
 
 ```text
-https://www.notion.so/32867ed6853580cf923edaac24d37f25?source=copy_link
+https://www.notion.so/BBS_Project-36467ed6853580d4a545eb62e86d4675?source=copy_link
 ```
 
 GitHub Secret `NOTION_PARENT_PAGE_ID`에는 아래 값을 등록하면 된다.
 
 ```text
-32867ed6853580cf923edaac24d37f25
+36467ed6853580d4a545eb62e86d4675
 ```
 
 ## 4. GitHub Secrets 등록
@@ -98,13 +95,6 @@ Settings → Secrets and variables → Actions → New repository secret
 
 민감정보는 절대 커밋하지 않는다.
 
-기본 토글명과 프로젝트 페이지명을 바꾸고 싶으면 GitHub Actions workflow의 env에 다음 값을 추가할 수 있다.
-
-```yaml
-NOTION_TARGET_TOGGLE_TITLE: 데이터베이스실습
-NOTION_PROJECT_PAGE_TITLE: BBS_project
-```
-
 ## 5. 수동 실행 방법
 
 로컬에서 테스트하고 싶다면 환경변수를 설정한 뒤 스크립트를 실행한다.
@@ -113,7 +103,7 @@ PowerShell 예시:
 
 ```powershell
 $env:NOTION_TOKEN="secret_xxx"
-$env:NOTION_PARENT_PAGE_ID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+$env:NOTION_PARENT_PAGE_ID="36467ed6853580d4a545eb62e86d4675"
 node scripts/sync-notion.js
 ```
 
@@ -121,7 +111,7 @@ Git Bash 또는 Linux/macOS 예시:
 
 ```bash
 NOTION_TOKEN="secret_xxx" \
-NOTION_PARENT_PAGE_ID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" \
+NOTION_PARENT_PAGE_ID="36467ed6853580d4a545eb62e86d4675" \
 node scripts/sync-notion.js
 ```
 
@@ -135,4 +125,4 @@ node scripts/sync-notion.js
 - 복잡한 Markdown 표는 Notion 표가 아니라 코드블록 형태로 동기화될 수 있다.
 - 이미지 파일 업로드까지 자동 변환하지는 않는다.
 
-마지막 동기화 테스트: 2026-05-18 링크 방식 재실행
+마지막 동기화 테스트: 2026-05-18 BBS_Project 직접 동기화

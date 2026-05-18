@@ -8,13 +8,9 @@ const NOTION_VERSION = '2022-06-28';
 const MAX_CHILDREN_PER_REQUEST = 100;
 const MAX_RICH_TEXT_LENGTH = 1900;
 const DOCS_DIR = path.join(process.cwd(), 'docs');
-const DEFAULT_TOGGLE_TITLE = '데이터베이스실습';
-const DEFAULT_PROJECT_TITLE = 'BBS_project';
 
 const notionToken = process.env.NOTION_TOKEN;
 const parentPageId = process.env.NOTION_PARENT_PAGE_ID;
-const targetToggleTitle = process.env.NOTION_TARGET_TOGGLE_TITLE || DEFAULT_TOGGLE_TITLE;
-const projectPageTitle = process.env.NOTION_PROJECT_PAGE_TITLE || DEFAULT_PROJECT_TITLE;
 
 if (!notionToken || !parentPageId) {
   console.error('Missing NOTION_TOKEN or NOTION_PARENT_PAGE_ID environment variable.');
@@ -252,137 +248,12 @@ async function getChildPages(parentId) {
   return pages;
 }
 
-async function getChildBlocks(parentId) {
-  const blocks = [];
-  let cursor;
-
-  do {
-    const query = cursor ? `?page_size=100&start_cursor=${encodeURIComponent(cursor)}` : '?page_size=100';
-    const result = await notionRequest('GET', `/blocks/${parentId}/children${query}`);
-
-    blocks.push(...(result.results || []));
-    cursor = result.has_more ? result.next_cursor : null;
-  } while (cursor);
-
-  return blocks;
-}
-
-function getBlockTitle(block) {
-  const value = block[block.type];
-
-  if (!value || !Array.isArray(value.rich_text)) {
-    return '';
-  }
-
-  return value.rich_text.map((text) => text.plain_text || '').join('').trim();
-}
-
-async function findChildToggle(parentId, title) {
-  const blocks = await getChildBlocks(parentId);
-
-  return blocks.find((block) => block.type === 'toggle' && getBlockTitle(block) === title);
-}
-
-async function createToggle(parentId, title) {
-  const result = await notionRequest('PATCH', `/blocks/${parentId}/children`, {
-    children: [
-      {
-        object: 'block',
-        type: 'toggle',
-        toggle: {
-          rich_text: [plainText(title)],
-          children: []
-        }
-      }
-    ]
-  });
-
-  return result.results[0];
-}
-
-async function createChildPageBlock(parentId, title) {
-  const result = await notionRequest('PATCH', `/blocks/${parentId}/children`, {
-    children: [
-      {
-        object: 'block',
-        type: 'child_page',
-        child_page: {
-          title
-        }
-      }
-    ]
-  });
-
-  return result.results[0].id;
-}
-
-async function ensureLinkToPage(parentBlockId, pageId, title) {
-  const blocks = await getChildBlocks(parentBlockId);
-  const existingLink = blocks.find(
-    (block) =>
-      block.type === 'link_to_page' &&
-      block.link_to_page &&
-      block.link_to_page.type === 'page_id' &&
-      block.link_to_page.page_id === pageId
-  );
-
-  if (existingLink) {
-    return;
-  }
-
-  const existingChildPage = blocks.find((block) => block.type === 'child_page' && block.child_page.title === title);
-
-  if (existingChildPage) {
-    await notionRequest('DELETE', `/blocks/${existingChildPage.id}`);
-  }
-
-  await notionRequest('PATCH', `/blocks/${parentBlockId}/children`, {
-    children: [
-      {
-        object: 'block',
-        type: 'link_to_page',
-        link_to_page: {
-          type: 'page_id',
-          page_id: pageId
-        }
-      }
-    ]
-  });
-}
-
-async function getOrCreateToggle(parentId, title) {
-  const existing = await findChildToggle(parentId, title);
-
-  if (existing) {
-    return existing.id;
-  }
-
-  const created = await createToggle(parentId, title);
-  console.log(`Created Notion toggle: ${title}`);
-  return created.id;
-}
-
-function buildPageParent(parentId, parentType) {
-  if (parentType === 'block') {
-    return {
-      type: 'block_id',
-      block_id: parentId
-    };
-  }
-
-  return {
-    type: 'page_id',
-    page_id: parentId
-  };
-}
-
-async function createChildPage(parentId, parentType, title) {
-  if (parentType === 'block') {
-    return createChildPageBlock(parentId, title);
-  }
-
+async function createChildPage(parentId, title) {
   const page = await notionRequest('POST', '/pages', {
-    parent: buildPageParent(parentId, parentType),
+    parent: {
+      type: 'page_id',
+      page_id: parentId
+    },
     properties: {
       title: {
         title: [
@@ -398,33 +269,6 @@ async function createChildPage(parentId, parentType, title) {
   });
 
   return page.id;
-}
-
-async function getOrCreateChildPage(parentId, parentType, title) {
-  const pages = await getChildPages(parentId);
-  const existingPageId = pages.get(title);
-
-  if (existingPageId) {
-    return existingPageId;
-  }
-
-  const pageId = await createChildPage(parentId, parentType, title);
-  console.log(`Created Notion project page: ${title}`);
-  return pageId;
-}
-
-async function getOrCreateProjectPage(parentPageIdValue, toggleId, title) {
-  const pages = await getChildPages(parentPageIdValue);
-  let pageId = pages.get(title);
-
-  if (!pageId) {
-    pageId = await createChildPage(parentPageIdValue, 'page', title);
-    console.log(`Created Notion project page: ${title}`);
-  }
-
-  await ensureLinkToPage(toggleId, pageId, title);
-
-  return pageId;
 }
 
 async function updatePageTitle(pageId, title) {
@@ -478,7 +322,7 @@ async function syncFile(filePath, existingPages) {
   ];
 
   if (!pageId) {
-    pageId = await createChildPage(existingPages.parentId, existingPages.parentType, title);
+    pageId = await createChildPage(existingPages.parentId, title);
     existingPages.set(title, pageId);
     console.log(`Created Notion page: ${title}`);
   } else {
@@ -502,12 +346,9 @@ async function main() {
     return;
   }
 
-  const toggleId = await getOrCreateToggle(parentPageId, targetToggleTitle);
-  const projectPageId = await getOrCreateProjectPage(parentPageId, toggleId, projectPageTitle);
-  const existingPages = await getChildPages(projectPageId);
+  const existingPages = await getChildPages(parentPageId);
 
-  existingPages.parentId = projectPageId;
-  existingPages.parentType = 'page';
+  existingPages.parentId = parentPageId;
 
   for (const file of files) {
     await syncFile(file, existingPages);
