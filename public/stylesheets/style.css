@@ -624,6 +624,14 @@ textarea.form-control {
   box-shadow: 0 0 0 3px var(--bbs-primary-focus);
 }
 
+.bbs-footer {
+  border-top: 1px solid var(--bbs-hairline);
+  color: var(--bbs-ink-subtle);
+  font-size: 0.82rem;
+  margin-top: 2.5rem;
+  padding: 1.1rem 0 1.35rem;
+}
+
 .auth-card .card-body,
 .form-card .card-body {
   padding: 1.18rem;
@@ -679,6 +687,10 @@ dl.row dd {
     padding-top: 1.25rem !important;
   }
 
+  main > .d-flex:first-child {
+    gap: 0.85rem !important;
+  }
+
   .card-body,
   .auth-card .card-body,
   .form-card .card-body,
@@ -702,6 +714,23 @@ dl.row dd {
   .navbar .navbar-text {
     margin: 0.08rem 0;
   }
+
+  .table {
+    min-width: 680px;
+  }
+
+  .table > :not(caption) > * > * {
+    padding: 0.68rem 0.72rem;
+  }
+
+  .board-read-content {
+    font-size: 0.92rem;
+    min-height: 160px;
+  }
+
+  textarea.form-control {
+    min-height: 150px;
+  }
 }
 
 @media (max-width: 575.98px) {
@@ -712,7 +741,12 @@ dl.row dd {
 
   .btn-action,
   .card-footer .btn,
-  form .btn {
+  .auth-card form > .d-flex .btn,
+  .form-card form > .d-flex .btn {
+    width: 100%;
+  }
+
+  main > .d-flex:first-child .btn {
     width: 100%;
   }
 
@@ -729,5 +763,38 @@ dl.row dd {
 
   .pagination {
     flex-wrap: wrap;
+  }
+
+  .card,
+  .board-card {
+    border-radius: var(--bbs-radius-md);
+  }
+
+  .table {
+    font-size: 0.82rem;
+    min-width: 620px;
+  }
+
+  .table a.text-dark {
+    max-width: 360px !important;
+  }
+
+  .content-card .card-header {
+    align-items: flex-start !important;
+    gap: 0.5rem;
+  }
+
+  .list-group-item .btn {
+    width: 100%;
+  }
+
+  .modal-dialog {
+    margin-left: 0.92rem;
+    margin-right: 0.92rem;
+  }
+
+  .bbs-footer {
+    margin-top: 1.6rem;
+    text-align: center;
   }
 }
