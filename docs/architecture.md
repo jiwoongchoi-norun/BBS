@@ -23,7 +23,7 @@ Browser
 | `config/dbconfig.js`           | `.env` 기반 OracleDB 접속 설정                     |
 | `routes/bbs.js`                | 게시판, 회원, 댓글, 추천, 파일 라우터              |
 | `views/bbs/*.ejs`              | 화면 템플릿                                        |
-| `views/bbs/partials/*.ejs`     | 공통 head/nav                                      |
+| `views/bbs/partials/*.ejs`     | 공통 head/nav/footer                               |
 | `public/stylesheets/style.css` | 화면 스타일                                        |
 | `scripts/*.sql`                | DB 생성/마이그레이션/롤백 스크립트                 |
 | `uploads/bbs`                  | 업로드 파일 저장 경로                              |
@@ -43,15 +43,19 @@ Browser
 | GET    | `/bbs/delete`         | 글 soft delete                             |
 | GET    | `/bbs/login`          | 로그인 화면                                |
 | POST   | `/bbs/logincheck`     | 로그인 처리, bcrypt 전환                   |
+| GET    | `/bbs/find-id`        | 아이디 찾기 화면                           |
+| POST   | `/bbs/find-id`        | 이름/이메일 기반 아이디 찾기               |
 | GET    | `/bbs/logout`         | 로그아웃                                   |
 | GET    | `/bbs/signup`         | 회원가입 화면                              |
 | POST   | `/bbs/signupsave`     | 회원가입 저장                              |
 | GET    | `/bbs/updatesignup`   | 회원정보 수정 화면                         |
 | POST   | `/bbs/updatesignsave` | 회원정보 수정 저장                         |
+| POST   | `/bbs/withdraw`       | 회원 탈퇴 soft deactivate                  |
 | POST   | `/bbs/reaction`       | 좋아요/싫어요 처리                         |
 | POST   | `/bbs/wsave`          | 댓글 작성                                  |
 | POST   | `/bbs/wreply`         | 대댓글 작성                                |
-| GET    | `/bbs/wdelete`        | 댓글 soft delete                           |
+| POST   | `/bbs/wupdate`        | 댓글 수정                                  |
+| POST   | `/bbs/wdelete`        | 댓글 soft delete                           |
 | GET    | `/bbs/download`       | 첨부파일 다운로드                          |
 
 ## 핵심 처리 흐름
@@ -60,11 +64,21 @@ Browser
 
 1. `POST /bbs/logincheck`
 2. `LOGIN`에서 사용자 조회
-3. `PASSWORD_ALGO` 또는 bcrypt prefix로 bcrypt 여부 판단
-4. bcrypt 계정이면 `bcrypt.compare`
-5. legacy SHA-512 계정이면 `PASSWORD + SALT` 검증
-6. legacy 로그인 성공 시 bcrypt로 재저장
-7. `req.session.user` 저장
+3. `LOGIN.OK = 1` 활성 계정인지 확인
+4. `PASSWORD_ALGO` 또는 bcrypt prefix로 bcrypt 여부 판단
+5. bcrypt 계정이면 `bcrypt.compare`
+6. legacy SHA-512 계정이면 `PASSWORD + SALT` 검증
+7. legacy 로그인 성공 시 bcrypt로 재저장
+8. `req.session.user` 저장
+
+### 회원 탈퇴
+
+1. `POST /bbs/withdraw`
+2. 로그인 사용자만 허용
+3. 비밀번호와 확인 문구 `탈퇴` 검증
+4. bcrypt 또는 legacy SHA-512 방식으로 현재 비밀번호 검증
+5. `LOGIN.OK = 0`으로 계정 비활성화
+6. 세션 종료 후 목록으로 이동
 
 ### 게시글 읽기와 조회수
 
@@ -103,4 +117,5 @@ Browser
 - `routes/bbs.js`에 기능이 집중되어 있으므로 코드 리뷰 시 라우터 단위로 끊어서 보는 것이 좋습니다.
 - `oracledb.autoCommit = true`라 여러 SQL을 한 트랜잭션으로 묶는 구조는 아닙니다.
 - 게시글/댓글 삭제는 DB soft delete입니다.
+- 회원 탈퇴는 `LOGIN.OK = 0` soft deactivate입니다.
 - 업로드 파일은 DB 메타데이터와 실제 파일이 분리되어 있습니다.

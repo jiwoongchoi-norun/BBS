@@ -60,15 +60,20 @@ OracleDB 접속 정보가 `.env`에서 들어옵니다.
 
 1. `GET /bbs/login`
 2. `POST /bbs/logincheck`
-3. `GET /bbs/logout`
-4. `GET /bbs/signup`
-5. `POST /bbs/signupsave`
-6. `GET /bbs/updatesignup`
-7. `POST /bbs/updatesignsave`
+3. `GET/POST /bbs/find-id`
+4. `GET /bbs/logout`
+5. `GET /bbs/signup`
+6. `POST /bbs/signupsave`
+7. `GET /bbs/updatesignup`
+8. `POST /bbs/updatesignsave`
+9. `POST /bbs/withdraw`
 
 핵심 포인트:
 
 - 로그인 성공 시 `req.session.user` 저장
+- `LOGIN.OK = 1`인 활성 계정만 로그인 허용
+- 아이디 찾기는 이름과 이메일이 일치하는 활성 계정만 조회
+- 회원 탈퇴는 비밀번호 확인 후 `LOGIN.OK = 0`으로 비활성화
 - bcrypt 계정은 `bcrypt.compare`
 - legacy SHA-512 계정은 성공 시 bcrypt로 재저장
 - 신규 가입과 회원정보 수정은 bcrypt만 저장
@@ -89,6 +94,8 @@ OracleDB 접속 정보가 `.env`에서 들어옵니다.
 핵심 포인트:
 
 - 목록/검색은 페이징을 사용합니다.
+- 로그인 사용자는 `mine=1`로 본인 작성글만 볼 수 있습니다.
+- 목록 제목 옆에는 활성 댓글/대댓글 수가 표시됩니다.
 - 글 작성은 로그인 필요입니다.
 - 글 수정/삭제는 작성자만 가능합니다.
 - 삭제는 `OK = 0` soft delete입니다.
@@ -116,14 +123,15 @@ OracleDB 접속 정보가 `.env`에서 들어옵니다.
 
 1. `POST /bbs/wsave`
 2. `POST /bbs/wreply`
-3. `GET /bbs/wdelete`
-4. `views/bbs/read.ejs` 댓글 출력 부분
+3. `POST /bbs/wupdate`
+4. `POST /bbs/wdelete`
+5. `views/bbs/read.ejs` 댓글 출력 부분
 
 핵심 포인트:
 
 - 댓글과 대댓글은 모두 `BBSW` 테이블에 저장합니다.
 - 대댓글은 `PARENT_NO`와 `DEPTH`로 구분합니다.
-- 댓글 삭제는 작성자 본인만 가능합니다.
+- 댓글 수정/삭제는 작성자 본인만 가능합니다.
 
 ## 8. 파일 업로드와 다운로드
 
@@ -146,11 +154,12 @@ OracleDB 접속 정보가 `.env`에서 들어옵니다.
 
 1. `views/bbs/partials/head.ejs`
 2. `views/bbs/partials/nav.ejs`
-3. `views/bbs/list.ejs`
-4. `views/bbs/read.ejs`
-5. `views/bbs/form.ejs`
-6. `views/bbs/update.ejs`
-7. 로그인/회원가입 관련 EJS
+3. `views/bbs/partials/footer.ejs`
+4. `views/bbs/list.ejs`
+5. `views/bbs/read.ejs`
+6. `views/bbs/form.ejs`
+7. `views/bbs/update.ejs`
+8. 로그인/회원가입/아이디 찾기 관련 EJS
 
 ## 10. DB 스크립트
 
