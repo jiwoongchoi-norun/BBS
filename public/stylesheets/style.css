@@ -449,6 +449,52 @@ textarea.form-control {
   color: var(--bbs-primary-hover) !important;
 }
 
+.comment-count-link {
+  align-items: center;
+  border-radius: var(--bbs-radius-sm);
+  color: var(--bbs-ink-subtle);
+  display: inline-flex;
+  font-size: 0.78rem;
+  font-weight: 560;
+  gap: 0.22rem;
+  margin-left: 0.32rem;
+  padding: 0.06rem 0.26rem;
+  text-decoration: none;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.comment-count-link:hover,
+.comment-count-link:focus {
+  background: var(--bbs-primary-soft);
+  color: var(--bbs-primary-hover);
+}
+
+.comment-count-link.has-comments {
+  color: var(--bbs-primary);
+}
+
+.comment-count-icon {
+  border: 1.5px solid currentColor;
+  border-radius: 4px;
+  display: inline-block;
+  height: 0.76em;
+  position: relative;
+  width: 0.92em;
+}
+
+.comment-count-icon::after {
+  border-color: currentColor transparent transparent currentColor;
+  border-style: solid;
+  border-width: 0.2em 0 0 0.24em;
+  bottom: -0.24em;
+  content: '';
+  height: 0;
+  left: 0.18em;
+  position: absolute;
+  width: 0;
+}
+
 .table thead a {
   align-items: center;
   border-radius: var(--bbs-radius-xs);

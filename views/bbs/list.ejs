@@ -237,7 +237,12 @@
                                                 title="<%=column[1]%>">
                                                 <%=column[1]%>
                                             </a>
-                                            <span class="ms-1 small <%= commentCount > 0 ? 'text-primary fw-semibold' : 'text-secondary' %>">[<%=commentCount%>]</span>
+                                            <a class="comment-count-link <%= commentCount > 0 ? 'has-comments' : '' %>"
+                                                href="/bbs/read?brdno=<%=postId%>#comments"
+                                                aria-label="댓글 <%=commentCount%>개 보기">
+                                                <span class="comment-count-icon" aria-hidden="true"></span>
+                                                <span><%=commentCount%></span>
+                                            </a>
                                         </td>
                                         <td class="text-secondary"><%=column[2]%></td>
                                         <td class="text-center"><%=column[5]%></td>
