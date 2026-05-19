@@ -56,3 +56,37 @@
 ## 제출 기준 판단
 
 과제 수준에서는 SQL Injection 완화, 비밀번호 평문 저장 방지, 세션 분리, 작성자 권한 체크가 반영되어 있습니다. 실서비스 기준으로는 CSRF, 트랜잭션, 파일 삭제 정책, 접근 로그, 계정 잠금 정책을 추가해야 합니다.
+
+## Authorization Update
+- Attachment download now revalidates the logged-in user against the original post writer in the server route and returns 403 on mismatch.
+
+## Input Validation Update
+
+- `title` is required and limited to 200 characters on the server.
+- `content` is required and limited to 4000 characters on the server.
+- `id` is required and limited to 4-20 characters using only letters, numbers, and `_`.
+- `email` is required on signup/account update and must match email format when provided.
+- `phone` is required on signup and must match the `010-1234-5678` style format.
+- Validation failures keep the existing screen flow where possible and show a friendly form or flash message.
+
+## XSS Output Escaping Update
+
+- Checked `views/bbs/*.ejs` for raw EJS output tags.
+- `<%- %>` is used only for EJS partial includes such as `head`, `nav`, `flash`, and `footer`.
+- User-controlled fields including post title, post content, writer/name, search keyword, file name, and comment content use `<%= %>` escaped output.
+- Rich text/HTML rendering is not enabled; title, content, and comments remain plain text when displayed.
+
+## CSRF Protection Update
+
+- Added `csurf` session-based CSRF protection to the `/bbs` router.
+- `res.locals.csrfToken` is generated for BBS views and included in every POST form as hidden `_csrf`.
+- Covered login, find ID, signup, account update, account withdrawal, post create/update, reactions, comments, replies, comment update, and comment delete forms.
+- The file upload form keeps a hidden token and also sends `_csrf` in the action query so multipart upload can pass CSRF validation before `multer` parses the file body.
+- Invalid or missing CSRF tokens return HTTP 403.
+
+## Session Cookie Security Update
+
+- `SESSION_SECRET` remains required from `.env`; no hardcoded fallback is used.
+- `express-session` cookies now use `httpOnly: true`, `sameSite: 'lax'`, and a 2 hour `maxAge`.
+- Cookie `secure` is enabled only when `NODE_ENV=production`, so local `http://localhost` development remains usable.
+

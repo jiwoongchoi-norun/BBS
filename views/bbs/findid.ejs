@@ -17,6 +17,7 @@
             </div>
             <div class="card-body">
                 <form action="/bbs/find-id" method="post">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="name">이름</label>
                         <input class="form-control" type="text" id="name" name="name" maxlength="100"

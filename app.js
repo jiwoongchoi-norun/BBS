@@ -11,6 +11,7 @@ var usersRouter = require('./routes/users');
 var bbsRouter = require('./routes/bbs');
 var app = express();
 var sessionSecret = process.env.SESSION_SECRET;
+var isProduction = process.env.NODE_ENV === 'production';
 
 if (!sessionSecret) {
   throw new Error('SESSION_SECRET is required. Set it in your .env file.');
@@ -30,7 +31,13 @@ app.use(
   expressSession({
     secret: sessionSecret,
     resave: false,
-    saveUninitialized: false
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isProduction,
+      maxAge: 1000 * 60 * 60 * 2
+    }
   })
 );
 app.use(function (req, res, next) {

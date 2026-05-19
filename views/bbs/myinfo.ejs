@@ -38,6 +38,7 @@
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
                     <form action="/bbs/withdraw" method="post">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <div class="modal-header">
                             <h2 class="modal-title h5 fw-bold" id="withdrawModalLabel">회원 탈퇴 확인</h2>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="닫기"></button>

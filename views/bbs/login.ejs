@@ -12,6 +12,7 @@
             </div>
             <div class="card-body">
                 <form name="form1" action="/bbs/logincheck" method="post">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="id">아이디</label>
                         <input class="form-control" type="text" id="id" name="id" placeholder="id" value="">

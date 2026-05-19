@@ -18,6 +18,7 @@
             </div>
             <div class="card-body">
                 <form name="form1" action="/bbs/signupsave" method="post" id="signupForm">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <input type="hidden" id="idChecked" name="idChecked" value="N">
                     <input type="hidden" id="checkedId" name="checkedId" value="">
 

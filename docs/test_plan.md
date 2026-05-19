@@ -100,3 +100,28 @@ npm run security:semgrep
 16. 회원정보 수정
 17. 회원 탈퇴
 18. OracleDB 테이블 조회 결과
+
+## Authorization test
+- Attachment download by a non-writer should return 403, while the writer can download normally after login.
+
+## Input validation test
+
+- Signup: blank `id`, invalid characters in `id`, invalid `email`, blank/invalid `phone` should stay on signup and show a message.
+- ID check: `id` shorter than 4 characters or containing characters outside letters, numbers, and `_` should return unavailable JSON with a message.
+- Account update: invalid `id` or `email`, blank password, or password shorter than 4 characters should stay on the account update flow with a message.
+- Post create/update: blank `title`, blank `content`, `title` over 200 characters, or `content` over 4000 characters should be rejected by the server.
+- Run `npm run verify:app` after code changes.
+
+## XSS escaping test
+
+- Create or edit a post with `<script>alert(1)</script>` in `title` and `content`; the list, read, and update screens should show it as text, not execute it.
+- Create or edit a comment/reply with `<img src=x onerror=alert(1)>`; the read screen and comment edit textarea should show it as text, not execute it.
+- Confirm `views/bbs/*.ejs` keeps user-controlled output on `<%= %>` and reserves `<%- %>` for safe partial includes only.
+
+## CSRF protection test
+
+- Open each BBS form normally and confirm POST actions still work: login, find ID, signup, account update, withdrawal, post create/update, reaction, comment/reply create, comment update, and comment delete.
+- Submit a POST request to `/bbs/logincheck` or `/bbs/wsave` without `_csrf`; it should return HTTP 403.
+- Confirm the file upload post form includes `_csrf` and still uploads an allowed file successfully.
+- Run `npm run verify:app` after CSRF changes.
+

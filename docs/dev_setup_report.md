@@ -1,5 +1,11 @@
 # Dev Setup Report
 
+## Environment Variables
+
+- `NODE_ENV=development` for local `http://localhost` testing.
+- `NODE_ENV=production` enables the session cookie `secure` option and should be used only behind HTTPS.
+- `SESSION_SECRET` must be set in `.env`; the app does not use a hardcoded fallback.
+
 ## 설치된 개발 도구
 
 | 도구     | 용도                  |

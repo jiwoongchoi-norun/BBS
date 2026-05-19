@@ -19,6 +19,7 @@
     "@notionhq/client": "^5.21.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "~1.4.4",
+    "csurf": "^1.11.0",
     "debug": "~2.6.9",
     "dotenv": "^17.4.2",
     "ejs": "^5.0.2",

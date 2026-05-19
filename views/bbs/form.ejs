@@ -5,20 +5,26 @@
 <body>
     <%- include('partials/nav') %>
 
+    <%
+        var savedForm = typeof formData !== 'undefined' ? formData : {};
+    %>
+
     <main class="container py-4 py-lg-5">
         <div class="card board-card form-card mx-auto">
             <div class="card-header bg-white">
                 <h1 class="h4 fw-bold mb-0">글쓰기</h1>
             </div>
             <div class="card-body">
-                <form name="form1" action="/bbs/save" method="post" enctype="multipart/form-data">
+                <form name="form1" action="/bbs/save?_csrf=<%= csrfToken %>" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="brdtitle">제목</label>
-                        <input class="form-control" type="text" id="brdtitle" name="brdtitle" maxlength="250" value="">
+                        <input class="form-control" type="text" id="brdtitle" name="brdtitle" maxlength="200"
+                            value="<%= savedForm.title || '' %>">
                     </div>
                     <div class="mb-4">
                         <label class="form-label fw-semibold" for="brdmemo">내용</label>
-                        <textarea class="form-control" id="brdmemo" name="brdmemo" rows="8"></textarea>
+                        <textarea class="form-control" id="brdmemo" name="brdmemo" rows="8" maxlength="4000"><%= savedForm.content || '' %></textarea>
                     </div>
                     <div class="mb-4">
                         <label class="form-label fw-semibold" for="uploadFile">첨부파일</label>

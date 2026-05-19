@@ -57,6 +57,7 @@
                     <% if (loginUser) { %>
                         <div class="reaction-actions">
                             <form action="/bbs/reaction" method="post" class="d-inline">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="hidden" name="bbsno" value="<%=column[0]%>">
                                 <input type="hidden" name="reaction_type" value="LIKE">
                                 <button type="submit" class="reaction-button reaction-like <%= selectedReaction === 'LIKE' ? 'is-active' : '' %>"
@@ -66,6 +67,7 @@
                                 </button>
                             </form>
                             <form action="/bbs/reaction" method="post" class="d-inline">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                 <input type="hidden" name="bbsno" value="<%=column[0]%>">
                                 <input type="hidden" name="reaction_type" value="DISLIKE">
                                 <button type="submit" class="reaction-button reaction-dislike <%= selectedReaction === 'DISLIKE' ? 'is-active' : '' %>"
@@ -129,6 +131,7 @@
             <div class="card-body">
                 <% if (loginUser) { %>
                     <form action="/bbs/wsave" method="post" class="mb-4">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <input type="hidden" name="bbsno" value="<%=column[0]%>">
                         <label class="form-label fw-semibold" for="commentContent">댓글 작성</label>
                         <textarea class="form-control mb-2" id="commentContent" name="content" rows="3" maxlength="4000" required></textarea>
@@ -205,6 +208,7 @@
                                 <% if (loginUser && !isDeletedComment) { %>
                                     <div class="collapse mt-3" id="replyForm<%= comment[0] %>">
                                         <form action="/bbs/wreply" method="post" class="border-top pt-3">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                             <input type="hidden" name="bbsno" value="<%=column[0]%>">
                                             <input type="hidden" name="parent_no" value="<%=comment[0]%>">
                                             <label class="form-label small text-secondary" for="replyContent<%= comment[0] %>">답글 작성</label>
@@ -218,6 +222,7 @@
                                 <% if (isMine) { %>
                                     <div class="collapse commentEditToggle<%= comment[0] %>" id="editCommentForm<%= comment[0] %>">
                                         <form action="/bbs/wupdate" method="post" class="mt-2">
+                                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                             <input type="hidden" name="bbsno" value="<%=column[0]%>">
                                             <input type="hidden" name="wno" value="<%=comment[0]%>">
                                             <label class="form-label small text-secondary" for="editCommentContent<%= comment[0] %>">댓글 수정</label>
@@ -244,6 +249,7 @@
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">취소</button>
                                                     <form action="/bbs/wdelete" method="post" class="d-inline">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                         <input type="hidden" name="bbsno" value="<%=column[0]%>">
                                                         <input type="hidden" name="wno" value="<%=comment[0]%>">
                                                         <button type="submit" class="btn btn-danger btn-sm">삭제</button>
