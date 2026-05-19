@@ -72,15 +72,19 @@ app.use(function (req, res, next) {
 
 // error handler
 app.use(function (err, req, res, _next) {
+  var status = err.status || 500;
+  var publicMessage = status === 404 ? '요청한 페이지를 찾을 수 없습니다.' : '요청 처리 중 문제가 발생했습니다.';
+  var displayMessage = isProduction ? publicMessage : err.message;
+
   // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
+  res.locals.message = displayMessage;
+  res.locals.error = isProduction ? {} : err;
 
   // render the error page
-  res.status(err.status || 500);
+  res.status(status);
   res.render('error', {
-    message: err.message,
-    error: req.app.get('env') === 'development' ? err : {},
+    message: displayMessage,
+    error: isProduction ? {} : err,
     errcode: 0
   });
 });

@@ -1,5 +1,29 @@
 # BBS 게시판 프로젝트
 
+## Security Update Status
+
+Security update steps 1-10 are complete in the current codebase and are summarized in `docs/security_report.md`.
+
+Completed security scope:
+
+- SQL Injection mitigation with Oracle bind variables and whitelist validation.
+- Authorization checks for post/comment/file actions.
+- Server-side input validation.
+- XSS output escaping review for EJS views.
+- CSRF protection for BBS POST forms.
+- Session cookie hardening.
+- Password policy enforcement.
+- Assignment-only password reset token flow.
+- Upload restrictions and download path validation.
+- Production error message minimization.
+
+Remaining candidates:
+
+- Automated test coverage.
+- More precise transaction boundaries.
+- Account lockout and audit logging policy.
+- Admin features.
+
 Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트입니다. 교수님 PPT 요구사항의 기본 게시판 흐름을 충족하고, 보안/사용성/디자인 개선 기능을 추가했습니다.
 
 ## 현재 구현 상태

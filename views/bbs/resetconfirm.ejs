@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<%- include('partials/head', { title: '새 비밀번호 설정' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="container py-4 py-lg-5">
+        <%
+            var currentToken = typeof token !== 'undefined' ? token : '';
+            var canReset = typeof validToken !== 'undefined' ? validToken : false;
+            var resultMessage = typeof message !== 'undefined' ? message : '';
+        %>
+        <div class="card board-card auth-card mx-auto">
+            <div class="card-header bg-white">
+                <h1 class="h4 fw-bold mb-0">새 비밀번호 설정</h1>
+            </div>
+            <div class="card-body">
+                <% if (resultMessage) { %>
+                    <div class="alert <%= canReset ? 'alert-warning' : 'alert-danger' %>"><%= resultMessage %></div>
+                <% } %>
+
+                <% if (canReset) { %>
+                    <form action="/bbs/reset-password/confirm" method="post">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="token" value="<%= currentToken %>">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="pw1">새 비밀번호</label>
+                            <input class="form-control" type="password" id="pw1" name="pw1" maxlength="100" required>
+                            <div class="form-text">최소 8자, 영문과 숫자를 포함해야 합니다.</div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold" for="pw2">새 비밀번호 확인</label>
+                            <input class="form-control" type="password" id="pw2" name="pw2" maxlength="100" required>
+                        </div>
+                        <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
+                            <a href="/bbs/login" class="btn btn-outline-secondary btn-action">로그인</a>
+                            <button type="submit" class="btn btn-primary btn-action">비밀번호 저장</button>
+                        </div>
+                    </form>
+                <% } else { %>
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="/bbs/reset-password" class="btn btn-outline-primary btn-action">토큰 다시 요청</a>
+                        <a href="/bbs/login" class="btn btn-primary btn-action">로그인</a>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </main>
+    <%- include('partials/footer') %>
+</body>
+</html>

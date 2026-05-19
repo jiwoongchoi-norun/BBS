@@ -1,5 +1,13 @@
 # Architecture
 
+## Upload Storage Policy
+
+- Uploaded files are stored under `uploads/bbs` with server-generated filenames.
+- `BBS_FILE` keeps the original filename, generated filename, relative storage path, file size, MIME type, and active status.
+- File upload accepts one file up to 10MB and checks both extension and MIME type.
+- Download resolves the generated filename under `uploads/bbs` and rejects mismatched DB path metadata or traversal attempts.
+- Post deletion remains a DB soft delete, but active attachment rows are marked inactive and matching physical files are deleted best-effort.
+
 ## 전체 구조
 
 ```text

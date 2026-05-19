@@ -125,3 +125,37 @@ npm run security:semgrep
 - Confirm the file upload post form includes `_csrf` and still uploads an allowed file successfully.
 - Run `npm run verify:app` after CSRF changes.
 
+## Password policy test
+
+- Signup with a password shorter than 8 characters should stay on signup and show a password policy message.
+- Signup with 8+ letters only or 8+ numbers only should stay on signup and show a password policy message.
+- Signup with mismatched password confirmation should stay on signup and show a mismatch message.
+- Account update should reject the same weak or mismatched passwords.
+- Signup/account update with a password such as `abc12345` should pass the password policy and continue the normal flow.
+
+## Password reset token test
+
+- Apply `scripts/schema.sql` on a new DB or `scripts/migration.sql` on an existing DB and confirm `RESET_TOKEN` exists.
+- Open `/bbs/reset-password`, enter an active account ID and matching email, and confirm a reset link is shown on screen.
+- Open the reset link before expiration and set a new password that satisfies the password policy, such as `abc12345`.
+- Confirm the token row is marked used and the same token cannot reset the password again.
+- Confirm an invalid, missing, expired, or already used token shows an error and does not update the password.
+- Confirm weak or mismatched new passwords are rejected by the reset form.
+
+## Upload restriction test
+
+- Upload an allowed file under 10MB, such as `.png` with `image/png`, and confirm it appears on the read screen.
+- Try a disallowed extension such as `.exe` or `.js`; the post form should show an upload warning and no file should be saved.
+- Try a MIME mismatch, such as a renamed executable with an allowed extension; upload should be rejected.
+- Try a file larger than 10MB; the post form should show the size-limit warning.
+- Delete a post with an attachment and confirm `BBS_FILE.OK = 0` and the physical file under `uploads/bbs` is removed when present.
+- Request `/bbs/download?fno=abc` or a tampered file id/path metadata case; the route should reject it and never serve a path outside `uploads/bbs`.
+
+## Production error message test
+
+- Run with `NODE_ENV=production` and trigger a missing page; the error page should show a generic not-found message without stack details.
+- Run with `NODE_ENV=production` and trigger a server error; the error page should show a generic processing error without `err.message` or stack details.
+- Run in development mode and confirm debugging details are still available through the normal development error handler data.
+- Try logging in with a non-existent ID and with a wrong password; both should show the same generic login failure message.
+- Try logging in with a deactivated account; the deactivated-account guidance should still be shown.
+

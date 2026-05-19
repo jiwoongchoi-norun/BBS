@@ -14,21 +14,21 @@ var bcryptSaltRounds = 12;
 var csrfProtection = csrf();
 var uploadDir = path.join(__dirname, '..', 'uploads', 'bbs');
 var skipViewCountTokens = Object.create(null);
-var allowedFileExts = [
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.gif',
-  '.pdf',
-  '.txt',
-  '.zip',
-  '.hwp',
-  '.hwpx',
-  '.docx',
-  '.pptx',
-  '.xlsx'
-];
-var blockedFileExts = ['.exe', '.js', '.sh', '.bat', '.cmd', '.ps1'];
+var maxUploadSize = 10 * 1024 * 1024;
+var allowedFileTypes = {
+  '.jpg': ['image/jpeg'],
+  '.jpeg': ['image/jpeg'],
+  '.png': ['image/png'],
+  '.gif': ['image/gif'],
+  '.pdf': ['application/pdf'],
+  '.txt': ['text/plain'],
+  '.zip': ['application/zip', 'application/x-zip-compressed'],
+  '.hwp': ['application/x-hwp', 'application/haansofthwp', 'application/octet-stream'],
+  '.hwpx': ['application/zip', 'application/octet-stream'],
+  '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+  '.pptx': ['application/vnd.openxmlformats-officedocument.presentationml.presentation'],
+  '.xlsx': ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+};
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -46,13 +46,16 @@ var upload = multer({
     }
   }),
   limits: {
-    fileSize: 10 * 1024 * 1024
+    fileSize: maxUploadSize,
+    files: 1
   },
   fileFilter: function (_req, file, cb) {
-    var ext = path.extname(file.originalname || '').toLowerCase();
+    var originalName = path.basename(file.originalname || '');
+    var ext = path.extname(originalName).toLowerCase();
+    var allowedMimes = allowedFileTypes[ext] || [];
 
-    if (blockedFileExts.indexOf(ext) >= 0 || allowedFileExts.indexOf(ext) < 0) {
-      cb(new Error('?덉슜?섏? ?딅뒗 ?뚯씪 ?뺤떇?낅땲??'));
+    if (!ext || allowedMimes.length < 1 || allowedMimes.indexOf(file.mimetype) < 0) {
+      cb(new Error('허용되지 않는 파일 형식입니다.'));
       return;
     }
 
@@ -131,6 +134,10 @@ function createBcryptPassword(password, callback) {
   bcrypt.hash(password, bcryptSaltRounds, callback);
 }
 
+function createResetToken() {
+  return crypto.randomBytes(32).toString('hex');
+}
+
 function getPaging(req) {
   var allowedPageSizes = [10, 20, 30, 50];
   var pageSize = parseInt(req.query.pageSize, 10);
@@ -198,7 +205,48 @@ function getUploadOriginalName(file) {
     return '';
   }
 
-  return Buffer.from(file.originalname, 'latin1').toString('utf8');
+  return path.basename(Buffer.from(file.originalname, 'latin1').toString('utf8'));
+}
+
+function getUploadErrorMessage(err) {
+  if (!err) return '';
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return '첨부파일은 10MB 이하만 업로드할 수 있습니다.';
+  }
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_COUNT') {
+    return '첨부파일은 1개만 업로드할 수 있습니다.';
+  }
+  return err.message || '첨부파일 업로드에 실패했습니다.';
+}
+
+function resolveStoredUploadPath(saveName) {
+  var safeName = path.basename(saveName || '');
+  var uploadRoot = path.resolve(uploadDir);
+  var filePath = path.resolve(uploadRoot, safeName);
+
+  if (!safeName || safeName !== saveName || filePath.indexOf(uploadRoot + path.sep) !== 0) {
+    return '';
+  }
+
+  return filePath;
+}
+
+function deleteStoredFile(saveName) {
+  var filePath = resolveStoredUploadPath(saveName);
+
+  if (filePath && fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (err) {
+      console.error('file delete failed : ' + err.message);
+    }
+  }
+}
+
+function deleteStoredFiles(fileRows) {
+  for (var i = 0; i < fileRows.length; i++) {
+    deleteStoredFile(fileRows[i][0]);
+  }
 }
 
 // 臾몄옄???낅젰媛믪쓣 trim?섍퀬 理쒕? 湲몄씠瑜??섏쑝硫?鍮?媛믪쑝濡?泥섎━?쒕떎.
@@ -254,6 +302,15 @@ function validateAccountInput(id, email, phone, options) {
   if (email && !isValidEmail(email)) return '?щ컮瑜??대찓???뺤떇?쇰줈 ?낅젰?댁＜?몄슂.';
   if (options.phoneRequired && !phone) return '?꾪솕踰덊샇瑜??낅젰?댁＜?몄슂.';
   if (phone && !isValidPhone(phone)) return '?꾪솕踰덊샇??010-1234-5678 ?뺤떇?쇰줈 ?낅젰?댁＜?몄슂.';
+  return '';
+}
+
+function validatePasswordPolicy(password) {
+  if (!password) return '비밀번호를 입력해주세요.';
+  if (password.length < 8) return '비밀번호는 최소 8자 이상이어야 합니다.';
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return '비밀번호는 영문과 숫자를 모두 포함해야 합니다.';
+  }
   return '';
 }
 
@@ -353,10 +410,226 @@ router.post('/find-id', function (req, res, next) {
   });
 });
 
+router.get('/reset-password', function (req, res) {
+  if (req.session.user) {
+    setFlash(req, 'info', '?대? 濡쒓렇?몃릺???덉뒿?덈떎.');
+    res.redirect('/bbs/list');
+    return;
+  }
+
+  res.render('bbs/resetrequest', {
+    formData: {},
+    resetLink: '',
+    message: ''
+  });
+});
+
+router.post('/reset-password/request', function (req, res, next) {
+  var id = cleanText(req.body.id, 50);
+  var email = cleanText(req.body.email, 200);
+  var formData = { id: id, email: email };
+
+  function renderRequest(message, resetLink) {
+    res.render('bbs/resetrequest', {
+      formData: formData,
+      resetLink: resetLink || '',
+      message: message
+    });
+  }
+
+  if (!id || !isValidUserId(id) || !isValidEmail(email) || !email) {
+    renderRequest('아이디와 이메일을 정확히 입력해주세요.', '');
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var findSql = 'SELECT ID FROM LOGIN WHERE ID = :id AND EMAIL = :email AND OK = 1';
+
+    connection.execute(findSql, { id: id, email: email }, function (err, result) {
+      if (err) {
+        connection.release();
+        console.error('err : ' + err);
+        return next(err);
+      }
+
+      if (result.rows.length < 1) {
+        connection.release();
+        renderRequest('일치하는 활성 계정을 찾을 수 없습니다.', '');
+        return;
+      }
+
+      var token = createResetToken();
+      var disableOldSql =
+        'UPDATE RESET_TOKEN SET USED = 1, USEDATE = SYSDATE WHERE USER_ID = :id AND USED = 0';
+      var insertSql =
+        'INSERT INTO RESET_TOKEN(NO, USER_ID, TOKEN, EXPIRES_AT) ' +
+        "VALUES(RESET_TOKEN_SEQ.NEXTVAL, :id, :token, SYSDATE + INTERVAL '1' HOUR)";
+
+      connection.execute(disableOldSql, { id: id }, function (err) {
+        if (err) {
+          connection.release();
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        connection.execute(insertSql, { id: id, token: token }, function (err) {
+          connection.release();
+
+          if (err) {
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          renderRequest(
+            '비밀번호 재설정 토큰이 생성되었습니다. 실제 이메일 발송은 과제 범위에서 제외했습니다.',
+            '/bbs/reset-password/confirm?token=' + encodeURIComponent(token)
+          );
+        });
+      });
+    });
+  });
+});
+
+router.get('/reset-password/confirm', function (req, res, next) {
+  var token = cleanText(req.query.token, 128);
+
+  function renderConfirm(validToken, message) {
+    res.render('bbs/resetconfirm', {
+      token: token,
+      validToken: validToken,
+      message: message || ''
+    });
+  }
+
+  if (!token) {
+    renderConfirm(false, '재설정 토큰이 없습니다.');
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var sql =
+      'SELECT R.USER_ID FROM RESET_TOKEN R JOIN LOGIN L ON L.ID = R.USER_ID ' +
+      'WHERE R.TOKEN = :token AND R.USED = 0 AND R.EXPIRES_AT > SYSDATE AND L.OK = 1';
+
+    connection.execute(sql, { token: token }, function (err, result) {
+      connection.release();
+
+      if (err) {
+        console.error('err : ' + err);
+        return next(err);
+      }
+
+      renderConfirm(result.rows.length > 0, result.rows.length > 0 ? '' : '토큰이 없거나 만료되었습니다.');
+    });
+  });
+});
+
+router.post('/reset-password/confirm', function (req, res, next) {
+  var token = cleanText(req.body.token, 128);
+  var pw1 = cleanText(req.body.pw1, 100);
+  var pw2 = cleanText(req.body.pw2, 100);
+  var passwordError = validatePasswordPolicy(pw1);
+
+  function renderConfirm(validToken, message) {
+    res.render('bbs/resetconfirm', {
+      token: token,
+      validToken: validToken,
+      message: message || ''
+    });
+  }
+
+  if (!token) {
+    renderConfirm(false, '재설정 토큰이 없습니다.');
+    return;
+  }
+
+  if (pw1 !== pw2) {
+    renderConfirm(true, '비밀번호와 비밀번호 확인이 일치하지 않습니다.');
+    return;
+  }
+
+  if (passwordError) {
+    renderConfirm(true, passwordError);
+    return;
+  }
+
+  oracledb.getConnection(dbconfig, function (err, connection) {
+    if (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
+
+    var findSql =
+      'SELECT R.USER_ID FROM RESET_TOKEN R JOIN LOGIN L ON L.ID = R.USER_ID ' +
+      'WHERE R.TOKEN = :token AND R.USED = 0 AND R.EXPIRES_AT > SYSDATE AND L.OK = 1';
+
+    connection.execute(findSql, { token: token }, function (err, result) {
+      if (err) {
+        connection.release();
+        console.error('err : ' + err);
+        return next(err);
+      }
+
+      if (result.rows.length < 1) {
+        connection.release();
+        renderConfirm(false, '토큰이 없거나 만료되었습니다.');
+        return;
+      }
+
+      var userId = result.rows[0][0];
+
+      createBcryptPassword(pw1, function (err, hashPassword) {
+        if (err) {
+          connection.release();
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        var updatePasswordSql =
+          "UPDATE LOGIN SET PASSWORD = :password, SALT = NULL, PASSWORD_ALGO = 'bcrypt', PASSWORD_UPDATED_AT = SYSDATE " +
+          'WHERE ID = :id';
+
+        connection.execute(updatePasswordSql, { password: hashPassword, id: userId }, function (err) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          var useTokenSql = 'UPDATE RESET_TOKEN SET USED = 1, USEDATE = SYSDATE WHERE TOKEN = :token';
+
+          connection.execute(useTokenSql, { token: token }, function (err) {
+            connection.release();
+
+            if (err) {
+              console.error('err : ' + err);
+              return next(err);
+            }
+
+            setFlash(req, 'success', '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.');
+            res.redirect('/bbs/login');
+          });
+        });
+      });
+    });
+  });
+});
+
 router.post('/logincheck', function (req, res, next) {
   var pw = cleanText(req.body.password, 100);
   var code = 0;
   var id = cleanText(req.body.id, 50); // ?낅젰媛?寃利?  var pw = cleanText(req.body.password, 100); // ?낅젰媛?寃利?  var code = 0;
+  var loginFailureMessage = '아이디 또는 비밀번호가 올바르지 않습니다.';
 
   if (!id || !pw || !isValidUserId(id)) {
     res.render('bbs/login', {
@@ -392,7 +665,7 @@ router.post('/logincheck', function (req, res, next) {
           errcode: code,
           flashMessage: {
             type: 'danger',
-            text: '濡쒓렇???꾩씠?붽? ?놁뒿?덈떎.'
+            text: loginFailureMessage
           }
         });
         return;
@@ -451,7 +724,7 @@ router.post('/logincheck', function (req, res, next) {
               errcode: code,
               flashMessage: {
                 type: 'danger',
-                text: '鍮꾨?踰덊샇媛 ?由쎈땲??'
+                text: loginFailureMessage
               }
             });
             return;
@@ -470,7 +743,7 @@ router.post('/logincheck', function (req, res, next) {
           errcode: code,
           flashMessage: {
             type: 'danger',
-            text: '鍮꾨?踰덊샇媛 ?由쎈땲??'
+            text: loginFailureMessage
           }
         });
         return;
@@ -486,7 +759,7 @@ router.post('/logincheck', function (req, res, next) {
           errcode: code,
           flashMessage: {
             type: 'danger',
-            text: '鍮꾨?踰덊샇媛 ?由쎈땲??'
+            text: loginFailureMessage
           }
         });
         return;
@@ -722,24 +995,34 @@ router.post('/signupsave', function (req, res, next) {
   var code = 0;
   var formData = { id: id, name: name, email: email, phone: phone };
   var accountError = validateAccountInput(id, email, phone, { emailRequired: true, phoneRequired: true });
+  var passwordError = validatePasswordPolicy(pw1);
 
-  function renderSignupMessage(message, available) {
+  function renderSignupMessage(message, available, flashText) {
     res.render('bbs/signup', {
       code: 0,
       formData: formData,
       idCheckMessage: message,
-      idCheckAvailable: available
+      idCheckAvailable: available,
+      flashMessage: flashText
+        ? {
+            type: 'warning',
+            text: flashText
+          }
+        : null
     });
   }
 
   if (pw1 != pw2) {
-    code = 1;
-    res.render('error', { errcode: code });
+    renderSignupMessage('', null, '비밀번호와 비밀번호 확인이 일치하지 않습니다.');
     return;
   }
 
-  if (accountError || pw1 == '' || name == '' || pw1.length < 4) {
-    renderSignupMessage(accountError || '鍮꾨?踰덊샇??4???댁긽, ?대쫫? ?꾩닔濡??낅젰?댁＜?몄슂.', false);
+  if (accountError || passwordError || name == '') {
+    renderSignupMessage(
+      accountError || '',
+      accountError ? false : null,
+      passwordError || (name == '' ? '이름을 입력해주세요.' : '')
+    );
     return;
   }
 
@@ -912,12 +1195,13 @@ router.post('/updatesignsave', function (req, res, next) {
   }
 
   var updateAccountError = validateAccountInput(id, email, '', { emailRequired: true });
-  if (updateAccountError || pw == '' || name == '' || pw.length < 4) {
+  var updatePasswordError = validatePasswordPolicy(pw);
+  if (updateAccountError || updatePasswordError || name == '') {
     return res.render('bbs/updatesignform', {
       rows: [[id, '', name, email]],
       flashMessage: {
         type: 'warning',
-        text: updateAccountError || '鍮꾨?踰덊샇??4???댁긽, ?대쫫? ?꾩닔濡??낅젰?댁＜?몄슂.'
+        text: updateAccountError || updatePasswordError || '이름을 입력해주세요.'
       }
     });
   }
@@ -1061,7 +1345,19 @@ router.post('/save', function (req, res, next) {
 
   upload.single('uploadFile')(req, res, function (uploadErr) {
     if (uploadErr) {
-      return next(uploadErr);
+      var uploadMessage = getUploadErrorMessage(uploadErr);
+      setFlash(req, 'warning', uploadMessage);
+      res.render('bbs/form', {
+        flashMessage: {
+          type: 'warning',
+          text: uploadMessage
+        },
+        formData: {
+          title: cleanText(req.body.brdtitle, 200),
+          content: cleanText(req.body.brdmemo, 4000)
+        }
+      });
+      return;
     }
 
     var content = cleanText(req.body.brdmemo, 4000);
@@ -1070,6 +1366,9 @@ router.post('/save', function (req, res, next) {
     var postError = validatePostInput(title, content);
 
     if (postError || !writer) {
+      if (req.file) {
+        deleteStoredFile(req.file.filename);
+      }
       setFlash(req, 'warning', postError || '작성자 정보를 확인해주세요.');
       res.render('bbs/form', {
         flashMessage: {
@@ -1083,6 +1382,9 @@ router.post('/save', function (req, res, next) {
 
     oracledb.getConnection(dbconfig, function (err, connection) {
       if (err) {
+        if (req.file) {
+          deleteStoredFile(req.file.filename);
+        }
         console.error('err : ' + err);
         return next(err);
       }
@@ -1092,6 +1394,9 @@ router.post('/save', function (req, res, next) {
       connection.execute(nextNoSql, function (err, seqResult) {
         if (err) {
           connection.release();
+          if (req.file) {
+            deleteStoredFile(req.file.filename);
+          }
           console.error('err : ' + err);
           return next(err);
         }
@@ -1112,6 +1417,9 @@ router.post('/save', function (req, res, next) {
           function (err) {
             if (err) {
               connection.release();
+              if (req.file) {
+                deleteStoredFile(req.file.filename);
+              }
               console.error('err : ' + err);
               return next(err);
             }
@@ -1142,6 +1450,7 @@ router.post('/save', function (req, res, next) {
               function (err) {
                 if (err) {
                   connection.release();
+                  deleteStoredFile(req.file.filename);
                   console.error('err : ' + err);
                   return next(err);
                 }
@@ -1298,33 +1607,43 @@ router.get('/delete', function (req, res, next) {
       return;
     }
 
+    var selectFilesSql = 'SELECT SAVE_FILENAME FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1';
     var sql = 'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND (WRITER = :writer OR WRITER = :writerName)';
 
-    connection.execute(sql, { bbsno: bbsno, writer: writer, writerName: writerName }, function (err, result) {
+    connection.execute(selectFilesSql, { bbsno: bbsno }, function (err, fileRows) {
       if (err) {
         connection.release();
         console.error('err : ' + err);
         return next(err);
       }
 
-      if (!result.rowsAffected) {
-        connection.release();
-        renderForbidden(res);
-        return;
-      }
-
-      var fileSql = 'UPDATE BBS_FILE SET OK = 0 WHERE BBSNO = :bbsno';
-
-      connection.execute(fileSql, { bbsno: bbsno }, function (err) {
+      connection.execute(sql, { bbsno: bbsno, writer: writer, writerName: writerName }, function (err, result) {
         if (err) {
           connection.release();
           console.error('err : ' + err);
           return next(err);
         }
 
-        connection.release();
-        setFlash(req, 'success', '寃뚯떆湲????젣?섏뿀?듬땲??');
-        res.redirect('/bbs/list');
+        if (!result.rowsAffected) {
+          connection.release();
+          renderForbidden(res);
+          return;
+        }
+
+        var fileSql = 'UPDATE BBS_FILE SET OK = 0 WHERE BBSNO = :bbsno';
+
+        connection.execute(fileSql, { bbsno: bbsno }, function (err) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
+
+          connection.release();
+          deleteStoredFiles(fileRows.rows);
+          setFlash(req, 'success', '寃뚯떆湲????젣?섏뿀?듬땲??');
+          res.redirect('/bbs/list');
+        });
       });
     });
   });
@@ -1936,12 +2255,13 @@ router.get('/download', function (req, res, next) {
         }
 
         var row = result.rows[0];
-        var orgName = row[0];
+        var orgName = path.basename(row[0] || 'download');
         var saveName = row[1];
-        var filePath = path.resolve(uploadDir, saveName);
-        var uploadRoot = path.resolve(uploadDir);
+        var storedRelativePath = (row[2] || '').replace(/\\/g, '/');
+        var expectedRelativePath = path.join('uploads', 'bbs', path.basename(saveName || '')).replace(/\\/g, '/');
+        var filePath = resolveStoredUploadPath(saveName);
 
-        if (filePath.indexOf(uploadRoot + path.sep) !== 0 || !fs.existsSync(filePath)) {
+        if (!filePath || storedRelativePath !== expectedRelativePath || !fs.existsSync(filePath)) {
           connection.release();
           renderForbidden(res);
           return;

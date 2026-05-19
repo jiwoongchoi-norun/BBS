@@ -1,5 +1,28 @@
 # OracleDB Schema Summary
 
+## RESET_TOKEN Update
+
+`RESET_TOKEN` stores password reset tokens for the assignment-only reset flow.
+
+| Column | Purpose |
+| ------ | ------- |
+| `NO` | Reset token row number, PK |
+| `USER_ID` | Login account ID |
+| `TOKEN` | Random reset token |
+| `EXPIRES_AT` | Token expiration time |
+| `USED` | Token use status, 0 active and 1 used |
+| `REGDATE` | Token creation time |
+| `USEDATE` | Token use time |
+
+Supporting objects:
+
+- `RESET_TOKEN_SEQ`
+- `UX_RESET_TOKEN_TOKEN` on `RESET_TOKEN(TOKEN)`
+- `IDX_RESET_TOKEN_USER` on `RESET_TOKEN(USER_ID)`
+- `FK_RESET_TOKEN_LOGIN` from `RESET_TOKEN.USER_ID` to `LOGIN.ID`
+
+Reset tokens expire after 1 hour. Existing active tokens for the same user are marked used before a new token is inserted.
+
 ## 목적
 
 현재 BBS 프로젝트에서 사용하는 OracleDB 테이블과 마이그레이션 기준을 정리합니다. 신규 DB는 `scripts/schema.sql`, 기존 DB 보강은 `scripts/migration.sql`을 기준으로 합니다.
