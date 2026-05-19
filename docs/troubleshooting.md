@@ -1,45 +1,51 @@
 # Troubleshooting
 
+최종 업데이트: 2026-05-19
+
 ## 서버가 켜지지 않을 때
 
-1. `.env` 존재 여부 확인
-2. OracleDB 실행 여부 확인
-3. `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 확인
-4. 포트 3000 사용 중인지 확인
+1. `.env` 파일이 있는지 확인한다.
+2. `SESSION_SECRET`이 비어 있지 않은지 확인한다.
+3. OracleDB가 실행 중인지 확인한다.
+4. `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING`을 확인한다.
+5. 3000번 포트를 이미 다른 프로세스가 사용 중인지 확인한다.
 
 ```powershell
 netstat -ano | Select-String ':3000'
 ```
 
-## app load가 실패할 때
+## 앱 로딩 검증
 
 ```powershell
 npm run verify:app
 ```
 
-실패하면 require error, router error, syntax error를 먼저 확인합니다.
+실패하면 require error, router error, syntax error를 먼저 확인한다.
 
 ## OracleDB 연결 실패
 
-- Oracle XE 서비스가 실행 중인지 확인합니다.
-- 접속 문자열이 `localhost/XEPDB1`인지 `localhost/XE`인지 환경에 맞게 확인합니다.
-- 계정 권한과 비밀번호를 확인합니다.
+- Oracle XE 서비스가 실행 중인지 확인한다.
+- 접속 문자열이 환경에 맞는지 확인한다. 예: `localhost/XEPDB1`, `localhost/XE`
+- DB 계정 권한과 비밀번호를 확인한다.
+- 신규 DB이면 `scripts/schema.sql`을 먼저 적용한다.
+- 기존 DB이면 `scripts/migration.sql` 적용 여부를 확인한다.
 
 ## 로그인 실패
 
-- 신규 계정은 bcrypt hash인지 확인합니다.
-- 기존 계정은 `PASSWORD_ALGO`, `SALT`가 legacy 구조와 맞는지 확인합니다.
-- 비밀번호 원문은 DB나 문서에 출력하지 않습니다.
+- 신규 계정은 bcrypt hash로 저장되어야 한다.
+- 기존 계정은 `PASSWORD_ALGO`, `SALT`가 legacy 구조와 맞는지 확인한다.
+- 탈퇴 계정은 `LOGIN.OK = 0`이면 로그인할 수 없다.
+- 실제 비밀번호 값은 문서나 로그에 출력하지 않는다.
 
 ```sql
 SELECT ID, PASSWORD_ALGO, SALT, OK
 FROM LOGIN
-WHERE ID = '확인할ID';
+WHERE ID = '확인할_ID';
 ```
 
-## 좋아요/싫어요를 눌렀는데 조회수가 오를 때
+## 좋아요/싫어요 후 조회수가 증가할 때
 
-정상 동작은 추천 수만 바뀌고 조회수는 유지되는 것입니다. `routes/bbs.js`의 아래 흐름을 확인합니다.
+정상 동작은 추천 수만 바뀌고 조회수는 유지되는 것이다. 다음 흐름을 확인한다.
 
 - `redirectReadWithoutViewCount()`
 - `createSkipViewCountToken()`
@@ -47,7 +53,7 @@ WHERE ID = '확인할ID';
 - `GET /bbs/read`
 - `POST /bbs/reaction`
 
-## 좋아요/싫어요 클릭 시 NJS-098 오류가 날 때
+## NJS-098 오류
 
 오류 예:
 
@@ -57,25 +63,40 @@ NJS-098: 0 bind placeholders were used in the SQL statement but 1 bind values we
 
 원인:
 
-- 좋아요/싫어요 처리 후 read 화면으로 redirect할 때 조회수 증가를 건너뛰기 위해 `GET /bbs/read`가 no-op SQL인 `BEGIN NULL; END;`를 실행합니다.
-- 이 SQL에는 `:brdno` 같은 bind placeholder가 0개입니다.
-- 그런데 기존 구현은 일반 조회수 증가 SQL에서 쓰던 `{ brdno }` bind 객체를 그대로 넘겨 OracleDB 드라이버가 `placeholder 0개, bind 1개` 불일치로 `NJS-098`을 발생시켰습니다.
+- SQL 안에 `:brdno` 같은 bind placeholder가 없는데 `{ brdno }` bind 객체를 넘겼을 때 발생한다.
+- 추천 후 조회수 증가를 건너뛰는 no-op SQL에서 주로 발생할 수 있다.
 
-수정 기준:
+처리:
 
-- `skipViewCount`가 true이면 bind를 `{}`로 넘깁니다.
-- 일반 조회이면 기존처럼 `UPDATE BBS ... WHERE NO = :brdno`와 `{ brdno }`를 함께 넘깁니다.
+- placeholder가 없는 SQL에는 `{}`를 넘긴다.
+- 일반 조회수 증가 SQL에는 `WHERE NO = :brdno`와 `{ brdno }`를 함께 넘긴다.
+
+## CSRF 403 오류
+
+- POST form에 hidden `_csrf`가 있는지 확인한다.
+- multipart upload form은 action query에도 `_csrf`가 전달되는지 확인한다.
+- 오래 열린 form은 세션/token이 바뀌었을 수 있으므로 새로고침 후 다시 시도한다.
 
 ## 파일 업로드 실패
 
-- 허용 확장자인지 확인합니다.
-- 파일 크기가 10MB 이하인지 확인합니다.
-- `uploads/bbs` 폴더가 생성되어 있는지 확인합니다.
+- 허용 확장자인지 확인한다.
+- 파일 크기가 10MB 이하인지 확인한다.
+- 한 번에 1개 파일만 업로드했는지 확인한다.
+- `uploads/bbs` 폴더가 존재하고 쓰기 가능한지 확인한다.
+
+## 다운로드 실패
+
+- `fno`가 숫자인지 확인한다.
+- 게시글과 첨부파일의 `OK`가 1인지 확인한다.
+- 로그인 사용자가 게시글 작성자인지 확인한다.
+- DB의 `FILE_PATH`, `SAVE_FILENAME`이 `uploads/bbs` 내부 실제 파일과 일치하는지 확인한다.
 
 ## 문자가 깨져 보일 때
 
-PowerShell 콘솔 코드페이지 문제일 수 있습니다. VS Code에서 UTF-8로 파일을 열어 확인합니다.
+문서는 UTF-8 기준으로 작성한다. PowerShell 콘솔에서만 깨져 보이면 다음을 실행한 뒤 다시 확인한다.
 
 ```powershell
 chcp 65001
 ```
+
+VS Code에서는 파일 인코딩을 UTF-8로 열어 확인한다.
