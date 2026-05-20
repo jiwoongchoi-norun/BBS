@@ -1,4 +1,4 @@
-﻿var express = require('express');
+var express = require('express');
 var router = express.Router();
 var oracledb = require('oracledb');
 var crypto = require('crypto');
@@ -63,7 +63,7 @@ var upload = multer({
   }
 });
 
-// 글쓰기, 수정, 삭제처럼 로그인이 필요한 요청에서 공통으로 사용하는 인증 가드.
+// 글쓰기, 수정, 삭제처럼 로그인이 필요한 요청에서 공통으로 사용하는 인증 검사
 function requireLogin(req, res) {
   if (!req.session.user) {
     if (req.flashMessage) {
@@ -82,7 +82,7 @@ function createSkipViewCountToken(bbsno) {
   return token;
 }
 
-// 일반 글 읽기는 조회수를 올리고, 좋아요/싫어요 후 내부 이동은 조회수를 올리지 않는다.
+// 일반 글 읽기는 조회수를 올리고 좋아요/싫어요 이동은 조회수를 올리지 않는다.
 function shouldSkipViewCount(req, brdno) {
   var token = cleanText(req.query.skip_view_token, 64);
 
@@ -117,7 +117,7 @@ function redirectReadWithoutViewCount(req, res, next, bbsno) {
   });
 }
 
-// 기존 SHA-512 + salt 계정 검증용 해시 함수. 로그인 성공 시 bcrypt로 자동 전환한다.
+// 기존 SHA-512 + salt 계정 검증용 해시 함수. 로그인 성공 후 bcrypt로 자동 전환한다.
 function createPasswordHash(password, salt) {
   return crypto
     .createHash('sha512')
@@ -129,7 +129,7 @@ function isBcryptPassword(algo, storedPassword) {
   return algo === 'bcrypt' || /^\$2[aby]\$/.test(storedPassword || '');
 }
 
-// 신규 가입과 회원정보 수정은 bcrypt만 저장한다.
+// 신규 가입과 회원정보 수정은 bcrypt만 사용한다.
 function createBcryptPassword(password, callback) {
   bcrypt.hash(password, bcryptSaltRounds, callback);
 }
@@ -529,7 +529,10 @@ router.get('/reset-password/confirm', function (req, res, next) {
         return next(err);
       }
 
-      renderConfirm(result.rows.length > 0, result.rows.length > 0 ? '' : '토큰이 없거나 만료되었습니다.');
+      renderConfirm(
+        result.rows.length > 0,
+        result.rows.length > 0 ? '' : '토큰이 없거나 만료되었습니다.'
+      );
     });
   });
 });
@@ -599,27 +602,36 @@ router.post('/reset-password/confirm', function (req, res, next) {
           "UPDATE LOGIN SET PASSWORD = :password, SALT = NULL, PASSWORD_ALGO = 'bcrypt', PASSWORD_UPDATED_AT = SYSDATE " +
           'WHERE ID = :id';
 
-        connection.execute(updatePasswordSql, { password: hashPassword, id: userId }, function (err) {
-          if (err) {
-            connection.release();
-            console.error('err : ' + err);
-            return next(err);
-          }
-
-          var useTokenSql = 'UPDATE RESET_TOKEN SET USED = 1, USEDATE = SYSDATE WHERE TOKEN = :token';
-
-          connection.execute(useTokenSql, { token: token }, function (err) {
-            connection.release();
-
+        connection.execute(
+          updatePasswordSql,
+          { password: hashPassword, id: userId },
+          function (err) {
             if (err) {
+              connection.release();
               console.error('err : ' + err);
               return next(err);
             }
 
-            setFlash(req, 'success', '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.');
-            res.redirect('/bbs/login');
-          });
-        });
+            var useTokenSql =
+              'UPDATE RESET_TOKEN SET USED = 1, USEDATE = SYSDATE WHERE TOKEN = :token';
+
+            connection.execute(useTokenSql, { token: token }, function (err) {
+              connection.release();
+
+              if (err) {
+                console.error('err : ' + err);
+                return next(err);
+              }
+
+              setFlash(
+                req,
+                'success',
+                '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.'
+              );
+              res.redirect('/bbs/login');
+            });
+          }
+        );
       });
     });
   });
@@ -948,7 +960,10 @@ router.get('/check-id', function (req, res, next) {
   var id = cleanText(req.query.userId || req.query.id, 50);
   if (id && !isValidUserId(id)) {
     req.session.checkedSignupId = null;
-    res.json({ available: false, message: '아이디는 4~20자의 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.' });
+    res.json({
+      available: false,
+      message: '아이디는 4~20자의 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.'
+    });
     return;
   }
 
@@ -964,21 +979,25 @@ router.get('/check-id', function (req, res, next) {
       return next(err);
     }
 
-    connection.execute('SELECT COUNT(*) FROM LOGIN WHERE ID = :id', { id: id }, function (err, result) {
-      connection.release();
+    connection.execute(
+      'SELECT COUNT(*) FROM LOGIN WHERE ID = :id',
+      { id: id },
+      function (err, result) {
+        connection.release();
 
-      if (err) {
-        console.error('err : ' + err);
-        return next(err);
+        if (err) {
+          console.error('err : ' + err);
+          return next(err);
+        }
+
+        var available = result.rows[0][0] === 0;
+        req.session.checkedSignupId = available ? id : null;
+        res.json({
+          available: available,
+          message: available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.'
+        });
       }
-
-      var available = result.rows[0][0] === 0;
-      req.session.checkedSignupId = available ? id : null;
-      res.json({
-        available: available,
-        message: available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.'
-      });
-    });
+    );
   });
 });
 
@@ -994,7 +1013,10 @@ router.post('/signupsave', function (req, res, next) {
   var sessionCheckedId = req.session.checkedSignupId;
   var code = 0;
   var formData = { id: id, name: name, email: email, phone: phone };
-  var accountError = validateAccountInput(id, email, phone, { emailRequired: true, phoneRequired: true });
+  var accountError = validateAccountInput(id, email, phone, {
+    emailRequired: true,
+    phoneRequired: true
+  });
   var passwordError = validatePasswordPolicy(pw1);
 
   function renderSignupMessage(message, available, flashText) {
@@ -1047,43 +1069,47 @@ router.post('/signupsave', function (req, res, next) {
         return next(err);
       }
 
-      connection.execute('SELECT COUNT(*) FROM LOGIN WHERE ID = :id', { id: id }, function (err, countResult) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
+      connection.execute(
+        'SELECT COUNT(*) FROM LOGIN WHERE ID = :id',
+        { id: id },
+        function (err, countResult) {
+          if (err) {
+            connection.release();
+            console.error('err : ' + err);
+            return next(err);
+          }
 
-        if (countResult.rows[0][0] > 0) {
-          connection.release();
-          req.session.checkedSignupId = null;
-          renderSignupMessage('이미 사용 중인 아이디입니다.', false);
-          return;
-        }
-
-        connection.execute(
-          sql,
-          {
-            id: id,
-            password: hashPassword,
-            name: name,
-            email: email,
-            phone: phone
-          },
-          function (err) {
-            if (err) {
-              connection.release();
-              code = 3;
-              res.render('error', { errcode: code });
-              return;
-            }
+          if (countResult.rows[0][0] > 0) {
             connection.release();
             req.session.checkedSignupId = null;
-            setFlash(req, 'success', '회원가입이 완료되었습니다. 로그인해주세요.');
-            res.redirect('/bbs/login');
+            renderSignupMessage('이미 사용 중인 아이디입니다.', false);
+            return;
           }
-        );
-      });
+
+          connection.execute(
+            sql,
+            {
+              id: id,
+              password: hashPassword,
+              name: name,
+              email: email,
+              phone: phone
+            },
+            function (err) {
+              if (err) {
+                connection.release();
+                code = 3;
+                res.render('error', { errcode: code });
+                return;
+              }
+              connection.release();
+              req.session.checkedSignupId = null;
+              setFlash(req, 'success', '회원가입이 완료되었습니다. 로그인해주세요.');
+              res.redirect('/bbs/login');
+            }
+          );
+        }
+      );
     });
   });
 });
@@ -1168,7 +1194,7 @@ router.get('/updatesignup', function (req, res, next) {
         }
 
         var row = result.rows[0];
-        // 비밀번호 해시가 화면에 다시 노출되지 않도록 빈 값으로 넘긴다.
+        // 비밀번호 해시가 화면에 다시 출력되지 않도록 빈 값으로 넘긴다.
         res.render('bbs/updatesignform', { rows: [[row[0], '', row[1], row[2]]] });
         connection.release();
       });
@@ -1482,7 +1508,7 @@ router.get('/read', function (req, res, next) {
 
     var skipViewCount = shouldSkipViewCount(req, brdno);
 
-    // read 화면은 상세 조회, 조회수 증가, 댓글/파일/내 추천 상태 조회를 한 번에 처리한다.
+    // read 화면은 상세 조회, 조회수 증가, 댓글/파일/추천 상태 조회를 한 번에 처리한다.
     var updateSql =
       'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
     var sql =
@@ -1597,7 +1623,7 @@ router.get('/delete', function (req, res, next) {
       return next(err);
     }
 
-    // 실제 DELETE 대신 상태값만 내려 과제 흐름에 맞는 soft delete를 유지한다.
+    // 실제 DELETE 대신 상태값만 내려 과제 흐름에 맞는 soft delete를 사용한다.
     var bbsno = toValidNumber(req.query.brdno); // 게시글 번호 검증
     var writer = req.session.user.id;
     var writerName = req.session.user.name || req.session.user.id;
@@ -1609,7 +1635,8 @@ router.get('/delete', function (req, res, next) {
     }
 
     var selectFilesSql = 'SELECT SAVE_FILENAME FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1';
-    var sql = 'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND (WRITER = :writer OR WRITER = :writerName)';
+    var sql =
+      'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND (WRITER = :writer OR WRITER = :writerName)';
 
     connection.execute(selectFilesSql, { bbsno: bbsno }, function (err, fileRows) {
       if (err) {
@@ -1618,34 +1645,38 @@ router.get('/delete', function (req, res, next) {
         return next(err);
       }
 
-      connection.execute(sql, { bbsno: bbsno, writer: writer, writerName: writerName }, function (err, result) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
-
-        if (!result.rowsAffected) {
-          connection.release();
-          renderForbidden(res);
-          return;
-        }
-
-        var fileSql = 'UPDATE BBS_FILE SET OK = 0 WHERE BBSNO = :bbsno';
-
-        connection.execute(fileSql, { bbsno: bbsno }, function (err) {
+      connection.execute(
+        sql,
+        { bbsno: bbsno, writer: writer, writerName: writerName },
+        function (err, result) {
           if (err) {
             connection.release();
             console.error('err : ' + err);
             return next(err);
           }
 
-          connection.release();
-          deleteStoredFiles(fileRows.rows);
-          setFlash(req, 'success', '게시글이 삭제되었습니다.');
-          res.redirect('/bbs/list');
-        });
-      });
+          if (!result.rowsAffected) {
+            connection.release();
+            renderForbidden(res);
+            return;
+          }
+
+          var fileSql = 'UPDATE BBS_FILE SET OK = 0 WHERE BBSNO = :bbsno';
+
+          connection.execute(fileSql, { bbsno: bbsno }, function (err) {
+            if (err) {
+              connection.release();
+              console.error('err : ' + err);
+              return next(err);
+            }
+
+            connection.release();
+            deleteStoredFiles(fileRows.rows);
+            setFlash(req, 'success', '게시글이 삭제되었습니다.');
+            res.redirect('/bbs/list');
+          });
+        }
+      );
     });
   });
 });
@@ -1686,7 +1717,10 @@ router.get('/update', function (req, res, next) {
         return;
       }
 
-      if (rows.rows[0][3] !== req.session.user.id && rows.rows[0][3] !== (req.session.user.name || req.session.user.id)) {
+      if (
+        rows.rows[0][3] !== req.session.user.id &&
+        rows.rows[0][3] !== (req.session.user.name || req.session.user.id)
+      ) {
         connection.release();
         renderForbidden(res);
         return;
@@ -1802,77 +1836,81 @@ router.get('/search', function (req, res, next) {
       binds.writerName = req.session.user.name || req.session.user.id;
     }
 
-    connection.execute('SELECT COUNT(*) FROM BBS WHERE ' + whereSql, binds, function (err, countResult) {
-      if (err) {
-        connection.release();
-        console.error('err : ' + err);
-        return next(err);
-      }
-
-      var totalCount = countResult.rows[0][0];
-      var totalPage = Math.ceil(totalCount / paging.pageSize);
-
-      if (totalPage > 0 && paging.currentPage > totalPage) {
-        paging.currentPage = totalPage;
-      }
-
-      var offset = (paging.currentPage - 1) * paging.pageSize;
-      var paginationBaseUrl =
-        '/bbs/search?choice=' +
-        encodeURIComponent(choice) +
-        '&search=' +
-        encodeURIComponent(searchKeyword) +
-        '&pageSize=' +
-        paging.pageSize +
-        (myPostsOnly ? '&mine=1' : '') +
-        (sortInfo.sort
-          ? '&sort=' +
-            encodeURIComponent(sortInfo.sort) +
-            '&order=' +
-            encodeURIComponent(sortInfo.order)
-          : '') +
-        '&page=';
-
-      sql =
-        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
-        '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
-        'FROM BBS WHERE ' +
-        whereSql +
-        ' ORDER BY ' +
-        sortInfo.orderBy +
-        ' OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
-
-      connection.execute(
-        sql,
-        Object.assign({}, binds, {
-          offset: offset,
-          pageSize: paging.pageSize
-        }),
-        function (err, rows) {
-          if (err) {
-            connection.release();
-            console.error('err : ' + err);
-            return next(err);
-          }
-
-          res.render(
-            'bbs/list',
-            Object.assign(getPagingViewData(paging.currentPage, paging.pageSize, totalCount), {
-              rows: rows.rows,
-              searchChoice: choice,
-              searchKeyword: searchKeyword,
-              isSearch: true,
-              myPostsOnly: !!myPostsOnly,
-              sort: sortInfo.sort,
-              order: sortInfo.order,
-              paginationBaseUrl: paginationBaseUrl
-            })
-          );
+    connection.execute(
+      'SELECT COUNT(*) FROM BBS WHERE ' + whereSql,
+      binds,
+      function (err, countResult) {
+        if (err) {
           connection.release();
+          console.error('err : ' + err);
+          return next(err);
         }
-      );
-    });
+
+        var totalCount = countResult.rows[0][0];
+        var totalPage = Math.ceil(totalCount / paging.pageSize);
+
+        if (totalPage > 0 && paging.currentPage > totalPage) {
+          paging.currentPage = totalPage;
+        }
+
+        var offset = (paging.currentPage - 1) * paging.pageSize;
+        var paginationBaseUrl =
+          '/bbs/search?choice=' +
+          encodeURIComponent(choice) +
+          '&search=' +
+          encodeURIComponent(searchKeyword) +
+          '&pageSize=' +
+          paging.pageSize +
+          (myPostsOnly ? '&mine=1' : '') +
+          (sortInfo.sort
+            ? '&sort=' +
+              encodeURIComponent(sortInfo.sort) +
+              '&order=' +
+              encodeURIComponent(sortInfo.order)
+            : '') +
+          '&page=';
+
+        sql =
+          "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+          'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
+          '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
+          'FROM BBS WHERE ' +
+          whereSql +
+          ' ORDER BY ' +
+          sortInfo.orderBy +
+          ' OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
+
+        connection.execute(
+          sql,
+          Object.assign({}, binds, {
+            offset: offset,
+            pageSize: paging.pageSize
+          }),
+          function (err, rows) {
+            if (err) {
+              connection.release();
+              console.error('err : ' + err);
+              return next(err);
+            }
+
+            res.render(
+              'bbs/list',
+              Object.assign(getPagingViewData(paging.currentPage, paging.pageSize, totalCount), {
+                rows: rows.rows,
+                searchChoice: choice,
+                searchKeyword: searchKeyword,
+                isSearch: true,
+                myPostsOnly: !!myPostsOnly,
+                sort: sortInfo.sort,
+                order: sortInfo.order,
+                paginationBaseUrl: paginationBaseUrl
+              })
+            );
+            connection.release();
+          }
+        );
+      }
+    );
   });
 });
 
@@ -1921,7 +1959,7 @@ router.post('/reaction', function (req, res, next) {
 
         var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
 
-        // 기록이 없으면 새 추천을 추가하고 게시글 카운터를 증가시킨다.
+        // 기록이 없으면 추천을 추가하고 게시글 카운트를 증가시킨다.
         if (!currentReaction) {
           var insertReactionSql =
             reactionType === 'LIKE'
@@ -1951,7 +1989,7 @@ router.post('/reaction', function (req, res, next) {
           return;
         }
 
-        // 같은 버튼을 다시 누르면 추천 기록을 삭제하고 카운터를 되돌린다.
+        // 같은 버튼을 다시 누르면 추천 기록을 삭제하고 카운트를 되돌린다.
         if (currentReaction === reactionType) {
           var cancelReactionSql =
             reactionType === 'LIKE'
@@ -1977,7 +2015,7 @@ router.post('/reaction', function (req, res, next) {
           return;
         }
 
-        // 반대 버튼을 누르면 기록은 갱신하고 기존 카운터와 새 카운터를 동시에 보정한다.
+        // 반대 버튼을 누르면 기록을 갱신하고 기존 카운트와 새 카운트를 동시에 보정한다.
         var switchReactionSql =
           reactionType === 'LIKE'
             ? 'BEGIN ' +
@@ -2012,7 +2050,7 @@ router.post('/wsave', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
   var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
-  var content = cleanText(req.body.content, 4000); // 댓글 내용 검증
+  var content = cleanText(req.body.content, 4000);
   var writer = req.session.user.id;
 
   if (!bbsno || !content) {
@@ -2056,8 +2094,8 @@ router.post('/wreply', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
   var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
-  var parentNo = toValidNumber(req.body.parent_no); // 부모 댓글 번호 검증
-  var content = cleanText(req.body.content, 4000); // 답글 내용 검증
+  var parentNo = toValidNumber(req.body.parent_no);
+  var content = cleanText(req.body.content, 4000);
   var writer = req.session.user.id;
 
   if (!bbsno || !parentNo || !content) {
@@ -2082,7 +2120,7 @@ router.post('/wreply', function (req, res, next) {
 
       if (parentRows.rows.length < 1) {
         connection.release();
-        setFlash(req, 'warning', '답글을 달 댓글을 찾을 수 없습니다.');
+        setFlash(req, 'warning', '답글 대상 댓글을 찾을 수 없습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
         return;
       }
@@ -2132,8 +2170,8 @@ router.post('/wupdate', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
   var wno = toValidNumber(req.body.wno); // 댓글 번호 검증
-  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
-  var content = cleanText(req.body.content, 4000); // 댓글 내용 검증
+  var bbsno = toValidNumber(req.body.bbsno);
+  var content = cleanText(req.body.content, 4000);
   var writer = req.session.user.id;
 
   if (!wno || !bbsno || !content) {
@@ -2184,7 +2222,7 @@ router.post('/wdelete', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
   var wno = toValidNumber(req.body.wno); // 댓글 번호 검증
-  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var bbsno = toValidNumber(req.body.bbsno);
   var writer = req.session.user.id;
 
   if (!wno || !bbsno) {
@@ -2270,7 +2308,9 @@ router.get('/download', function (req, res, next) {
         var orgName = path.basename(row[0] || 'download');
         var saveName = row[1];
         var storedRelativePath = (row[2] || '').replace(/\\/g, '/');
-        var expectedRelativePath = path.join('uploads', 'bbs', path.basename(saveName || '')).replace(/\\/g, '/');
+        var expectedRelativePath = path
+          .join('uploads', 'bbs', path.basename(saveName || ''))
+          .replace(/\\/g, '/');
         var filePath = resolveStoredUploadPath(saveName);
 
         if (!filePath || storedRelativePath !== expectedRelativePath || !fs.existsSync(filePath)) {
