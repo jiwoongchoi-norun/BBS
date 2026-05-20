@@ -63,11 +63,11 @@ var upload = multer({
   }
 });
 
-// 湲?곌린, ?섏젙, ??젣泥섎읆 濡쒓렇?몄씠 ?꾩슂???붿껌?먯꽌 怨듯넻?쇰줈 ?ъ슜?섎뒗 ?몄쬆 媛??
+// 글쓰기, 수정, 삭제처럼 로그인이 필요한 요청에서 공통으로 사용하는 인증 가드.
 function requireLogin(req, res) {
   if (!req.session.user) {
     if (req.flashMessage) {
-      req.flashMessage('warning', '濡쒓렇?몄씠 ?꾩슂??湲곕뒫?낅땲??');
+      req.flashMessage('warning', '로그인이 필요한 기능입니다.');
     }
     res.redirect('/bbs/login');
     return false;
@@ -75,14 +75,14 @@ function requireLogin(req, res) {
   return true;
 }
 
-// 異붿쿇 泥섎━ ??read ?붾㈃?쇰줈 ?뚯븘媛???議고쉶?섍? 利앷??섏? ?딅룄濡?1?뚯슜 ?좏겙??留뚮뱺??
+// 추천 처리 후 read 화면으로 돌아갈 때 조회수가 증가하지 않도록 1회용 토큰을 만든다.
 function createSkipViewCountToken(bbsno) {
   var token = crypto.randomBytes(16).toString('hex');
   skipViewCountTokens[token] = bbsno;
   return token;
 }
 
-// ?쇰컲 湲 ?쎄린??議고쉶?섎? ?щ━怨? 醫뗭븘???レ뼱?????대? ?대룞? 議고쉶?섎? ?щ━吏 ?딅뒗??
+// 일반 글 읽기는 조회수를 올리고, 좋아요/싫어요 후 내부 이동은 조회수를 올리지 않는다.
 function shouldSkipViewCount(req, brdno) {
   var token = cleanText(req.query.skip_view_token, 64);
 
@@ -99,7 +99,7 @@ function shouldSkipViewCount(req, brdno) {
   return false;
 }
 
-// express-session ?????대컢 ?뚮Ц??由щ떎?대젆???꾩뿉 session.save瑜?紐낆떆?곸쑝濡??몄텧?쒕떎.
+// express-session 저장 타이밍 때문에 리다이렉트 전에 session.save를 명시적으로 호출한다.
 function redirectReadWithoutViewCount(req, res, next, bbsno) {
   var token = createSkipViewCountToken(bbsno);
   req.session.skipViewCountBbsno = bbsno;
@@ -117,7 +117,7 @@ function redirectReadWithoutViewCount(req, res, next, bbsno) {
   });
 }
 
-// 湲곗〈 SHA-512 + salt 怨꾩젙 寃利앹슜 ?댁떆 ?⑥닔. 濡쒓렇???깃났 ??bcrypt濡??먮룞 ?꾪솚?쒕떎.
+// 기존 SHA-512 + salt 계정 검증용 해시 함수. 로그인 성공 시 bcrypt로 자동 전환한다.
 function createPasswordHash(password, salt) {
   return crypto
     .createHash('sha512')
@@ -129,7 +129,7 @@ function isBcryptPassword(algo, storedPassword) {
   return algo === 'bcrypt' || /^\$2[aby]\$/.test(storedPassword || '');
 }
 
-// ?좉퇋 媛?낃낵 ?뚯썝?뺣낫 ?섏젙? bcrypt留???ν븳??
+// 신규 가입과 회원정보 수정은 bcrypt만 저장한다.
 function createBcryptPassword(password, callback) {
   bcrypt.hash(password, bcryptSaltRounds, callback);
 }
@@ -249,7 +249,7 @@ function deleteStoredFiles(fileRows) {
   }
 }
 
-// 臾몄옄???낅젰媛믪쓣 trim?섍퀬 理쒕? 湲몄씠瑜??섏쑝硫?鍮?媛믪쑝濡?泥섎━?쒕떎.
+// 문자열 입력값을 trim하고 최대 길이를 넘으면 빈 값으로 처리한다.
 function cleanText(value, maxLength) {
   var text = (value || '').trim();
 
@@ -260,18 +260,18 @@ function cleanText(value, maxLength) {
   return text;
 }
 
-// URL/query/body濡??ㅼ뼱???レ옄媛 ?묒쓽 ?뺤닔?몄? ?뺤씤?쒕떎.
+// URL/query/body로 들어온 숫자가 양의 정수인지 확인한다.
 function isValidNumber(value) {
   var numberValue = Number(value);
   return Number.isInteger(numberValue) && numberValue > 0;
 }
 
-// ?좏슚?섏? ?딆? ?レ옄??null濡?諛붽퓭 ?쇱슦?곗뿉??bad request濡?泥섎━?섍쾶 ?쒕떎.
+// 유효하지 않은 숫자는 null로 바꿔 라우터에서 bad request로 처리하게 한다.
 function toValidNumber(value) {
   return isValidNumber(value) ? Number(value) : null;
 }
 
-// ?대찓?쇱? ?좏깮 ?낅젰媛믪씠硫? 媛믪씠 ?덉쑝硫?湲곕낯 ?대찓???뺤떇留??덉슜?쒕떎.
+// 이메일은 선택 입력값이며, 값이 있으면 기본 이메일 형식만 허용한다.
 function isValidEmail(value) {
   if (!value) return true;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -286,22 +286,22 @@ function isValidPhone(value) {
 }
 
 function validatePostInput(title, content) {
-  if (!title) return '?쒕ぉ???낅젰?댁＜?몄슂.';
-  if (!content) return '?댁슜???낅젰?댁＜?몄슂.';
-  if (title.length > 200) return '?쒕ぉ? 200???댄븯濡??낅젰?댁＜?몄슂.';
-  if (content.length > 4000) return '?댁슜? 4000???댄븯濡??낅젰?댁＜?몄슂.';
+  if (!title) return '제목을 입력해주세요.';
+  if (!content) return '내용을 입력해주세요.';
+  if (title.length > 200) return '제목은 200자 이하로 입력해주세요.';
+  if (content.length > 4000) return '내용은 4000자 이하로 입력해주세요.';
   return '';
 }
 
 function validateAccountInput(id, email, phone, options) {
   options = options || {};
 
-  if (!id) return '?꾩씠?붾? ?낅젰?댁＜?몄슂.';
-  if (!isValidUserId(id)) return '?꾩씠?붾뒗 4~20?먯쓽 ?곷Ц, ?レ옄, 諛묒쨪(_)留??ъ슜?????덉뒿?덈떎.';
-  if (options.emailRequired && !email) return '?대찓?쇱쓣 ?낅젰?댁＜?몄슂.';
-  if (email && !isValidEmail(email)) return '?щ컮瑜??대찓???뺤떇?쇰줈 ?낅젰?댁＜?몄슂.';
-  if (options.phoneRequired && !phone) return '?꾪솕踰덊샇瑜??낅젰?댁＜?몄슂.';
-  if (phone && !isValidPhone(phone)) return '?꾪솕踰덊샇??010-1234-5678 ?뺤떇?쇰줈 ?낅젰?댁＜?몄슂.';
+  if (!id) return '아이디를 입력해주세요.';
+  if (!isValidUserId(id)) return '아이디는 4~20자의 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.';
+  if (options.emailRequired && !email) return '이메일을 입력해주세요.';
+  if (email && !isValidEmail(email)) return '올바른 이메일 형식으로 입력해주세요.';
+  if (options.phoneRequired && !phone) return '전화번호를 입력해주세요.';
+  if (phone && !isValidPhone(phone)) return '전화번호는 010-1234-5678 형식으로 입력해주세요.';
   return '';
 }
 
@@ -314,16 +314,16 @@ function validatePasswordPolicy(password) {
   return '';
 }
 
-// 沅뚰븳???녿뒗 ?붿껌?????怨듯넻 ?묐떟.
+// 권한이 없는 요청에 대한 공통 응답.
 function renderForbidden(res) {
   res.status(403);
-  res.send('沅뚰븳???놁뒿?덈떎.');
+  res.send('권한이 없습니다.');
 }
 
-// ?섎せ???낅젰媛믪뿉 ???怨듯넻 ?묐떟.
+// 잘못된 입력값에 대한 공통 응답.
 function renderBadRequest(res, message) {
   res.status(400);
-  res.send(message || '?섎せ???붿껌?낅땲??');
+  res.send(message || '잘못된 요청입니다.');
 }
 
 function setFlash(req, type, text) {
@@ -349,7 +349,7 @@ router.get('/', function (req, res) {
 
 router.get('/login', function (req, res) {
   if (req.session.user) {
-    setFlash(req, 'info', '?대? 濡쒓렇?몃릺???덉뒿?덈떎.');
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
     res.redirect('/bbs/list');
     return;
   }
@@ -359,7 +359,7 @@ router.get('/login', function (req, res) {
 
 router.get('/find-id', function (req, res) {
   if (req.session.user) {
-    setFlash(req, 'info', '?대? 濡쒓렇?몃릺???덉뒿?덈떎.');
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
     res.redirect('/bbs/list');
     return;
   }
@@ -380,7 +380,7 @@ router.post('/find-id', function (req, res, next) {
     res.render('bbs/findid', {
       formData: formData,
       foundId: '',
-      message: '媛?????낅젰???대쫫怨??대찓?쇱쓣 ?뺥솗???낅젰?댁＜?몄슂.'
+      message: '가입 시 입력한 이름과 이메일을 정확히 입력해주세요.'
     });
     return;
   }
@@ -404,7 +404,7 @@ router.post('/find-id', function (req, res, next) {
       res.render('bbs/findid', {
         formData: formData,
         foundId: result.rows.length ? result.rows[0][0] : '',
-        message: result.rows.length ? '' : '?쇱튂?섎뒗 ?뚯썝 ?뺣낫瑜?李얠? 紐삵뻽?듬땲??'
+        message: result.rows.length ? '' : '일치하는 회원 정보를 찾을 수 없습니다.'
       });
     });
   });
@@ -412,7 +412,7 @@ router.post('/find-id', function (req, res, next) {
 
 router.get('/reset-password', function (req, res) {
   if (req.session.user) {
-    setFlash(req, 'info', '?대? 濡쒓렇?몃릺???덉뒿?덈떎.');
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
     res.redirect('/bbs/list');
     return;
   }
@@ -628,7 +628,7 @@ router.post('/reset-password/confirm', function (req, res, next) {
 router.post('/logincheck', function (req, res, next) {
   var pw = cleanText(req.body.password, 100);
   var code = 0;
-  var id = cleanText(req.body.id, 50); // ?낅젰媛?寃利?  var pw = cleanText(req.body.password, 100); // ?낅젰媛?寃利?  var code = 0;
+  var id = cleanText(req.body.id, 50); // 입력값 검증
   var loginFailureMessage = '아이디 또는 비밀번호가 올바르지 않습니다.';
 
   if (!id || !pw || !isValidUserId(id)) {
@@ -636,7 +636,7 @@ router.post('/logincheck', function (req, res, next) {
       errcode: 0,
       flashMessage: {
         type: 'warning',
-        text: '?꾩씠?붿? 鍮꾨?踰덊샇瑜??낅젰?댁＜?몄슂.'
+        text: '아이디와 비밀번호를 입력해주세요.'
       }
     });
     return;
@@ -683,7 +683,7 @@ router.post('/logincheck', function (req, res, next) {
           errcode: 1,
           flashMessage: {
             type: 'danger',
-            text: '?덊눜 泥섎━??怨꾩젙?낅땲??'
+            text: '탈퇴 처리된 계정입니다.'
           }
         });
         return;
@@ -704,7 +704,7 @@ router.post('/logincheck', function (req, res, next) {
         }
 
         connection.release();
-        setFlash(req, 'success', '濡쒓렇?몃릺?덉뒿?덈떎.');
+        setFlash(req, 'success', '로그인되었습니다.');
         res.redirect('/bbs/list');
       }
 
@@ -850,8 +850,8 @@ router.post('/withdraw', function (req, res, next) {
   var confirmText = cleanText(req.body.confirmText, 20);
   var userId = req.session.user.id;
 
-  if (!password || confirmText !== '?덊눜') {
-    setFlash(req, 'warning', '?뚯썝 ?덊눜 ?뺤씤 臾멸뎄? 鍮꾨?踰덊샇瑜??낅젰?댁＜?몄슂.');
+  if (!password || confirmText !== '탈퇴') {
+    setFlash(req, 'warning', '회원 탈퇴 확인 문구와 비밀번호를 입력해주세요.');
     res.redirect('/bbs/myinfo');
     return;
   }
@@ -902,7 +902,7 @@ router.post('/withdraw', function (req, res, next) {
 
       function rejectPassword() {
         connection.release();
-        setFlash(req, 'danger', '鍮꾨?踰덊샇媛 ?쇱튂?섏? ?딆뒿?덈떎.');
+        setFlash(req, 'danger', '비밀번호가 일치하지 않습니다.');
         res.redirect('/bbs/myinfo');
       }
 
@@ -936,7 +936,7 @@ router.post('/withdraw', function (req, res, next) {
 
 router.get('/signup', function (req, res) {
   if (req.session.user) {
-    setFlash(req, 'info', '?대? 濡쒓렇?몃릺???덉뒿?덈떎.');
+    setFlash(req, 'info', '이미 로그인되어 있습니다.');
     res.redirect('/bbs/list');
     return;
   }
@@ -948,13 +948,13 @@ router.get('/check-id', function (req, res, next) {
   var id = cleanText(req.query.userId || req.query.id, 50);
   if (id && !isValidUserId(id)) {
     req.session.checkedSignupId = null;
-    res.json({ available: false, message: '?꾩씠?붾뒗 4~20?먯쓽 ?곷Ц, ?レ옄, 諛묒쨪(_)留??ъ슜?????덉뒿?덈떎.' });
+    res.json({ available: false, message: '아이디는 4~20자의 영문, 숫자, 밑줄(_)만 사용할 수 있습니다.' });
     return;
   }
 
   if (!id) {
     req.session.checkedSignupId = null;
-    res.json({ available: false, message: '?꾩씠?붾? ?낅젰?댁＜?몄슂.' });
+    res.json({ available: false, message: '아이디를 입력해주세요.' });
     return;
   }
 
@@ -976,7 +976,7 @@ router.get('/check-id', function (req, res, next) {
       req.session.checkedSignupId = available ? id : null;
       res.json({
         available: available,
-        message: available ? '?ъ슜 媛?ν븳 ?꾩씠?붿엯?덈떎.' : '?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎.'
+        message: available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.'
       });
     });
   });
@@ -1027,7 +1027,7 @@ router.post('/signupsave', function (req, res, next) {
   }
 
   if (!idChecked || checkedId !== id || sessionCheckedId !== id) {
-    renderSignupMessage('?꾩씠??以묐났?뺤씤???꾨즺?댁＜?몄슂.', false);
+    renderSignupMessage('아이디 중복확인을 완료해주세요.', false);
     return;
   }
 
@@ -1057,7 +1057,7 @@ router.post('/signupsave', function (req, res, next) {
         if (countResult.rows[0][0] > 0) {
           connection.release();
           req.session.checkedSignupId = null;
-          renderSignupMessage('?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎.', false);
+          renderSignupMessage('이미 사용 중인 아이디입니다.', false);
           return;
         }
 
@@ -1079,7 +1079,7 @@ router.post('/signupsave', function (req, res, next) {
             }
             connection.release();
             req.session.checkedSignupId = null;
-            setFlash(req, 'success', '?뚯썝媛?낆씠 ?꾨즺?섏뿀?듬땲?? 濡쒓렇?명빐二쇱꽭??');
+            setFlash(req, 'success', '회원가입이 완료되었습니다. 로그인해주세요.');
             res.redirect('/bbs/login');
           }
         );
@@ -1168,7 +1168,7 @@ router.get('/updatesignup', function (req, res, next) {
         }
 
         var row = result.rows[0];
-        // 鍮꾨?踰덊샇 ?댁떆媛 ?붾㈃???ㅼ떆 ?몄텧?섏? ?딅룄濡?鍮?媛믪쑝濡??섍릿??
+        // 비밀번호 해시가 화면에 다시 노출되지 않도록 빈 값으로 넘긴다.
         res.render('bbs/updatesignform', { rows: [[row[0], '', row[1], row[2]]] });
         connection.release();
       });
@@ -1183,13 +1183,13 @@ router.post('/updatesignsave', function (req, res, next) {
   var name = cleanText(req.body.name, 100);
   var email = cleanText(req.body.email, 200);
   var pw2 = cleanText(req.body.pw2, 100);
-  var id = cleanText(req.body.id, 50); // ?낅젰媛?寃利?  var pw = cleanText(req.body.pw1, 100); // ?낅젰媛?寃利?  var name = cleanText(req.body.name, 100); // ?낅젰媛?寃利?  var email = cleanText(req.body.email, 200); // ?낅젰媛?寃利?  var pw2 = cleanText(req.body.pw2, 100); // ?낅젰媛?寃利?
+  var id = cleanText(req.body.id, 50); // 입력값 검증
   if (!requireLogin(req, res)) return;
 
   if (pw != pw2) {
     res.render('bbs/updatesignform', {
       rows: [[id, '', name, email]],
-      flashMessage: { type: 'warning', text: '鍮꾨?踰덊샇 ?뺤씤???쇱튂?섏? ?딆뒿?덈떎.' }
+      flashMessage: { type: 'warning', text: '비밀번호 확인이 일치하지 않습니다.' }
     });
     return;
   }
@@ -1238,7 +1238,7 @@ router.post('/updatesignsave', function (req, res, next) {
           req.session.user.id = id;
           req.session.user.name = name;
           connection.release();
-          setFlash(req, 'success', '?뚯썝?뺣낫媛 ?섏젙?섏뿀?듬땲??');
+          setFlash(req, 'success', '회원정보가 수정되었습니다.');
           res.redirect('/bbs/list');
         }
       );
@@ -1264,7 +1264,7 @@ router.get('/list', function (req, res, next) {
       console.error('err : ' + err);
       return next(err);
     }
-    // soft delete??湲? 紐⑸줉?먯꽌 ?쒖쇅?섍퀬 理쒖떊 湲??癒쇱? 蹂댁씠?꾨줉 ?뺣젹?쒕떎.
+    // soft delete된 글은 목록에서 제외하고 최신 글이 먼저 보이도록 정렬한다.
     var countSql = 'SELECT COUNT(*) FROM BBS WHERE ' + whereSql;
 
     connection.execute(countSql, binds, function (err, countResult) {
@@ -1361,7 +1361,7 @@ router.post('/save', function (req, res, next) {
     }
 
     var content = cleanText(req.body.brdmemo, 4000);
-    var title = cleanText(req.body.brdtitle, 200); // ?낅젰媛?寃利?    var content = cleanText(req.body.brdmemo, 4000);
+    var title = cleanText(req.body.brdtitle, 200); // 입력값 검증
     var writer = req.session.user.name || req.session.user.id;
     var postError = validatePostInput(title, content);
 
@@ -1426,7 +1426,7 @@ router.post('/save', function (req, res, next) {
 
             if (!req.file) {
               connection.release();
-              setFlash(req, 'success', '寃뚯떆湲???깅줉?섏뿀?듬땲??');
+              setFlash(req, 'success', '게시글이 등록되었습니다.');
               res.redirect('/bbs/list');
               return;
             }
@@ -1456,7 +1456,7 @@ router.post('/save', function (req, res, next) {
                 }
 
                 connection.release();
-                setFlash(req, 'success', '寃뚯떆湲怨?泥⑤??뚯씪???깅줉?섏뿀?듬땲??');
+                setFlash(req, 'success', '게시글과 첨부파일이 등록되었습니다.');
                 res.redirect('/bbs/list');
               }
             );
@@ -1468,9 +1468,9 @@ router.post('/save', function (req, res, next) {
 });
 
 router.get('/read', function (req, res, next) {
-  var brdno = toValidNumber(req.query.brdno); // 寃뚯떆湲 踰덊샇 寃利?
+  var brdno = toValidNumber(req.query.brdno); // 게시글 번호 검증
   if (!brdno) {
-    renderBadRequest(res, '寃뚯떆湲 踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.');
+    renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
     return;
   }
 
@@ -1482,7 +1482,7 @@ router.get('/read', function (req, res, next) {
 
     var skipViewCount = shouldSkipViewCount(req, brdno);
 
-    // read ?붾㈃? ?곸꽭 議고쉶, 議고쉶??利앷?, ?볤?/?뚯씪/??異붿쿇 ?곹깭 議고쉶瑜???踰덉뿉 泥섎━?쒕떎.
+    // read 화면은 상세 조회, 조회수 증가, 댓글/파일/내 추천 상태 조회를 한 번에 처리한다.
     var updateSql =
       'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
     var sql =
@@ -1597,13 +1597,14 @@ router.get('/delete', function (req, res, next) {
       return next(err);
     }
 
-    // ?ㅼ젣 DELETE ????곹깭媛믩쭔 ?대젮 怨쇱젣 ?먮쫫??留욌뒗 soft delete瑜??좎??쒕떎.
-    var bbsno = toValidNumber(req.query.brdno); // 寃뚯떆湲 踰덊샇 寃利?    var writer = req.session.user.id;
+    // 실제 DELETE 대신 상태값만 내려 과제 흐름에 맞는 soft delete를 유지한다.
+    var bbsno = toValidNumber(req.query.brdno); // 게시글 번호 검증
+    var writer = req.session.user.id;
     var writerName = req.session.user.name || req.session.user.id;
 
     if (!bbsno) {
       connection.release();
-      renderBadRequest(res, '寃뚯떆湲 踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.');
+      renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
       return;
     }
 
@@ -1641,7 +1642,7 @@ router.get('/delete', function (req, res, next) {
 
           connection.release();
           deleteStoredFiles(fileRows.rows);
-          setFlash(req, 'success', '寃뚯떆湲????젣?섏뿀?듬땲??');
+          setFlash(req, 'success', '게시글이 삭제되었습니다.');
           res.redirect('/bbs/list');
         });
       });
@@ -1651,9 +1652,9 @@ router.get('/delete', function (req, res, next) {
 
 router.get('/update', function (req, res, next) {
   if (!requireLogin(req, res)) return;
-  var brdno = toValidNumber(req.query.brdno); // 寃뚯떆湲 踰덊샇 寃利?
+  var brdno = toValidNumber(req.query.brdno); // 게시글 번호 검증
   if (!brdno) {
-    renderBadRequest(res, '寃뚯떆湲 踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.');
+    renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
     return;
   }
 
@@ -1663,7 +1664,7 @@ router.get('/update', function (req, res, next) {
       return next(err);
     }
 
-    // ?섏젙 ?붾㈃? ??젣?섏? ?딆? ?쒖꽦 湲留???곸쑝濡??쒗븳?쒕떎.
+    // 수정 화면은 삭제되지 않은 활성 글만 대상으로 제한한다.
     var sql =
       "SELECT NO, TITLE, CONTENT, WRITER, to_char(REGDATE,'yyyy-mm-dd') " +
       'FROM BBS WHERE OK = 1 AND NO = :brdno';
@@ -1713,7 +1714,7 @@ router.post('/updatesave', function (req, res, next) {
   var title = cleanText(req.body.brdtitle, 200);
   var content = cleanText(req.body.brdmemo, 4000);
   var writer = req.session.user.id;
-  var brdno = toValidNumber(req.body.brdno); // 寃뚯떆湲 踰덊샇 寃利?  var title = cleanText(req.body.brdtitle, 200); // ?낅젰媛?寃利?  var content = cleanText(req.body.brdmemo, 4000); // ?낅젰媛?寃利?  var writer = req.session.user.id;
+  var brdno = toValidNumber(req.body.brdno); // 게시글 번호 검증
   var writerName = req.session.user.name || req.session.user.id;
   var postError = validatePostInput(title, content);
 
@@ -1753,7 +1754,7 @@ router.post('/updatesave', function (req, res, next) {
         }
 
         connection.release();
-        setFlash(req, 'success', '寃뚯떆湲???섏젙?섏뿀?듬땲??');
+        setFlash(req, 'success', '게시글이 수정되었습니다.');
         res.redirect('/bbs/list');
       }
     );
@@ -1770,7 +1771,8 @@ router.get('/search', function (req, res, next) {
   };
   var paging = getPaging(req);
   var sortInfo = getSort(req);
-  var searchKeyword = cleanText(req.query.search, 200); // 寃?됱뼱 湲몄씠 寃利?  var myPostsOnly = req.query.mine === '1' && req.session.user;
+  var searchKeyword = cleanText(req.query.search, 200); // 검색어 길이 검증
+  var myPostsOnly = req.query.mine === '1' && req.session.user;
 
   if (!searchColumns[choice]) {
     choice = 'TITLE';
@@ -1787,7 +1789,7 @@ router.get('/search', function (req, res, next) {
     var binds = { search: '%' + searchKeyword + '%' };
 
     if (choice == 'TITLE_CONTENT') {
-      // ?쒕ぉ+?댁슜 寃?됱? OR 議곌굔??愿꾪샇濡?臾띠뼱 OK=1 議곌굔怨??④퍡 ?곸슜?쒕떎.
+      // 제목+내용 검색은 OR 조건을 괄호로 묶어 OK=1 조건과 함께 적용한다.
 
       whereSql = 'OK=1 AND (TITLE LIKE :search OR CONTENT LIKE :search)';
     } else {
@@ -1882,7 +1884,7 @@ router.post('/reaction', function (req, res, next) {
   var userId = req.session.user.id;
 
   if (!bbsno || !isValidReactionType(reactionType)) {
-    renderBadRequest(res, '異붿쿇 ?낅젰媛믪쓣 ?뺤씤?섏꽭??');
+    renderBadRequest(res, '추천 입력값을 확인하세요.');
     return;
   }
 
@@ -1903,7 +1905,7 @@ router.post('/reaction', function (req, res, next) {
 
       if (postRows.rows.length < 1) {
         connection.release();
-        renderBadRequest(res, '寃뚯떆湲 踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.');
+        renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
         return;
       }
 
@@ -1919,7 +1921,7 @@ router.post('/reaction', function (req, res, next) {
 
         var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
 
-        // 湲곕줉???놁쑝硫???異붿쿇??異붽??섍퀬 寃뚯떆湲 移댁슫?곕? 利앷??쒗궓??
+        // 기록이 없으면 새 추천을 추가하고 게시글 카운터를 증가시킨다.
         if (!currentReaction) {
           var insertReactionSql =
             reactionType === 'LIKE'
@@ -1949,7 +1951,7 @@ router.post('/reaction', function (req, res, next) {
           return;
         }
 
-        // 媛숈? 踰꾪듉???ㅼ떆 ?꾨Ⅴ硫?異붿쿇 湲곕줉????젣?섍퀬 移댁슫?곕? ?섎룎由곕떎.
+        // 같은 버튼을 다시 누르면 추천 기록을 삭제하고 카운터를 되돌린다.
         if (currentReaction === reactionType) {
           var cancelReactionSql =
             reactionType === 'LIKE'
@@ -1975,7 +1977,7 @@ router.post('/reaction', function (req, res, next) {
           return;
         }
 
-        // 諛섎? 踰꾪듉???꾨Ⅴ硫?湲곕줉? 媛깆떊?섍퀬 湲곗〈 移댁슫?곗? ??移댁슫?곕? ?숈떆??蹂댁젙?쒕떎.
+        // 반대 버튼을 누르면 기록은 갱신하고 기존 카운터와 새 카운터를 동시에 보정한다.
         var switchReactionSql =
           reactionType === 'LIKE'
             ? 'BEGIN ' +
@@ -2009,10 +2011,12 @@ router.post('/reaction', function (req, res, next) {
 router.post('/wsave', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var bbsno = toValidNumber(req.body.bbsno); // 寃뚯떆湲 踰덊샇 寃利?  var content = cleanText(req.body.content, 4000); // ?볤? ?댁슜 寃利?  var writer = req.session.user.id;
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var content = cleanText(req.body.content, 4000); // 댓글 내용 검증
+  var writer = req.session.user.id;
 
   if (!bbsno || !content) {
-    renderBadRequest(res, '?볤? ?낅젰媛믪쓣 ?뺤씤?섏꽭??');
+    renderBadRequest(res, '댓글 입력값을 확인하세요.');
     return;
   }
 
@@ -2041,7 +2045,7 @@ router.post('/wsave', function (req, res, next) {
         }
 
         connection.release();
-        setFlash(req, 'success', '?볤????깅줉?섏뿀?듬땲??');
+        setFlash(req, 'success', '댓글이 등록되었습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
       }
     );
@@ -2051,10 +2055,13 @@ router.post('/wsave', function (req, res, next) {
 router.post('/wreply', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var bbsno = toValidNumber(req.body.bbsno); // 寃뚯떆湲 踰덊샇 寃利?  var parentNo = toValidNumber(req.body.parent_no); // 遺紐??볤? 踰덊샇 寃利?  var content = cleanText(req.body.content, 4000); // ?듦? ?댁슜 寃利?  var writer = req.session.user.id;
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var parentNo = toValidNumber(req.body.parent_no); // 부모 댓글 번호 검증
+  var content = cleanText(req.body.content, 4000); // 답글 내용 검증
+  var writer = req.session.user.id;
 
   if (!bbsno || !parentNo || !content) {
-    renderBadRequest(res, '?듦? ?낅젰媛믪쓣 ?뺤씤?섏꽭??');
+    renderBadRequest(res, '답글 입력값을 확인하세요.');
     return;
   }
 
@@ -2075,7 +2082,7 @@ router.post('/wreply', function (req, res, next) {
 
       if (parentRows.rows.length < 1) {
         connection.release();
-        setFlash(req, 'warning', '?듦??????볤???李얠쓣 ???놁뒿?덈떎.');
+        setFlash(req, 'warning', '답글을 달 댓글을 찾을 수 없습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
         return;
       }
@@ -2112,7 +2119,7 @@ router.post('/wreply', function (req, res, next) {
             }
 
             connection.release();
-            setFlash(req, 'success', '?듦????깅줉?섏뿀?듬땲??');
+            setFlash(req, 'success', '답글이 등록되었습니다.');
             res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
           });
         }
@@ -2124,10 +2131,13 @@ router.post('/wreply', function (req, res, next) {
 router.post('/wupdate', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var wno = toValidNumber(req.body.wno); // ?볤? 踰덊샇 寃利?  var bbsno = toValidNumber(req.body.bbsno); // 寃뚯떆湲 踰덊샇 寃利?  var content = cleanText(req.body.content, 4000); // ?볤? ?댁슜 寃利?  var writer = req.session.user.id;
+  var wno = toValidNumber(req.body.wno); // 댓글 번호 검증
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var content = cleanText(req.body.content, 4000); // 댓글 내용 검증
+  var writer = req.session.user.id;
 
   if (!wno || !bbsno || !content) {
-    renderBadRequest(res, '?볤? ?섏젙媛믪쓣 ?뺤씤?섏꽭??');
+    renderBadRequest(res, '댓글 수정값을 확인하세요.');
     return;
   }
 
@@ -2163,7 +2173,7 @@ router.post('/wupdate', function (req, res, next) {
         }
 
         connection.release();
-        setFlash(req, 'success', '?볤????섏젙?섏뿀?듬땲??');
+        setFlash(req, 'success', '댓글이 수정되었습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
       }
     );
@@ -2173,10 +2183,12 @@ router.post('/wupdate', function (req, res, next) {
 router.post('/wdelete', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var wno = toValidNumber(req.body.wno); // ?볤? 踰덊샇 寃利?  var bbsno = toValidNumber(req.body.bbsno); // 寃뚯떆湲 踰덊샇 寃利?  var writer = req.session.user.id;
+  var wno = toValidNumber(req.body.wno); // 댓글 번호 검증
+  var bbsno = toValidNumber(req.body.bbsno); // 게시글 번호 검증
+  var writer = req.session.user.id;
 
   if (!wno || !bbsno) {
-    renderBadRequest(res, '?볤? 踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.');
+    renderBadRequest(res, '댓글 번호가 올바르지 않습니다.');
     return;
   }
 
@@ -2187,7 +2199,7 @@ router.post('/wdelete', function (req, res, next) {
     }
 
     var sql =
-      "UPDATE BBSW SET OK = 0, CONTENT = '??젣???볤??낅땲??', UPDATEDATE = SYSDATE " +
+      "UPDATE BBSW SET OK = 0, CONTENT = '삭제된 댓글입니다.', UPDATEDATE = SYSDATE " +
       'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
 
     connection.execute(sql, { wno: wno, bbsno: bbsno, writer: writer }, function (err, result) {
@@ -2204,7 +2216,7 @@ router.post('/wdelete', function (req, res, next) {
       }
 
       connection.release();
-      setFlash(req, 'success', '?볤?????젣?섏뿀?듬땲??');
+      setFlash(req, 'success', '댓글이 삭제되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
     });
   });
@@ -2213,9 +2225,9 @@ router.post('/wdelete', function (req, res, next) {
 router.get('/download', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  var fno = toValidNumber(req.query.fno); // ?뚯씪 踰덊샇 寃利?
+  var fno = toValidNumber(req.query.fno); // 파일 번호 검증
   if (!fno) {
-    renderBadRequest(res, '?뚯씪 踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.');
+    renderBadRequest(res, '파일 번호가 올바르지 않습니다.');
     return;
   }
 
