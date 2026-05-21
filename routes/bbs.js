@@ -10,6 +10,7 @@ var multer = require('multer');
 oracledb.autoCommit = true;
 
 var dbconfig = require('../config/dbconfig');
+var withConnection = require('../db/oracle').withConnection;
 var bcryptSaltRounds = 12;
 var csrfProtection = csrf();
 var uploadDir = path.join(__dirname, '..', 'uploads', 'bbs');
@@ -385,29 +386,22 @@ router.post('/find-id', function (req, res, next) {
     return;
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
-
+  withConnection(function (connection) {
     var sql = 'SELECT ID FROM LOGIN WHERE NAME = :name AND EMAIL = :email AND OK = 1';
 
-    connection.execute(sql, { name: name, email: email }, function (err, result) {
-      connection.release();
-
-      if (err) {
-        console.error('err : ' + err);
-        return next(err);
-      }
-
+    return connection.execute(sql, { name: name, email: email });
+  })
+    .then(function (result) {
       res.render('bbs/findid', {
         formData: formData,
         foundId: result.rows.length ? result.rows[0][0] : '',
         message: result.rows.length ? '' : '일치하는 회원 정보를 찾을 수 없습니다.'
       });
+    })
+    .catch(function (err) {
+      console.error('err : ' + err);
+      return next(err);
     });
-  });
 });
 
 router.get('/reset-password', function (req, res) {
@@ -495,7 +489,7 @@ router.post('/reset-password/request', function (req, res, next) {
   });
 });
 
-router.get('/reset-password/confirm', function (req, res, next) {
+router.get('/reset-password/confirm', async function (req, res, next) {
   var token = cleanText(req.query.token, 128);
 
   function renderConfirm(validToken, message) {
@@ -511,30 +505,23 @@ router.get('/reset-password/confirm', function (req, res, next) {
     return;
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
+  try {
+    await withConnection(async function (connection) {
+      var sql =
+        'SELECT R.USER_ID FROM RESET_TOKEN R JOIN LOGIN L ON L.ID = R.USER_ID ' +
+        'WHERE R.TOKEN = :token AND R.USED = 0 AND R.EXPIRES_AT > SYSDATE AND L.OK = 1';
 
-    var sql =
-      'SELECT R.USER_ID FROM RESET_TOKEN R JOIN LOGIN L ON L.ID = R.USER_ID ' +
-      'WHERE R.TOKEN = :token AND R.USED = 0 AND R.EXPIRES_AT > SYSDATE AND L.OK = 1';
-
-    connection.execute(sql, { token: token }, function (err, result) {
-      connection.release();
-
-      if (err) {
-        console.error('err : ' + err);
-        return next(err);
-      }
+      var result = await connection.execute(sql, { token: token });
 
       renderConfirm(
         result.rows.length > 0,
         result.rows.length > 0 ? '' : '토큰이 없거나 만료되었습니다.'
       );
     });
-  });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
 router.post('/reset-password/confirm', function (req, res, next) {
@@ -813,27 +800,17 @@ router.get('/logout', function (req, res) {
   });
 });
 
-router.get('/myinfo', function (req, res, next) {
+router.get('/myinfo', async function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
+  try {
+    await withConnection(async function (connection) {
+      var sql =
+        'SELECT ID, NAME, PHONE, ' +
+        "TO_CHAR(PASSWORD_UPDATED_AT, 'yyyy-mm-dd') AS PASSWORD_UPDATED_AT " +
+        'FROM LOGIN WHERE ID = :id AND OK = 1';
 
-    var sql =
-      'SELECT ID, NAME, PHONE, ' +
-      "TO_CHAR(PASSWORD_UPDATED_AT, 'yyyy-mm-dd') AS PASSWORD_UPDATED_AT " +
-      'FROM LOGIN WHERE ID = :id AND OK = 1';
-
-    connection.execute(sql, { id: req.session.user.id }, function (err, result) {
-      connection.release();
-
-      if (err) {
-        console.error('err : ' + err);
-        return next(err);
-      }
+      var result = await connection.execute(sql, { id: req.session.user.id });
 
       if (result.rows.length < 1) {
         res.redirect('/bbs/login');
@@ -852,7 +829,10 @@ router.get('/myinfo', function (req, res, next) {
         }
       });
     });
-  });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
 router.post('/withdraw', function (req, res, next) {
@@ -1173,32 +1153,25 @@ router.post('/signupsave-old', function (req, res, next) {
   });
 });
 
-router.get('/updatesignup', function (req, res, next) {
+router.get('/updatesignup', async function (req, res, next) {
   if (req.session.user) {
-    oracledb.getConnection(dbconfig, function (err, connection) {
-      if (err) {
-        console.error('err : ' + err);
-        return next(err);
-      }
-      var sql = 'SELECT ID, NAME, EMAIL FROM LOGIN WHERE ID = :id';
-      connection.execute(sql, { id: req.session.user.id }, function (err, result) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
+    try {
+      await withConnection(async function (connection) {
+        var sql = 'SELECT ID, NAME, EMAIL FROM LOGIN WHERE ID = :id';
+        var result = await connection.execute(sql, { id: req.session.user.id });
 
         if (result.rows.length < 1) {
-          connection.release();
           return res.redirect('/bbs/login');
         }
 
         var row = result.rows[0];
         // 비밀번호 해시가 화면에 다시 출력되지 않도록 빈 값으로 넘긴다.
         res.render('bbs/updatesignform', { rows: [[row[0], '', row[1], row[2]]] });
-        connection.release();
       });
-    });
+    } catch (err) {
+      console.error('err : ' + err);
+      return next(err);
+    }
   } else {
     res.redirect('/bbs/login');
   }
@@ -1272,7 +1245,7 @@ router.post('/updatesignsave', function (req, res, next) {
   });
 });
 
-router.get('/list', function (req, res, next) {
+router.get('/list', async function (req, res, next) {
   var paging = getPaging(req);
   var sortInfo = getSort(req);
   var myPostsOnly = req.query.mine === '1' && req.session.user;
@@ -1285,21 +1258,11 @@ router.get('/list', function (req, res, next) {
     binds.writerName = req.session.user.name || req.session.user.id;
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
-    // soft delete된 글은 목록에서 제외하고 최신 글이 먼저 보이도록 정렬한다.
-    var countSql = 'SELECT COUNT(*) FROM BBS WHERE ' + whereSql;
-
-    connection.execute(countSql, binds, function (err, countResult) {
-      if (err) {
-        connection.release();
-        console.error('err : ' + err);
-        return next(err);
-      }
-
+  try {
+    await withConnection(async function (connection) {
+      // soft delete된 글은 목록에서 제외하고 최신 글이 먼저 보이도록 정렬한다.
+      var countSql = 'SELECT COUNT(*) FROM BBS WHERE ' + whereSql;
+      var countResult = await connection.execute(countSql, binds);
       var totalCount = countResult.rows[0][0];
       var totalPage = Math.ceil(totalCount / paging.pageSize);
 
@@ -1327,38 +1290,32 @@ router.get('/list', function (req, res, next) {
         ' ORDER BY ' +
         sortInfo.orderBy +
         ' OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
-
-      connection.execute(
+      var rows = await connection.execute(
         sql,
         Object.assign({}, binds, {
           offset: offset,
           pageSize: paging.pageSize
-        }),
-        function (err, rows) {
-          if (err) {
-            connection.release();
-            console.error('err : ' + err);
-            return next(err);
-          }
+        })
+      );
 
-          res.render(
-            'bbs/list',
-            Object.assign(getPagingViewData(paging.currentPage, paging.pageSize, totalCount), {
-              rows: rows.rows,
-              searchChoice: 'TITLE',
-              searchKeyword: '',
-              isSearch: false,
-              myPostsOnly: !!myPostsOnly,
-              sort: sortInfo.sort,
-              order: sortInfo.order,
-              paginationBaseUrl: paginationBaseUrl
-            })
-          );
-          connection.release();
-        }
+      res.render(
+        'bbs/list',
+        Object.assign(getPagingViewData(paging.currentPage, paging.pageSize, totalCount), {
+          rows: rows.rows,
+          searchChoice: 'TITLE',
+          searchKeyword: '',
+          isSearch: false,
+          myPostsOnly: !!myPostsOnly,
+          sort: sortInfo.sort,
+          order: sortInfo.order,
+          paginationBaseUrl: paginationBaseUrl
+        })
       );
     });
-  });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
 router.get('/form', function (req, res) {
@@ -1493,128 +1450,102 @@ router.post('/save', function (req, res, next) {
   });
 });
 
-router.get('/read', function (req, res, next) {
+router.get('/read', async function (req, res, next) {
   var brdno = toValidNumber(req.query.brdno); // 게시글 번호 검증
   if (!brdno) {
     renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
     return;
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
+  try {
+    await withConnection(async function (connection) {
+      var skipViewCount = shouldSkipViewCount(req, brdno);
 
-    var skipViewCount = shouldSkipViewCount(req, brdno);
+      // read 화면은 상세 조회, 조회수 증가, 댓글/파일/추천 상태 조회를 한 번에 처리한다.
+      var updateSql =
+        'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
+      var sql =
+        'SELECT NO, TITLE, CONTENT, ' +
+        "WRITER, to_char(REGDATE,'yyyy-mm-dd'), VIEW_COUNT, " +
+        'NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
+        ' FROM BBS' +
+        ' WHERE OK = 1 AND NO = :brdno';
+      var commentSql =
+        'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
+        "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
+        "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK " +
+        'FROM BBSW ' +
+        'WHERE BBSNO = :bbsno ' +
+        'START WITH PARENT_NO IS NULL ' +
+        'CONNECT BY PRIOR NO = PARENT_NO ' +
+        'ORDER SIBLINGS BY NO ASC';
+      var fileSql =
+        'SELECT NO, BBSNO, ORG_FILENAME, SAVE_FILENAME, FILEPATH, FILESIZE, MIMETYPE, ' +
+        "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
+        'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
 
-    // read 화면은 상세 조회, 조회수 증가, 댓글/파일/추천 상태 조회를 한 번에 처리한다.
-    var updateSql =
-      'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
-    var sql =
-      'SELECT NO, TITLE, CONTENT, ' +
-      "WRITER, to_char(REGDATE,'yyyy-mm-dd'), VIEW_COUNT, " +
-      'NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
-      ' FROM BBS' +
-      ' WHERE OK = 1 AND NO = :brdno';
-    var commentSql =
-      'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
-      "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
-      "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK " +
-      'FROM BBSW ' +
-      'WHERE BBSNO = :bbsno ' +
-      'START WITH PARENT_NO IS NULL ' +
-      'CONNECT BY PRIOR NO = PARENT_NO ' +
-      'ORDER SIBLINGS BY NO ASC';
-    var fileSql =
-      'SELECT NO, BBSNO, ORG_FILENAME, SAVE_FILENAME, FILEPATH, FILESIZE, MIMETYPE, ' +
-      "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
-      'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
+      await connection.execute(
+        skipViewCount ? 'BEGIN NULL; END;' : updateSql,
+        skipViewCount ? {} : { brdno: brdno }
+      );
 
-    connection.execute(
-      skipViewCount ? 'BEGIN NULL; END;' : updateSql,
-      skipViewCount ? {} : { brdno: brdno },
-      function (err) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
+      var rows = await connection.execute(sql, { brdno: brdno });
 
-        connection.execute(sql, { brdno: brdno }, function (err, rows) {
-          if (err) {
-            connection.release();
-            console.error('err : ' + err);
-            return next(err);
-          }
-
-          if (rows.rows.length < 1) {
-            connection.release();
-            res.redirect('/bbs/list');
-            return;
-          }
-
-          connection.execute(commentSql, { bbsno: brdno }, function (err, commentRows) {
-            if (err) {
-              connection.release();
-              console.error('err : ' + err);
-              return next(err);
-            }
-
-            connection.execute(fileSql, { bbsno: brdno }, function (err, fileRows) {
-              if (err) {
-                connection.release();
-                console.error('err : ' + err);
-                return next(err);
-              }
-
-              if (!req.session.user) {
-                res.render('bbs/read', {
-                  rows: rows.rows,
-                  comments: commentRows.rows,
-                  files: fileRows.rows,
-                  currentUser: null,
-                  userReaction: ''
-                });
-                connection.release();
-                return;
-              }
-
-              var reactionSql =
-                'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
-
-              connection.execute(
-                reactionSql,
-                {
-                  bbsno: brdno,
-                  userId: req.session.user.id
-                },
-                function (err, reactionRows) {
-                  if (err) {
-                    connection.release();
-                    console.error('err : ' + err);
-                    return next(err);
-                  }
-
-                  res.render('bbs/read', {
-                    rows: rows.rows,
-                    comments: commentRows.rows,
-                    files: fileRows.rows,
-                    currentUser: req.session.user,
-                    userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : ''
-                  });
-                  connection.release();
-                }
-              );
-            });
-          });
-        });
+      if (rows.rows.length < 1) {
+        res.redirect('/bbs/list');
+        return;
       }
-    );
-  });
+
+      var commentRows = await connection.execute(commentSql, { bbsno: brdno });
+      var fileRows = await connection.execute(fileSql, { bbsno: brdno });
+
+      if (!req.session.user) {
+        res.render('bbs/read', {
+          rows: rows.rows,
+          comments: commentRows.rows,
+          files: fileRows.rows,
+          currentUser: null,
+          userReaction: ''
+        });
+        return;
+      }
+
+      var reactionSql =
+        'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
+
+      var reactionRows = await connection.execute(reactionSql, {
+        bbsno: brdno,
+        userId: req.session.user.id
+      });
+
+      res.render('bbs/read', {
+        rows: rows.rows,
+        comments: commentRows.rows,
+        files: fileRows.rows,
+        currentUser: req.session.user,
+        userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : ''
+      });
+    });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
-router.get('/delete', function (req, res, next) {
+router.get('/delete', function (req, res) {
+  if (!requireLogin(req, res)) return;
+
+  var bbsno = toValidNumber(req.query.brdno);
+
+  if (bbsno) {
+    res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+    return;
+  }
+
+  res.redirect('/bbs/list');
+});
+
+router.post('/delete', function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
   oracledb.getConnection(dbconfig, function (err, connection) {
@@ -1624,7 +1555,7 @@ router.get('/delete', function (req, res, next) {
     }
 
     // 실제 DELETE 대신 상태값만 내려 과제 흐름에 맞는 soft delete를 사용한다.
-    var bbsno = toValidNumber(req.query.brdno); // 게시글 번호 검증
+    var bbsno = toValidNumber(req.body.brdno); // 게시글 번호 검증
     var writer = req.session.user.id;
     var writerName = req.session.user.name || req.session.user.id;
 
@@ -1681,7 +1612,7 @@ router.get('/delete', function (req, res, next) {
   });
 });
 
-router.get('/update', function (req, res, next) {
+router.get('/update', async function (req, res, next) {
   if (!requireLogin(req, res)) return;
   var brdno = toValidNumber(req.query.brdno); // 게시글 번호 검증
   if (!brdno) {
@@ -1689,30 +1620,20 @@ router.get('/update', function (req, res, next) {
     return;
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
+  try {
+    await withConnection(async function (connection) {
+      // 수정 화면은 삭제되지 않은 활성 글만 대상으로 제한한다.
+      var sql =
+        "SELECT NO, TITLE, CONTENT, WRITER, to_char(REGDATE,'yyyy-mm-dd') " +
+        'FROM BBS WHERE OK = 1 AND NO = :brdno';
+      var fileSql =
+        'SELECT NO, BBSNO, ORG_FILENAME, SAVE_FILENAME, FILEPATH, FILESIZE, MIMETYPE, ' +
+        "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
+        'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
 
-    // 수정 화면은 삭제되지 않은 활성 글만 대상으로 제한한다.
-    var sql =
-      "SELECT NO, TITLE, CONTENT, WRITER, to_char(REGDATE,'yyyy-mm-dd') " +
-      'FROM BBS WHERE OK = 1 AND NO = :brdno';
-    var fileSql =
-      'SELECT NO, BBSNO, ORG_FILENAME, SAVE_FILENAME, FILEPATH, FILESIZE, MIMETYPE, ' +
-      "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
-      'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
-
-    connection.execute(sql, { brdno: brdno }, function (err, rows) {
-      if (err) {
-        connection.release();
-        console.error('err : ' + err);
-        return next(err);
-      }
+      var rows = await connection.execute(sql, { brdno: brdno });
 
       if (rows.rows.length < 1) {
-        connection.release();
         res.redirect('/bbs/list');
         return;
       }
@@ -1721,26 +1642,21 @@ router.get('/update', function (req, res, next) {
         rows.rows[0][3] !== req.session.user.id &&
         rows.rows[0][3] !== (req.session.user.name || req.session.user.id)
       ) {
-        connection.release();
         renderForbidden(res);
         return;
       }
 
-      connection.execute(fileSql, { bbsno: brdno }, function (err, fileRows) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
+      var fileRows = await connection.execute(fileSql, { bbsno: brdno });
 
-        res.render('bbs/updateform', {
-          rows: rows.rows,
-          files: fileRows.rows
-        });
-        connection.release();
+      res.render('bbs/updateform', {
+        rows: rows.rows,
+        files: fileRows.rows
       });
     });
-  });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
 router.post('/updatesave', function (req, res, next) {
@@ -1795,7 +1711,7 @@ router.post('/updatesave', function (req, res, next) {
   });
 });
 
-router.get('/search', function (req, res, next) {
+router.get('/search', async function (req, res, next) {
   var choice = req.query.choice || 'TITLE';
   var searchColumns = {
     TITLE: 'TITLE',
@@ -1812,15 +1728,11 @@ router.get('/search', function (req, res, next) {
     choice = 'TITLE';
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
-    }
-
-    var whereSql;
-    var sql;
-    var binds = { search: '%' + searchKeyword + '%' };
+  try {
+    await withConnection(async function (connection) {
+      var whereSql;
+      var sql;
+      var binds = { search: '%' + searchKeyword + '%' };
 
     if (choice == 'TITLE_CONTENT') {
       // 제목+내용 검색은 OR 조건을 괄호로 묶어 OK=1 조건과 함께 적용한다.
@@ -1836,82 +1748,67 @@ router.get('/search', function (req, res, next) {
       binds.writerName = req.session.user.name || req.session.user.id;
     }
 
-    connection.execute(
-      'SELECT COUNT(*) FROM BBS WHERE ' + whereSql,
-      binds,
-      function (err, countResult) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
+      var countResult = await connection.execute('SELECT COUNT(*) FROM BBS WHERE ' + whereSql, binds);
+      var totalCount = countResult.rows[0][0];
+      var totalPage = Math.ceil(totalCount / paging.pageSize);
 
-        var totalCount = countResult.rows[0][0];
-        var totalPage = Math.ceil(totalCount / paging.pageSize);
-
-        if (totalPage > 0 && paging.currentPage > totalPage) {
-          paging.currentPage = totalPage;
-        }
-
-        var offset = (paging.currentPage - 1) * paging.pageSize;
-        var paginationBaseUrl =
-          '/bbs/search?choice=' +
-          encodeURIComponent(choice) +
-          '&search=' +
-          encodeURIComponent(searchKeyword) +
-          '&pageSize=' +
-          paging.pageSize +
-          (myPostsOnly ? '&mine=1' : '') +
-          (sortInfo.sort
-            ? '&sort=' +
-              encodeURIComponent(sortInfo.sort) +
-              '&order=' +
-              encodeURIComponent(sortInfo.order)
-            : '') +
-          '&page=';
-
-        sql =
-          "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-          'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
-          '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
-          'FROM BBS WHERE ' +
-          whereSql +
-          ' ORDER BY ' +
-          sortInfo.orderBy +
-          ' OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
-
-        connection.execute(
-          sql,
-          Object.assign({}, binds, {
-            offset: offset,
-            pageSize: paging.pageSize
-          }),
-          function (err, rows) {
-            if (err) {
-              connection.release();
-              console.error('err : ' + err);
-              return next(err);
-            }
-
-            res.render(
-              'bbs/list',
-              Object.assign(getPagingViewData(paging.currentPage, paging.pageSize, totalCount), {
-                rows: rows.rows,
-                searchChoice: choice,
-                searchKeyword: searchKeyword,
-                isSearch: true,
-                myPostsOnly: !!myPostsOnly,
-                sort: sortInfo.sort,
-                order: sortInfo.order,
-                paginationBaseUrl: paginationBaseUrl
-              })
-            );
-            connection.release();
-          }
-        );
+      if (totalPage > 0 && paging.currentPage > totalPage) {
+        paging.currentPage = totalPage;
       }
-    );
-  });
+
+      var offset = (paging.currentPage - 1) * paging.pageSize;
+      var paginationBaseUrl =
+        '/bbs/search?choice=' +
+        encodeURIComponent(choice) +
+        '&search=' +
+        encodeURIComponent(searchKeyword) +
+        '&pageSize=' +
+        paging.pageSize +
+        (myPostsOnly ? '&mine=1' : '') +
+        (sortInfo.sort
+          ? '&sort=' +
+            encodeURIComponent(sortInfo.sort) +
+            '&order=' +
+            encodeURIComponent(sortInfo.order)
+          : '') +
+        '&page=';
+
+      sql =
+        "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+        'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
+        '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
+        'FROM BBS WHERE ' +
+        whereSql +
+        ' ORDER BY ' +
+        sortInfo.orderBy +
+        ' OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
+
+      var rows = await connection.execute(
+        sql,
+        Object.assign({}, binds, {
+          offset: offset,
+          pageSize: paging.pageSize
+        })
+      );
+
+      res.render(
+        'bbs/list',
+        Object.assign(getPagingViewData(paging.currentPage, paging.pageSize, totalCount), {
+          rows: rows.rows,
+          searchChoice: choice,
+          searchKeyword: searchKeyword,
+          isSearch: true,
+          myPostsOnly: !!myPostsOnly,
+          sort: sortInfo.sort,
+          order: sortInfo.order,
+          paginationBaseUrl: paginationBaseUrl
+        })
+      );
+    });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
 router.post('/reaction', function (req, res, next) {
@@ -2260,7 +2157,7 @@ router.post('/wdelete', function (req, res, next) {
   });
 });
 
-router.get('/download', function (req, res, next) {
+router.get('/download', async function (req, res, next) {
   if (!requireLogin(req, res)) return;
 
   var fno = toValidNumber(req.query.fno); // 파일 번호 검증
@@ -2269,65 +2166,55 @@ router.get('/download', function (req, res, next) {
     return;
   }
 
-  oracledb.getConnection(dbconfig, function (err, connection) {
-    if (err) {
-      console.error('err : ' + err);
-      return next(err);
+  try {
+    var result = await withConnection(async function (connection) {
+      var sql =
+        'SELECT F.ORG_FILENAME, F.SAVE_FILENAME, F.FILEPATH ' +
+        'FROM BBS_FILE F ' +
+        'JOIN BBS B ON B.NO = F.BBSNO ' +
+        'WHERE F.NO = :fno ' +
+        'AND F.OK = 1 ' +
+        'AND B.OK = 1 ' +
+        'AND (B.WRITER = :writer OR B.WRITER = :writerName)';
+
+      return connection.execute(
+        sql,
+        {
+          fno: fno,
+          writer: req.session.user.id,
+          writerName: req.session.user.name || req.session.user.id
+        }
+      );
+    });
+
+    if (result.rows.length < 1) {
+      renderForbidden(res);
+      return;
     }
 
-    var sql =
-      'SELECT F.ORG_FILENAME, F.SAVE_FILENAME, F.FILEPATH ' +
-      'FROM BBS_FILE F ' +
-      'JOIN BBS B ON B.NO = F.BBSNO ' +
-      'WHERE F.NO = :fno ' +
-      'AND F.OK = 1 ' +
-      'AND B.OK = 1 ' +
-      'AND (B.WRITER = :writer OR B.WRITER = :writerName)';
+    var row = result.rows[0];
+    var orgName = path.basename(row[0] || 'download');
+    var saveName = row[1];
+    var storedRelativePath = (row[2] || '').replace(/\\/g, '/');
+    var expectedRelativePath = path
+      .join('uploads', 'bbs', path.basename(saveName || ''))
+      .replace(/\\/g, '/');
+    var filePath = resolveStoredUploadPath(saveName);
 
-    connection.execute(
-      sql,
-      {
-        fno: fno,
-        writer: req.session.user.id,
-        writerName: req.session.user.name || req.session.user.id
-      },
-      function (err, result) {
-        if (err) {
-          connection.release();
-          console.error('err : ' + err);
-          return next(err);
-        }
+    if (!filePath || storedRelativePath !== expectedRelativePath || !fs.existsSync(filePath)) {
+      renderForbidden(res);
+      return;
+    }
 
-        if (result.rows.length < 1) {
-          connection.release();
-          renderForbidden(res);
-          return;
-        }
-
-        var row = result.rows[0];
-        var orgName = path.basename(row[0] || 'download');
-        var saveName = row[1];
-        var storedRelativePath = (row[2] || '').replace(/\\/g, '/');
-        var expectedRelativePath = path
-          .join('uploads', 'bbs', path.basename(saveName || ''))
-          .replace(/\\/g, '/');
-        var filePath = resolveStoredUploadPath(saveName);
-
-        if (!filePath || storedRelativePath !== expectedRelativePath || !fs.existsSync(filePath)) {
-          connection.release();
-          renderForbidden(res);
-          return;
-        }
-
-        connection.release();
-        res.download(filePath, orgName, function (downloadErr) {
-          if (downloadErr) {
-            next(downloadErr);
-          }
-        });
+    res.download(filePath, orgName, function (downloadErr) {
+      if (downloadErr) {
+        next(downloadErr);
       }
-    );
-  });
+    });
+  } catch (err) {
+    console.error('err : ' + err);
+    return next(err);
+  }
 });
 
 router.use(function (err, _req, res, next) {
