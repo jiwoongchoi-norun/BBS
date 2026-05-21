@@ -37,11 +37,17 @@ html {
 }
 
 body {
-  background:
-    linear-gradient(180deg, #ffffff 0, var(--bbs-canvas) 250px),
-    var(--bbs-canvas);
+  background: linear-gradient(180deg, #ffffff 0, var(--bbs-canvas) 250px), var(--bbs-canvas);
   color: var(--bbs-ink);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Noto Sans KR', Arial, sans-serif;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'SF Pro Text',
+    'Segoe UI',
+    'Noto Sans KR',
+    Arial,
+    sans-serif;
   font-size: 14px;
   line-height: 1.5;
   min-height: 100vh;
@@ -53,7 +59,10 @@ a {
   color: var(--bbs-primary);
   text-decoration-thickness: 1px;
   text-underline-offset: 3px;
-  transition: color var(--bbs-transition), background-color var(--bbs-transition), opacity var(--bbs-transition);
+  transition:
+    color var(--bbs-transition),
+    background-color var(--bbs-transition),
+    opacity var(--bbs-transition);
 }
 
 a:hover {
@@ -187,7 +196,10 @@ main > .d-flex:first-child p {
 }
 
 .board-card {
-  transition: border-color var(--bbs-transition), box-shadow var(--bbs-transition), transform var(--bbs-transition);
+  transition:
+    border-color var(--bbs-transition),
+    box-shadow var(--bbs-transition),
+    transform var(--bbs-transition);
 }
 
 .board-card:hover {
@@ -431,7 +443,10 @@ main > .d-flex:first-child p {
   color: var(--bbs-ink);
   font-size: 0.9rem;
   min-height: 38px;
-  transition: border-color var(--bbs-transition), box-shadow var(--bbs-transition), background-color var(--bbs-transition);
+  transition:
+    border-color var(--bbs-transition),
+    box-shadow var(--bbs-transition),
+    background-color var(--bbs-transition);
 }
 
 .form-control::placeholder {
@@ -469,7 +484,10 @@ textarea.form-control {
   gap: 0.42rem;
   margin: 0;
   padding: 0.34rem 0.55rem;
-  transition: background-color var(--bbs-transition), border-color var(--bbs-transition), color var(--bbs-transition);
+  transition:
+    background-color var(--bbs-transition),
+    border-color var(--bbs-transition),
+    color var(--bbs-transition);
 }
 
 .form-check:hover {
@@ -525,7 +543,9 @@ textarea.form-control {
 }
 
 .table tbody tr {
-  transition: background-color var(--bbs-transition), color var(--bbs-transition);
+  transition:
+    background-color var(--bbs-transition),
+    color var(--bbs-transition);
 }
 
 .table-hover > tbody > tr:hover > * {
@@ -667,7 +687,9 @@ textarea.form-control {
 .list-group-item {
   border-color: var(--bbs-hairline);
   padding: 0.82rem 0.92rem;
-  transition: background-color var(--bbs-transition), border-color var(--bbs-transition);
+  transition:
+    background-color var(--bbs-transition),
+    border-color var(--bbs-transition);
 }
 
 .list-group-item:hover {

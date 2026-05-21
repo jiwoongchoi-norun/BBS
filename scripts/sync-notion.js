@@ -260,7 +260,9 @@ async function getChildPages(parentId) {
   let cursor;
 
   do {
-    const query = cursor ? `?page_size=100&start_cursor=${encodeURIComponent(cursor)}` : '?page_size=100';
+    const query = cursor
+      ? `?page_size=100&start_cursor=${encodeURIComponent(cursor)}`
+      : '?page_size=100';
     const result = await notionRequest('GET', `/blocks/${parentId}/children${query}`);
 
     for (const block of result.results || []) {
@@ -319,7 +321,9 @@ async function clearPageChildren(pageId) {
   let cursor;
 
   do {
-    const query = cursor ? `?page_size=100&start_cursor=${encodeURIComponent(cursor)}` : '?page_size=100';
+    const query = cursor
+      ? `?page_size=100&start_cursor=${encodeURIComponent(cursor)}`
+      : '?page_size=100';
     const result = await notionRequest('GET', `/blocks/${pageId}/children${query}`);
 
     for (const block of result.results || []) {
@@ -343,10 +347,7 @@ async function syncFile(filePath, existingPages) {
   const title = getTitle(filePath, markdown);
   const relativePath = path.relative(process.cwd(), filePath).replace(/\\/g, '/');
   let pageId = existingPages.get(title);
-  const blocks = [
-    textBlock('paragraph', `Source: ${relativePath}`),
-    ...markdownToBlocks(markdown)
-  ];
+  const blocks = [textBlock('paragraph', `Source: ${relativePath}`), ...markdownToBlocks(markdown)];
 
   if (!pageId) {
     pageId = await createChildPage(existingPages.parentId, title);

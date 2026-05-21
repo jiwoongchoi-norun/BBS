@@ -73,7 +73,8 @@ app.use(function (req, res, next) {
 // error handler
 app.use(function (err, req, res, _next) {
   var status = err.status || 500;
-  var publicMessage = status === 404 ? '요청한 페이지를 찾을 수 없습니다.' : '요청 처리 중 문제가 발생했습니다.';
+  var publicMessage =
+    status === 404 ? '요청한 페이지를 찾을 수 없습니다.' : '요청 처리 중 문제가 발생했습니다.';
   var displayMessage = isProduction ? publicMessage : err.message;
 
   // set locals, only providing error in development
