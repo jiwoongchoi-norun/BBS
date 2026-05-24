@@ -1,136 +1,141 @@
 # 게시판 과제 제출 전 수동 테스트 결과
 
-최종 작성일: 2026-05-24
+최종 작성일: 2026-05-25
 
 ## 1. 문서 목적
 
-이 문서는 게시판 과제 제출 전 주요 기능을 수동으로 점검하기 위한 결과 기록 문서이다.
+이 문서는 게시판 과제 제출 전 실제로 수행한 확인과 아직 수행하지 않은 수동 테스트를 구분해서 기록한다. 실제로 실행하지 않은 기능은 `성공`으로 표시하지 않고 `미실행`으로 둔다.
 
-현재 문서 작성 단계에서는 서버 실행, 브라우저 조작, OracleDB 데이터 확인을 직접 수행하지 않았다. 따라서 실제로 실행하지 않은 항목은 `성공`으로 표시하지 않고 `미실행`으로 기록한다. 코드와 기존 문서에서 기능 존재 여부만 확인된 경우에는 비고에 코드상 확인 근거를 남긴다.
+## 2. 현재 확인 기준
 
-## 2. 테스트 환경
+| 항목                           | 내용                                                          |
+| ------------------------------ | ------------------------------------------------------------- |
+| 프로젝트 경로                  | `C:\BBS\BBS`                                                  |
+| 실행 환경                      | Node.js + Express + EJS + OracleDB                            |
+| 기준 문서                      | `README.md`, `docs/requirements_summary.md`                   |
+| 기준 코드                      | `routes/bbs.js`, `routes/bbs/*.routes.js`, `views/bbs/*.ejs`  |
+| 기준 URL                       | `http://localhost:3000/bbs/list`                              |
+| 실제 브라우저 전체 수동 테스트 | 미실행                                                        |
+| 실제 DB 데이터 직접 확인       | 미실행                                                        |
+| `.env` 전체 내용 확인          | 미실행, 민감정보 보호를 위해 문서에 값 기록 금지              |
+| 7단계 HTTP 세션 기반 DB 흐름   | 실행                                                          |
+| 7단계 실제 브라우저 조작       | 확인 필요, 이 세션에서 인앱 브라우저 `iab`를 사용할 수 없었음 |
 
-| 항목                         | 내용                                                                                                           |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| 테스트 문서 작성일           | 2026-05-24                                                                                                     |
-| 실제 수동 테스트 수행일      | 미실행                                                                                                         |
-| 프로젝트 경로                | `C:\BBS\BBS`                                                                                                   |
-| 실행 환경                    | Node.js + Express + EJS + OracleDB                                                                             |
-| 주요 확인 문서               | `docs/requirements_summary.md`, `README.md`                                                                    |
-| 주요 확인 코드               | `routes/bbs.js`, `views/bbs/*.ejs`                                                                             |
-| 테스트 기준 URL              | `http://localhost:3000/bbs/list`                                                                               |
-| 설치 명령어                  | `npm install`                                                                                                  |
-| 서버 실행 명령어             | `npm start`                                                                                                    |
-| 개발 서버 실행 명령어        | `npm run dev`                                                                                                  |
-| 앱 로드 확인 명령어          | `npm run verify:app`                                                                                           |
-| 린트 확인 명령어             | `npm run lint`                                                                                                 |
-| 포맷 확인 명령어             | `npm run format:check`                                                                                         |
-| 통합 확인 명령어             | `npm run check`                                                                                                |
-| 실제 서버 실행 여부          | 미실행                                                                                                         |
-| 실제 브라우저 수동 조작 여부 | 미실행                                                                                                         |
-| 실제 DB 데이터 확인 여부     | 미실행                                                                                                         |
-| DB 연결 확인 필요 여부       | 확인 필요                                                                                                      |
-| DB 연결 확인 내용            | `.env`의 `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정과 OracleDB 접속 가능 여부를 제출 전 확인해야 한다. |
+## 3. 실제 실행한 접근 확인
 
-## 3. 기능별 수동 테스트 표
+| 날짜       | 확인 방법                                        | 결과                                                      | 비고                                                                                                  |
+| ---------- | ------------------------------------------------ | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| 2026-05-24 | 임시 로컬 포트에서 Express app 실행 후 HTTP 요청 | `GET /bbs/list` HTTP 200, `text/html; charset=utf-8` 확인 | 실제 브라우저 조작은 아님. 목록 라우트와 DB query path가 해당 환경에서 접근 가능함을 확인한 기록이다. |
+| 2026-05-25 | 임시 로컬 포트에서 Express app 실행 후 HTTP 요청 | `GET /bbs/list` HTTP 200, `text/html; charset=utf-8` 확인 | 6단계 문서 정리 후 재확인. 실제 브라우저 조작은 아님.                                                 |
 
-| 기능                   | 테스트 절차                                                                         | 기대 결과                                                           | 실제 결과                                                                                                                                      | 상태   | 비고                                                                                           |
-| ---------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------- |
-| 회원가입               | `/bbs/signup` 접속 후 필수 정보를 입력하고 가입 버튼을 누른다.                      | 신규 회원이 등록되고 로그인 화면 또는 목록 화면으로 이동한다.       | 미실행. 코드상 `GET /bbs/signup`, `POST /bbs/signupsave`, `views/bbs/signup.ejs` 존재 확인.                                                    | 미실행 | 중복 ID 확인은 `/bbs/check-id` 라우트 존재 여부를 추가 확인할 필요가 있다.                     |
-| 로그인                 | `/bbs/login` 접속 후 가입된 ID와 비밀번호를 입력한다.                               | 인증 성공 시 세션이 생성되고 게시글 목록으로 이동한다.              | 미실행. 코드상 `GET /bbs/login`, `POST /bbs/logincheck`, 세션 사용자 저장 처리 확인.                                                           | 미실행 | bcrypt 및 legacy SHA-512 전환 로직은 코드상 존재하나 실제 계정으로 검증하지 않았다.            |
-| 로그아웃               | 로그인 상태에서 `/bbs/logout`을 실행한다.                                           | 세션이 삭제되고 로그인 전 상태로 전환된다.                          | 미실행. 코드상 `GET /bbs/logout` 존재 확인.                                                                                                    | 미실행 | 세션 삭제 후 화면 표시와 접근 제한은 브라우저에서 재확인 필요.                                 |
-| 회원정보 수정          | 로그인 후 `/bbs/updatesignup` 화면에서 정보를 수정하고 저장한다.                    | 회원 정보가 변경되고 저장 결과가 안내된다.                          | 미실행. 코드상 `GET /bbs/updatesignup`, `POST /bbs/updatesignsave`, `views/bbs/updatesignform.ejs` 존재 확인.                                  | 미실행 | 비밀번호 변경 조건과 입력값 검증은 실제 데이터로 확인 필요.                                    |
-| 글 목록                | `/bbs/list`에 접속한다.                                                             | 게시글 목록, 검색/정렬/페이징 UI가 표시된다.                        | 미실행. 코드상 `GET /bbs/list`, `views/bbs/list.ejs` 존재 확인.                                                                                | 미실행 | 샘플 데이터 또는 실제 DB 데이터가 있어야 화면 표시 검증 가능.                                  |
-| 글쓰기                 | 로그인 후 `/bbs/form`에서 제목, 내용을 입력하고 저장한다.                           | 새 게시글이 등록되고 목록 또는 상세 화면에서 확인된다.              | 미실행. 코드상 `GET /bbs/form`, `POST /bbs/save`, `views/bbs/form.ejs` 존재 확인.                                                              | 미실행 | 로그인 필요 여부, CSRF 토큰, 첨부파일 동시 등록은 실제 확인 필요.                              |
-| 글읽기                 | 목록에서 게시글 제목을 클릭해 `/bbs/read?brdno=...`로 이동한다.                     | 게시글 제목, 내용, 작성자, 조회수, 댓글, 첨부파일 정보가 표시된다.  | 미실행. 코드상 `GET /bbs/read`, `views/bbs/read.ejs` 존재 확인.                                                                                | 미실행 | 존재하지 않는 게시글 번호 처리도 확인 필요.                                                    |
-| 글수정                 | 작성자 계정으로 로그인 후 게시글 수정 화면에서 내용을 변경한다.                     | 작성자 본인 글만 수정되고 변경 내용이 저장된다.                     | 미실행. 코드상 `GET /bbs/update`, `POST /bbs/updatesave`, `views/bbs/updateform.ejs` 존재 확인.                                                | 미실행 | 작성자 권한 체크는 코드상 존재하나 실제 다른 계정으로 검증하지 않았다.                         |
-| 글삭제                 | 작성자 계정으로 로그인 후 게시글 삭제를 실행한다.                                   | 작성자 본인 글만 삭제 처리되고 목록에서 제외된다.                   | 미실행. 코드상 `GET /bbs/delete`는 안내 후 상세/목록으로 이동하고, 실제 삭제는 `POST /bbs/delete`에서만 수행되도록 정리됨을 확인.              | 미실행 | 브라우저/DB 수동 테스트는 아직 미실행. 삭제 UI는 상세 화면의 POST 폼을 사용하도록 코드상 확인. |
-| 검색                   | 목록에서 검색 조건과 검색어를 입력한다.                                             | 조건에 맞는 게시글만 목록에 표시되고 페이징이 유지된다.             | 미실행. 코드상 `GET /bbs/search` 존재 확인.                                                                                                    | 미실행 | 제목, 내용, 작성자, 제목+내용 조건별 실제 결과 확인 필요.                                      |
-| 조회수                 | 게시글 상세 화면을 새로 열거나 목록에서 상세로 진입한다.                            | 일반 상세 조회 시 조회수가 증가한다.                                | 미실행. 코드상 `VIEW_COUNT` 및 조회수 증가/스킵 토큰 처리 확인.                                                                                | 미실행 | reaction 후 리다이렉트에서는 조회수 증가를 건너뛰는 로직이 있어 실제 확인 필요.                |
-| 페이징                 | 글 목록과 검색 결과에서 페이지 번호 및 페이지 크기를 변경한다.                      | 선택한 페이지와 페이지 크기에 맞게 게시글이 표시된다.               | 미실행. 코드상 `page`, `pageSize`, pagination 데이터 처리 확인.                                                                                | 미실행 | 충분한 게시글 데이터가 있어야 검증 가능.                                                       |
-| 댓글 작성              | 로그인 후 게시글 상세 화면에서 댓글 내용을 입력하고 저장한다.                       | 댓글이 등록되고 상세 화면에 표시된다.                               | 미실행. 코드상 `POST /bbs/wsave` 존재 확인.                                                                                                    | 미실행 | 댓글 목록 표시와 빈 댓글 검증은 실제 확인 필요.                                                |
-| 댓글 수정/삭제         | 본인이 작성한 댓글에서 수정 또는 삭제를 실행한다.                                   | 본인 댓글만 수정/삭제되고 화면에 반영된다.                          | 미실행. 코드상 `POST /bbs/wupdate`, `POST /bbs/wdelete` 존재 확인.                                                                             | 미실행 | 다른 사용자의 댓글 수정/삭제 차단은 실제 계정 2개로 확인 필요.                                 |
-| 파일업로드             | 글쓰기 또는 글수정에서 허용 확장자 파일을 첨부하고 저장한다.                        | 파일 메타데이터가 저장되고 상세 화면에서 다운로드 가능하다.         | 미실행. 코드상 `multer`, `BBS_FILE`, `GET /bbs/download` 처리 확인.                                                                            | 미실행 | 10MB 제한, 1개 파일 제한, 허용 확장자와 차단 확장자 테스트 필요.                               |
-| reaction/좋아요/싫어요 | 로그인 후 상세 화면에서 좋아요 또는 싫어요 버튼을 누른다.                           | 반응 수가 변경되고 같은 버튼 재클릭 또는 반대 반응 전환이 처리된다. | 미실행. 코드상 `POST /bbs/reaction`, `BBS_REACTION` 처리 확인.                                                                                 | 미실행 | 로그인 필요 여부와 중복/전환 동작은 실제 확인 필요.                                            |
-| 비밀번호 재설정        | `/bbs/reset-password`에서 ID와 이메일을 입력하고 생성된 링크로 비밀번호를 변경한다. | 재설정 토큰이 생성되고 새 비밀번호로 로그인 가능하다.               | 미실행. 코드상 `GET /bbs/reset-password`, `POST /bbs/reset-password/request`, `GET/POST /bbs/reset-password/confirm`, 관련 EJS 화면 존재 확인. | 미실행 | 실제 이메일 발송은 과제 범위 밖으로 보이며, 화면에 표시되는 reset link 기반 검증 필요.         |
+## 4. 자동 검증 기록
 
-## 4. 제출 전 재확인 체크리스트
+| 날짜       | 명령                   | 결과 | 비고                |
+| ---------- | ---------------------- | ---- | ------------------- |
+| 2026-05-24 | `npm run verify:app`   | 성공 | `app loaded` 확인   |
+| 2026-05-24 | `npm run lint`         | 성공 | ESLint 통과         |
+| 2026-05-24 | `npm run format:check` | 성공 | Prettier check 통과 |
+| 2026-05-25 | `npm run verify:app`   | 성공 | `app loaded` 확인   |
+| 2026-05-25 | `npm run lint`         | 성공 | ESLint 통과         |
+| 2026-05-25 | `npm run format:check` | 성공 | Prettier check 통과 |
+| 2026-05-25 | `git diff --check`     | 성공 | 공백 오류 없음      |
 
-| 체크 항목                                                                     | 상태      | 비고                                                                                         |
-| ----------------------------------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------- |
-| `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정 | 확인 필요 | `.env` 전체 내용은 확인하지 않음.                                                            |
-| OracleDB 연결 가능 여부 확인                                                  | 확인 필요 | DB 계정, 비밀번호, 접속 문자열, 리스너 상태 확인 필요.                                       |
-| OracleDB 스키마 또는 마이그레이션 적용                                        | 확인 필요 | 실제 DB 접속 및 테이블 상태 미확인.                                                          |
-| `npm install` 완료                                                            | 확인 필요 | 이번 문서 보강 작업에서는 실행하지 않음.                                                     |
-| `npm run verify:app` 실행                                                     | 성공      | 3단계 helper 분리 후 `app loaded` 확인.                                                      |
-| `npm run lint` 실행                                                           | 성공      | 3단계 helper 분리 후 ESLint 통과.                                                            |
-| `npm run format:check` 실행                                                   | 성공      | 3단계 helper 분리 후 Prettier check 통과.                                                    |
-| `npm run check` 실행                                                          | 미실행    | lint, format:check, audit 통합 확인 명령어.                                                  |
-| 서버 실행 후 `/bbs/list` 접속                                                 | 미실행    | 브라우저 수동 확인 필요.                                                                     |
-| 회원가입부터 로그아웃까지 계정 흐름 확인                                      | 미실행    | 실제 계정 생성 후 확인 필요.                                                                 |
-| 게시글 CRUD와 검색/페이징 확인                                                | 미실행    | 샘플 데이터 또는 신규 데이터 필요.                                                           |
-| 댓글, reaction, 파일업로드 확인                                               | 미실행    | 로그인 계정과 테스트 파일 필요.                                                              |
-| 권한 없는 수정/삭제 차단 확인                                                 | 미실행    | 작성자 계정과 다른 계정 2개 필요.                                                            |
-| `GET /bbs/delete` 직접 접근 시 삭제 미수행 확인                               | 코드 확인 | DB 삭제 SQL은 `POST /bbs/delete`에만 있으며, GET은 flash 안내 후 상세/목록으로 redirect한다. |
-| helper 분리 후 구조 확인                                                      | 코드 확인 | `auth`, `response`, `validation` helper 분리 및 자동 검증 통과. 기능 수동 테스트는 아님.     |
+## 5. 기능별 브라우저 수동 테스트 상태
 
-## 5. 남은 확인 항목
+아래 표는 실제 브라우저 조작 기준 상태이다. 7단계에서 실행한 HTTP 세션 기반 DB 테스트 결과는 8장에 별도로 기록한다.
 
-- 실제 서버를 실행한 뒤 브라우저에서 기능별 수동 테스트를 수행해야 한다.
-- OracleDB에 필요한 테이블, 시퀀스, 샘플 데이터가 정상 적용되었는지 확인해야 한다.
-- `.env`의 DB 연결 정보와 `SESSION_SECRET` 설정을 확인해야 한다.
-- `npm install`, `npm run check` 실행 결과를 확인해야 한다. `npm run verify:app`, `npm run lint`, `npm run format:check`는 3단계 helper 분리 후 통과했다.
-- 회원가입, 로그인, 회원정보 수정, 비밀번호 재설정은 실제 계정 데이터로 확인해야 한다.
-- 게시글 목록, 글쓰기, 글읽기, 글수정, 글삭제, 검색, 조회수, 페이징은 실제 게시글 데이터로 확인해야 한다.
-- 댓글 작성, 댓글 수정/삭제, reaction, 파일업로드는 로그인 상태와 권한 조건을 함께 확인해야 한다.
-- 파일업로드는 허용 파일, 차단 파일, 10MB 초과 파일을 나누어 확인해야 한다.
-- 작성자 권한 체크는 작성자 계정과 다른 계정을 각각 사용해 확인해야 한다.
-    <!-- 4단계 repository 분리 메모: 게시글 soft delete/update SQL을 posts.repository.js로 이동했고, npm run verify:app 및 npm run lint를 통과했다. 브라우저/DB 수동 테스트는 아직 미실행이다. -->
-    <!-- 4단계 후속 댓글 repository 분리 메모: BBSW 댓글 목록/작성/답글/수정/삭제 SQL을 comments.repository.js로 이동했다. 자동 검증 후에도 댓글 기능 브라우저/DB 수동 테스트는 미실행 상태로 유지한다. -->
-  <!-- 4단계 후속 reaction repository 분리 메모: BBS_REACTION 조회/생성/수정/삭제와 BBS 좋아요/싫어요 카운트 갱신 SQL을 reactions.repository.js로 이동했다. 자동 검증 후에도 reaction 기능 브라우저/DB 수동 테스트는 미실행 상태로 유지한다. -->
+| 기능            | 테스트 절차                                             | 기대 결과                                         | 실제 결과                                                                           | 상태      |
+| --------------- | ------------------------------------------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------- | --------- |
+| 회원가입        | `/bbs/signup` 접속 후 필수 정보를 입력하고 가입         | 신규 회원 등록 후 로그인 화면 또는 목록 화면 이동 | 미실행. 코드상 route/view 존재 확인                                                 | 미실행    |
+| 로그인          | `/bbs/login`에서 가입된 ID와 비밀번호 입력              | 인증 성공, 세션 생성, 목록 이동                   | 미실행. 코드상 세션 사용자 저장 처리 확인                                           | 미실행    |
+| 로그아웃        | 로그인 상태에서 `/bbs/logout` 실행                      | 세션 삭제, 로그인 전 상태 전환                    | 미실행. 코드상 route 존재 확인                                                      | 미실행    |
+| 회원정보 수정   | 로그인 후 `/bbs/updatesignup`에서 정보 수정             | 회원 정보 변경 및 안내                            | 미실행. 코드상 route/view 존재 확인                                                 | 미실행    |
+| 글 목록         | `/bbs/list` 접속                                        | 게시글 목록, 검색/정렬/페이징 UI 표시             | HTTP 요청 기준 200 확인. 실제 브라우저 화면 조작은 미실행                           | 부분 확인 |
+| 글쓰기          | 로그인 후 `/bbs/form`에서 제목/내용 저장                | 새 게시글 등록 후 목록 또는 상세에서 확인         | 미실행. 코드상 route/view 존재 확인                                                 | 미실행    |
+| 글읽기          | 목록에서 게시글 제목 클릭                               | 제목, 내용, 작성자, 조회수, 댓글, 첨부파일 표시   | 미실행. 코드상 route/view 존재 확인                                                 | 미실행    |
+| 글수정          | 작성자 계정으로 게시글 수정                             | 작성자 본인 글만 수정, 변경 내용 저장             | 미실행. 코드상 route/view 존재 확인                                                 | 미실행    |
+| 글삭제          | 작성자 계정으로 삭제 실행                               | 작성자 본인 글만 soft delete, 목록 제외           | 미실행. 코드상 `GET /bbs/delete`는 안내/이동, 실제 삭제는 `POST /bbs/delete`로 확인 | 미실행    |
+| 검색            | 목록에서 검색 조건과 검색어 입력                        | 조건에 맞는 게시글 표시, 페이징 유지              | 미실행. 코드상 route 존재 확인                                                      | 미실행    |
+| 조회수          | 상세 화면 진입                                          | 일반 상세 조회 시 조회수 증가                     | 미실행. 코드상 `VIEW_COUNT` 처리 확인                                               | 미실행    |
+| 페이징          | 목록/검색에서 페이지 번호와 페이지 크기 변경            | 선택 조건에 맞게 게시글 표시                      | 미실행. 코드상 `page`, `pageSize` 처리 확인                                         | 미실행    |
+| 댓글 작성       | 로그인 후 상세 화면에서 댓글 저장                       | 댓글 등록 후 상세 화면 표시                       | 미실행. 코드상 route 존재 확인                                                      | 미실행    |
+| 댓글 수정/삭제  | 본인이 작성한 댓글 수정 또는 삭제                       | 본인 댓글만 수정/삭제                             | 미실행. 코드상 route 존재 확인                                                      | 미실행    |
+| 대댓글          | 댓글에 답글 작성                                        | 들여쓰기된 답글 표시                              | 미실행. 코드상 route 존재 확인                                                      | 미실행    |
+| 파일업로드      | 글쓰기/수정에서 허용 파일 첨부                          | 파일 메타데이터 저장, 상세 화면 다운로드 가능     | 미실행. 코드상 `multer`, `BBS_FILE`, 다운로드 route 확인                            | 미실행    |
+| reaction        | 로그인 후 좋아요/싫어요 클릭                            | 반응 수 변경, 취소/전환 처리                      | 미실행. 코드상 route/repository 확인                                                | 미실행    |
+| 비밀번호 재설정 | `/bbs/reset-password`에서 ID/이메일 입력 후 링크로 변경 | 토큰 생성, 새 비밀번호 로그인 가능                | 미실행. 코드상 route/view 존재 확인                                                 | 미실행    |
 
-## repository split closing note
+## 6. 제출 전 재확인 체크리스트
 
-- Scope checked: posts.repository.js, comments.repository.js, reactions.repository.js, and repository import/call flow in routes/bbs.js.
-- Export style: all three repositories use CommonJS module.exports consistently.
-- Responsibility check: repository functions receive connection and handle SQL execution/bind construction only.
-- Transaction check: commit/rollback remains in routes; write repository calls keep the existing autoCommit false flow.
-- Route logic retained: auth checks, input validation, redirect, flash/message, and response handling remain in routes/bbs.js.
-- Validation record: npm run verify:app, npm run lint, npm run format:check passed.
-- Manual test status: browser/DB manual tests were not executed, so feature test statuses remain not executed.
-- Remaining checks: DB tests are still needed for post update/delete, comment create/reply/update/delete, and reaction create/switch/cancel.
-- Deferred SQL: post creation, file upload, and users SQL remain deferred for stability because they are coupled to transaction/upload/auth flows.
+| 체크 항목                                                                     | 상태      | 비고                                                      |
+| ----------------------------------------------------------------------------- | --------- | --------------------------------------------------------- |
+| `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정 | 확인 필요 | `.env` 값은 문서에 기록하지 않는다.                       |
+| OracleDB 연결 가능 여부                                                       | 확인 필요 | DB 계정, 접속 문자열, 리스너 상태 확인 필요               |
+| OracleDB 스키마 또는 마이그레이션 적용                                        | 확인 필요 | 실제 DB 테이블 상태 직접 확인 필요                        |
+| `npm install` 완료                                                            | 확인 필요 | 이번 문서 정리 작업에서는 재설치하지 않음                 |
+| `/bbs/list` 접근                                                              | 부분 확인 | HTTP 요청 기준 200 기록 있음, 실제 브라우저 조작은 미실행 |
+| 회원가입부터 로그아웃까지 계정 흐름                                           | 미실행    | 실제 계정 생성 후 확인 필요                               |
+| 게시글 CRUD와 검색/페이징                                                     | 미실행    | 샘플 데이터 또는 신규 데이터 필요                         |
+| 댓글, reaction, 파일업로드                                                    | 미실행    | 로그인 계정과 테스트 파일 필요                            |
+| 권한 없는 수정/삭제 차단                                                      | 미실행    | 작성자 계정과 다른 계정 2개 필요                          |
 
-## route split step 5 note
+## 7. 다음 수동 테스트 순서
 
-- Scope changed: moved only reaction and comment POST route handlers out of `routes/bbs.js`.
-- New route files: `routes/bbs/reactions.routes.js`, `routes/bbs/comments.routes.js`.
-- URL behavior: existing paths such as `/bbs/reaction`, `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, and `/bbs/wdelete` are kept.
-- Deferred route areas: auth/user routes, post CRUD routes, file upload/download routes, EJS partial split, and README cleanup were not changed.
-- Validation record: `npm run verify:app`, `npm run lint`, and `npm run format:check` passed after the split.
-- Manual test status: browser/DB manual tests were not executed, so comment and reaction feature statuses remain not executed.
+1. `.env` 설정 이름과 OracleDB 접속 가능 여부를 확인한다.
+2. OracleDB에 `scripts/schema.sql` + `scripts/sample-data.sql` 또는 `scripts/migration.sql` 적용 여부를 확인한다.
+3. `npm start` 또는 `npm run dev`로 서버를 실행한다.
+4. 브라우저에서 `http://localhost:3000/bbs/list`를 연다.
+5. 회원가입 -> 로그인 -> 글쓰기 -> 목록 -> 상세 -> 댓글 -> reaction -> 파일 다운로드를 순서대로 확인한다.
+6. 작성자 계정으로 글/댓글 수정과 삭제를 확인한다.
+7. 다른 계정으로 글/댓글 수정, 삭제, 다운로드 차단을 확인한다.
+8. 파일 업로드는 허용 파일, 차단 파일, 10MB 초과 파일을 나누어 확인한다.
+9. 로그아웃 후 보호 기능 접근 시 로그인 화면으로 이동하는지 확인한다.
 
-## route split step 5 high-intensity note
+## 8. 7단계 HTTP/DB 기반 제출 전 테스트 결과
 
-- Scope changed: split `routes/bbs.js` into feature routers while keeping the `/bbs` mount path in `app.js` unchanged.
-- Final route files: `routes/bbs/auth.routes.js`, `routes/bbs/posts-read.routes.js`, `routes/bbs/posts-write.routes.js`, `routes/bbs/files.routes.js`, `routes/bbs/comments.routes.js`, `routes/bbs/reactions.routes.js`.
-- Helper files added/used: `routes/helpers/upload.js`, `routes/helpers/response.js`, `routes/helpers/validation.js`, `routes/middleware/auth.js`.
-- `routes/bbs.js` responsibility after split: CSRF middleware, `res.locals.csrfToken`, `/` to `/list` redirect, feature router mounting, and CSRF error handler.
-- URL behavior intended to remain unchanged: `/bbs/list`, `/bbs/search`, `/bbs/read`, `/bbs/form`, `/bbs/save`, `/bbs/update`, `/bbs/updatesave`, `/bbs/delete`, `/bbs/download`, `/bbs/login`, `/bbs/logincheck`, `/bbs/logout`, `/bbs/signup`, `/bbs/signupsave`, `/bbs/updatesignup`, `/bbs/updatesignsave`, `/bbs/withdraw`, `/bbs/find-id`, `/bbs/reset-password`, `/bbs/reset-password/request`, `/bbs/reset-password/confirm`, `/bbs/check-id`, `/bbs/myinfo`, `/bbs/reaction`, `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, `/bbs/wdelete`.
-- Automatic validation record: `npm run verify:app`, `npm run lint`, and `npm run format:check` passed after each split group and at the end.
-- Route loading check: `app` and all split route modules loaded with `require(...)` without runtime load errors.
-- Manual test status: browser/DB/file manual tests were not executed, so feature statuses remain not executed.
-- Step 5 closeout status: implementation complete, manual tests not executed.
-- Remaining manual checks: route split after member/auth real flow test needed; post list/read/create/update/delete real DB test needed; file upload/download real file test needed; comment/reaction real DB test needed.
-- Out of scope confirmed: no new feature implementation, no EJS UI change, no README cleanup, and no DB schema change.
+| 항목             | 내용                                                         |
+| ---------------- | ------------------------------------------------------------ |
+| 실행 일시        | 2026-05-25 00:40:28 +09:00                                   |
+| 실행 방식        | 로컬 서버 `npm start` 실행 후 HTTP 세션 요청                 |
+| 실제 브라우저    | 확인 필요. 인앱 브라우저 `iab` 사용 불가로 조작하지 못함     |
+| 테스트 계정      | `test_stage7_0525`                                           |
+| 테스트 게시글    | `[STAGE7_TEST]` prefix 사용                                  |
+| 테스트 댓글      | `[STAGE7_COMMENT]` prefix 사용                               |
+| 테스트 파일      | `stage7-test.txt`, MIME `text/plain`                         |
+| 생성 게시글 번호 | 일반 글 `121`, 파일 업로드 글 `122`                          |
+| 정리 상태        | 테스트 게시글 2건 모두 `POST /bbs/delete`로 soft delete 처리 |
 
-## post step 5 submission stability check
+| 순서 | 테스트               | 기대 결과                                         | 실제 결과                                                                         | 상태 | 비고                                                |
+| ---- | -------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------- | ---- | --------------------------------------------------- |
+| 1    | `/bbs/list` 접근     | 목록 페이지 HTTP 200, 화면 렌더링                 | HTTP 200 확인                                                                     | 성공 | HTTP 응답 기준. 실제 브라우저 화면 조작은 확인 필요 |
+| 2    | 회원가입             | 가입 성공 후 로그인 화면 또는 안내 위치 이동      | `POST /bbs/signupsave` HTTP 302, `/bbs/login` 이동                                | 성공 | 테스트 계정 신규 생성                               |
+| 3    | 로그인               | 세션 생성, 목록 이동, 로그인 상태 표시            | `POST /bbs/logincheck` HTTP 302, `/bbs/list` 이동                                 | 성공 | HTTP session cookie 기준                            |
+| 4    | 글쓰기               | 저장 후 목록에서 글 확인                          | `[STAGE7_TEST] write test` 저장 후 검색 결과에서 postId `121` 확인                | 성공 | 파일 없는 일반 글                                   |
+| 5    | 글읽기               | 상세 페이지, 조회수/댓글 영역/수정/삭제 버튼 확인 | `/bbs/read?brdno=121` HTTP 200, 제목과 댓글 작성 영역 확인                        | 성공 | 버튼 시각 확인은 실제 브라우저에서 추가 확인 필요   |
+| 6    | 글수정               | 수정 저장 후 변경 내용 반영                       | 제목을 `[STAGE7_TEST] write test updated`로 수정, 검색 결과 postId `121` 확인     | 성공 | HTTP/DB 흐름 기준                                   |
+| 7    | 댓글 작성            | 댓글 등록 후 상세 페이지 표시                     | `[STAGE7_COMMENT] root` 등록, wno `61` 확인                                       | 성공 | HTTP/DB 흐름 기준                                   |
+| 8    | 답글 작성            | 부모 댓글 아래 답글 표시                          | `[STAGE7_COMMENT] reply` 등록 후 상세 HTML에 표시 확인                            | 성공 | 실제 들여쓰기 시각 확인은 브라우저 필요             |
+| 9    | 댓글 수정            | 수정 내용 반영                                    | root 댓글을 `[STAGE7_COMMENT] root updated`로 수정 후 표시 확인                   | 성공 | HTTP/DB 흐름 기준                                   |
+| 10   | 댓글 삭제            | 삭제 처리 문구 또는 목록 반영                     | root 댓글 삭제 후 `사용자가 삭제한 댓글입니다.` 또는 `삭제됨` 표시 확인           | 성공 | 답글은 테스트 게시글 삭제로 함께 숨김 처리 대상     |
+| 11   | reaction 좋아요 등록 | 좋아요 수 증가, 내 반응 표시                      | 좋아요 `0 -> 1`, `activeLike=true` 확인                                           | 성공 | HTTP/DB 흐름 기준                                   |
+| 12   | reaction 싫어요 변경 | 좋아요 감소, 싫어요 증가                          | 좋아요 `1 -> 0`, 싫어요 `0 -> 1`, `activeDislike=true` 확인                       | 성공 | HTTP/DB 흐름 기준                                   |
+| 13   | reaction 취소        | 반응 취소, 카운트 감소                            | 싫어요 `1 -> 0`, active 반응 없음 확인                                            | 성공 | HTTP/DB 흐름 기준                                   |
+| 14   | 파일 업로드          | 파일 메타데이터 저장, 다운로드 링크 표시          | `[STAGE7_TEST] file upload test` 저장, postId `122`, `/bbs/download?fno=21` 확인  | 성공 | multipart HTTP 요청 기준                            |
+| 15   | 파일 다운로드        | 파일 다운로드 성공                                | `/bbs/download?fno=21` HTTP 200, 파일 내용 길이 24 확인                           | 성공 | 실제 브라우저 다운로드 UI는 확인 필요               |
+| 16   | 글삭제               | POST 삭제 처리 후 목록에서 제외                   | postId `121` 삭제 후 제목 검색 결과 없음. 파일 테스트 글 `122`도 soft delete 처리 | 성공 | 기존 사용자/게시글은 건드리지 않음                  |
+| 17   | 로그아웃             | 세션 종료, 목록 이동                              | `/bbs/logout` HTTP 302, `/bbs/list?notice=logout` 이동                            | 성공 | HTTP session 기준                                   |
 
-- Scope check: current changes are limited to route split files, upload helper, `routes/bbs.js` composition, and this manual test document.
-- Automatic validation record: `npm run verify:app`, `npm run lint`, and `npm run format:check` passed.
-- Server execution check: Express app was started on a temporary local port with `app.listen(...)` and handled an HTTP request.
-- Executed URL check: `GET /bbs/list` returned HTTP 200 with `text/html; charset=utf-8`.
-- DB-dependent result: `/bbs/list` loaded successfully, so the list route and its DB query path were reachable in this environment.
-- Manual browser status: a real browser was not used.
-- Not executed: signup, login, write, read detail, update, delete, comment, reply, comment update/delete, reaction, file upload/download, and logout remain not executed.
-- Remaining checks: full browser flow and real DB data mutation tests are still needed before treating all features as manually passed.
+### 7단계 확인 필요 항목
+
+- 실제 브라우저에서 화면 렌더링, 버튼 표시, modal 조작, 답글 들여쓰기, 파일 다운로드 UI를 확인해야 한다.
+- DB를 직접 조회해 테스트 계정, soft delete 처리된 테스트 게시글, 댓글/reaction/file row 상태를 확인하지는 않았다.
+- 테스트 계정 `test_stage7_0525`는 남아 있다. 테스트 게시글 prefix `[STAGE7_TEST]`로 생성한 글 2건은 soft delete 처리했다.
+
+### 7단계 후 자동 검증
+
+| 명령                   | 결과 | 비고              |
+| ---------------------- | ---- | ----------------- |
+| `npm run verify:app`   | 성공 | `app loaded` 확인 |
+| `npm run lint`         | 성공 | ESLint 통과       |
+| `npm run format:check` | 성공 | Prettier 통과     |
+| `git diff --check`     | 성공 | 공백 오류 없음    |

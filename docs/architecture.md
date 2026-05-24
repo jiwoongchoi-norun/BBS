@@ -1,6 +1,6 @@
 # BBS 서버 아키텍처
 
-최종 업데이트: 2026-05-19
+최종 업데이트: 2026-05-25
 
 ## 전체 구조
 
@@ -8,13 +8,15 @@
 Browser
   -> Express app.js
     -> /bbs routes/bbs.js
+      -> routes/bbs/*.routes.js
+      -> db/repositories/*.js
       -> OracleDB
       -> uploads/bbs
     -> views/bbs/*.ejs
     -> public/stylesheets/style.css
 ```
 
-이 프로젝트는 과제 제출과 시연을 우선한 단일 Express 라우터 구조이다. 별도 service/repository 계층을 두지 않고 `routes/bbs.js`에서 라우팅, 입력 검증, DB 접근, 파일 처리, 화면 렌더링을 함께 처리한다.
+이 프로젝트는 과제 제출과 시연을 우선한 Express 라우터 구조이다. 5단계에서 `/bbs` 기능을 회원, 게시글 조회, 게시글 변경, 파일, 댓글, 반응 라우터로 분리했다. `routes/bbs.js`는 공통 CSRF 처리와 feature router 조립을 담당하고, 게시글/댓글/반응 SQL은 `db/repositories/*.js`로 분리되어 있다.
 
 ## 주요 파일
 
@@ -23,7 +25,11 @@ Browser
 | `app.js`                       | Express 설정, EJS, static, session, router 연결, 전역 error handler |
 | `bin/www`                      | HTTP 서버 시작                                                      |
 | `config/dbconfig.js`           | `.env` 기반 OracleDB 접속 설정                                      |
-| `routes/bbs.js`                | 게시글, 회원, 댓글, 추천, 첨부파일 핵심 라우터                      |
+| `routes/bbs.js`                | `/bbs` 공통 CSRF 처리, feature router mount, CSRF 오류 처리         |
+| `routes/bbs/*.routes.js`       | 회원, 게시글 조회/변경, 파일, 댓글, 반응 기능별 라우터              |
+| `db/repositories/*.js`         | 게시글, 댓글, 반응 SQL 실행 함수                                    |
+| `routes/helpers/*.js`          | 응답, 업로드, 입력값 검증 helper                                    |
+| `routes/middleware/auth.js`    | 로그인 필요 middleware                                              |
 | `views/bbs/*.ejs`              | 화면 템플릿                                                         |
 | `views/bbs/partials/*.ejs`     | 공통 head, nav, flash, footer                                       |
 | `public/stylesheets/style.css` | Bootstrap 보완용 커스텀 스타일                                      |
@@ -49,7 +55,8 @@ Browser
 | POST     | `/bbs/save`                   | 글 저장, 파일 업로드                   |
 | GET      | `/bbs/update`                 | 글수정 화면                            |
 | POST     | `/bbs/updatesave`             | 글수정 저장                            |
-| GET      | `/bbs/delete`                 | 글 soft delete                         |
+| GET      | `/bbs/delete`                 | 삭제 안내 후 상세/목록으로 이동        |
+| POST     | `/bbs/delete`                 | 글 soft delete                         |
 | GET      | `/bbs/login`                  | 로그인 화면                            |
 | POST     | `/bbs/logincheck`             | 로그인 처리, legacy password migration |
 | GET      | `/bbs/logout`                 | 로그아웃                               |
@@ -112,7 +119,7 @@ Browser
 
 ## 구조상 주의점
 
-- `routes/bbs.js`가 큰 파일이므로 유지보수 시 한 번에 대규모 리팩토링하지 말고 라우트 단위로 나누어 검증한다.
+- 라우트가 기능별 파일로 분리되었지만 URL은 기존 `/bbs/...` 경로를 유지하므로, 변경 시 기존 경로 동작을 함께 확인한다.
 - `oracledb.autoCommit = true` 기반 코드가 있어 여러 SQL을 하나의 업무 단위로 묶는 transaction 안정성은 추가 개선 후보이다.
 - 삭제는 게시글/댓글/회원 대부분 soft delete를 사용한다.
 - 첨부파일은 DB 메타데이터와 실제 파일이 함께 관리되므로 삭제/롤백 작업 시 양쪽 상태를 함께 확인해야 한다.
