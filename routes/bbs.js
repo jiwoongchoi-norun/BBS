@@ -11,7 +11,16 @@ oracledb.autoCommit = true;
 
 var withConnection = require('../db/oracle').withConnection;
 var postsRepository = require('../db/repositories/posts.repository');
+var commentsRepository = require('../db/repositories/comments.repository');
+var reactionsRepository = require('../db/repositories/reactions.repository');
 var asyncHandler = require('./asyncHandler');
+var requireLogin = require('./middleware/auth').requireLogin;
+var responseHelpers = require('./helpers/response');
+var validationHelpers = require('./helpers/validation');
+var renderBadRequest = responseHelpers.renderBadRequest;
+var renderForbidden = responseHelpers.renderForbidden;
+var cleanText = validationHelpers.cleanText;
+var toValidNumber = validationHelpers.toValidNumber;
 var bcryptSaltRounds = 12;
 var csrfProtection = csrf();
 var uploadDir = path.join(__dirname, '..', 'uploads', 'bbs');
@@ -64,18 +73,6 @@ var upload = multer({
     cb(null, true);
   }
 });
-
-// 글쓰기, 수정, 삭제처럼 로그인이 필요한 요청에서 공통으로 사용하는 인증 검사
-function requireLogin(req, res) {
-  if (!req.session.user) {
-    if (req.flashMessage) {
-      req.flashMessage('warning', '로그인이 필요한 기능입니다.');
-    }
-    res.redirect('/bbs/login');
-    return false;
-  }
-  return true;
-}
 
 // 추천 처리 후 read 화면으로 돌아갈 때 조회수가 증가하지 않도록 1회용 토큰을 만든다.
 function createSkipViewCountToken(bbsno) {
@@ -251,28 +248,6 @@ function deleteStoredFiles(fileRows) {
   }
 }
 
-// 문자열 입력값을 trim하고 최대 길이를 넘으면 빈 값으로 처리한다.
-function cleanText(value, maxLength) {
-  var text = (value || '').trim();
-
-  if (maxLength && text.length > maxLength) {
-    return '';
-  }
-
-  return text;
-}
-
-// URL/query/body로 들어온 숫자가 양의 정수인지 확인한다.
-function isValidNumber(value) {
-  var numberValue = Number(value);
-  return Number.isInteger(numberValue) && numberValue > 0;
-}
-
-// 유효하지 않은 숫자는 null로 바꿔 라우터에서 bad request로 처리하게 한다.
-function toValidNumber(value) {
-  return isValidNumber(value) ? Number(value) : null;
-}
-
 // 이메일은 선택 입력값이며, 값이 있으면 기본 이메일 형식만 허용한다.
 function isValidEmail(value) {
   if (!value) return true;
@@ -314,18 +289,6 @@ function validatePasswordPolicy(password) {
     return '비밀번호는 영문과 숫자를 모두 포함해야 합니다.';
   }
   return '';
-}
-
-// 권한이 없는 요청에 대한 공통 응답.
-function renderForbidden(res) {
-  res.status(403);
-  res.send('권한이 없습니다.');
-}
-
-// 잘못된 입력값에 대한 공통 응답.
-function renderBadRequest(res, message) {
-  res.status(400);
-  res.send(message || '잘못된 요청입니다.');
 }
 
 function setFlash(req, type, text) {
@@ -1353,7 +1316,7 @@ router.get(
         return;
       }
 
-      var commentRows = await postsRepository.findCommentsByPostId(connection, brdno);
+      var commentRows = await commentsRepository.findCommentsByPostId(connection, brdno);
       var fileRows = await postsRepository.findFilesByPostId(connection, brdno);
 
       if (!req.session.user) {
@@ -1367,7 +1330,7 @@ router.get(
         return;
       }
 
-      var reactionRows = await postsRepository.findReactionByPostAndUser(
+      var reactionRows = await reactionsRepository.findReactionByUserAndPost(
         connection,
         brdno,
         req.session.user.id
@@ -1388,6 +1351,7 @@ router.get('/delete', function (req, res) {
   if (!requireLogin(req, res)) return;
 
   var bbsno = toValidNumber(req.query.brdno);
+  setFlash(req, 'warning', '게시글 삭제는 확인 창의 삭제 버튼을 통해서만 처리됩니다.');
 
   if (bbsno) {
     res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
@@ -1413,13 +1377,7 @@ router.post('/delete', async function (req, res, next) {
   try {
     var deleteSucceeded = await withConnection(async function (connection) {
       try {
-        var sql = 'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND WRITER = :writer AND OK = 1';
-
-        var result = await connection.execute(
-          sql,
-          { bbsno: bbsno, writer: writer },
-          { autoCommit: false }
-        );
+        var result = await postsRepository.softDeletePost(connection, bbsno, writer);
 
         if (!result.rowsAffected) {
           await connection.rollback();
@@ -1536,14 +1494,7 @@ router.post('/updatesave', function (req, res, next) {
     try {
       var updateSucceeded = await withConnection(async function (connection) {
         try {
-          var sql =
-            'UPDATE BBS SET TITLE = :title, CONTENT = :content WHERE NO = :brdno AND WRITER = :writer';
-
-          var result = await connection.execute(
-            sql,
-            { title: title, content: content, brdno: brdno, writer: writer },
-            { autoCommit: false }
-          );
+          var result = await postsRepository.updatePost(connection, brdno, title, content, writer);
 
           if (!result.rowsAffected) {
             await connection.rollback();
@@ -1726,54 +1677,24 @@ router.post('/reaction', async function (req, res, next) {
           return false;
         }
 
-        var selectSql =
-          'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
-        var reactionRows = await connection.execute(selectSql, { bbsno: bbsno, userId: userId });
+        var reactionRows = await reactionsRepository.findReactionByUserAndPost(
+          connection,
+          bbsno,
+          userId
+        );
         var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
-        var reactionSql;
-        var binds = { bbsno: bbsno, userId: userId };
 
         // 기록이 없으면 추천을 추가하고 게시글 카운트를 증가시킨다.
         if (!currentReaction) {
-          reactionSql =
-            reactionType === 'LIKE'
-              ? 'BEGIN ' +
-                'INSERT INTO BBS_REACTION (BBSNO, USER_ID, REACTION_TYPE, REGDATE) VALUES (:bbsno, :userId, :reactionType, SYSDATE); ' +
-                'UPDATE BBS SET LIKE_COUNT = NVL(LIKE_COUNT, 0) + 1 WHERE NO = :bbsno; ' +
-                'END;'
-              : 'BEGIN ' +
-                'INSERT INTO BBS_REACTION (BBSNO, USER_ID, REACTION_TYPE, REGDATE) VALUES (:bbsno, :userId, :reactionType, SYSDATE); ' +
-                'UPDATE BBS SET DISLIKE_COUNT = NVL(DISLIKE_COUNT, 0) + 1 WHERE NO = :bbsno; ' +
-                'END;';
-          binds.reactionType = reactionType;
+          await reactionsRepository.createReaction(connection, bbsno, userId, reactionType);
         } else if (currentReaction === reactionType) {
           // 같은 버튼을 다시 누르면 추천 기록을 삭제하고 카운트를 되돌린다.
-          reactionSql =
-            reactionType === 'LIKE'
-              ? 'BEGIN ' +
-                'DELETE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
-                'UPDATE BBS SET LIKE_COUNT = GREATEST(NVL(LIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
-                'END;'
-              : 'BEGIN ' +
-                'DELETE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
-                'UPDATE BBS SET DISLIKE_COUNT = GREATEST(NVL(DISLIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
-                'END;';
+          await reactionsRepository.deleteReaction(connection, bbsno, userId, reactionType);
         } else {
           // 반대 버튼을 누르면 기록을 갱신하고 기존 카운트와 새 카운트를 동시에 보정한다.
-          reactionSql =
-            reactionType === 'LIKE'
-              ? 'BEGIN ' +
-                'UPDATE BBS_REACTION SET REACTION_TYPE = :reactionType, UPDATEDATE = SYSDATE WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
-                'UPDATE BBS SET LIKE_COUNT = NVL(LIKE_COUNT, 0) + 1, DISLIKE_COUNT = GREATEST(NVL(DISLIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
-                'END;'
-              : 'BEGIN ' +
-                'UPDATE BBS_REACTION SET REACTION_TYPE = :reactionType, UPDATEDATE = SYSDATE WHERE BBSNO = :bbsno AND USER_ID = :userId; ' +
-                'UPDATE BBS SET DISLIKE_COUNT = NVL(DISLIKE_COUNT, 0) + 1, LIKE_COUNT = GREATEST(NVL(LIKE_COUNT, 0) - 1, 0) WHERE NO = :bbsno; ' +
-                'END;';
-          binds.reactionType = reactionType;
+          await reactionsRepository.updateReaction(connection, bbsno, userId, reactionType);
         }
 
-        await connection.execute(reactionSql, binds, { autoCommit: false });
         await connection.commit();
         return true;
       } catch (err) {
@@ -1813,19 +1734,7 @@ router.post('/wsave', async function (req, res, next) {
   try {
     await withConnection(async function (connection) {
       try {
-        var sql =
-          'INSERT INTO BBSW (NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, REGDATE, OK) ' +
-          'VALUES (BBSW_SEQ.NEXTVAL, :bbsno, NULL, :writer, :content, 0, SYSDATE, 1)';
-
-        await connection.execute(
-          sql,
-          {
-            bbsno: bbsno,
-            writer: writer,
-            content: content
-          },
-          { autoCommit: false }
-        );
+        await commentsRepository.createComment(connection, bbsno, writer, content);
 
         await connection.commit();
       } catch (err) {
@@ -1862,9 +1771,7 @@ router.post('/wreply', async function (req, res, next) {
   try {
     var parentExists = await withConnection(async function (connection) {
       try {
-        var parentSql = 'SELECT DEPTH FROM BBSW WHERE NO = :parentNo AND BBSNO = :bbsno AND OK = 1';
-
-        var parentRows = await connection.execute(parentSql, { parentNo: parentNo, bbsno: bbsno });
+        var parentRows = await commentsRepository.findCommentDepth(connection, parentNo, bbsno);
 
         if (parentRows.rows.length < 1) {
           await connection.rollback();
@@ -1872,26 +1779,8 @@ router.post('/wreply', async function (req, res, next) {
         }
 
         var depth = parentRows.rows[0][0] + 1;
-        var insertSql =
-          'INSERT INTO BBSW (NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, REGDATE, OK) ' +
-          'VALUES (BBSW_SEQ.NEXTVAL, :bbsno, :parentNo, :writer, :content, :depth, SYSDATE, 1)';
-
-        await connection.execute(
-          insertSql,
-          {
-            bbsno: bbsno,
-            parentNo: parentNo,
-            writer: writer,
-            content: content,
-            depth: depth
-          },
-          { autoCommit: false }
-        );
-
-        var updateSql =
-          'UPDATE BBSW SET CHILD_COUNT = NVL(CHILD_COUNT, 0) + 1 WHERE NO = :parentNo';
-
-        await connection.execute(updateSql, { parentNo: parentNo }, { autoCommit: false });
+        await commentsRepository.createReply(connection, bbsno, parentNo, writer, content, depth);
+        await commentsRepository.incrementChildCount(connection, parentNo);
 
         await connection.commit();
         return true;
@@ -1935,19 +1824,12 @@ router.post('/wupdate', async function (req, res, next) {
   try {
     var updateSucceeded = await withConnection(async function (connection) {
       try {
-        var sql =
-          'UPDATE BBSW SET CONTENT = :content, UPDATEDATE = SYSDATE ' +
-          'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
-
-        var result = await connection.execute(
-          sql,
-          {
-            content: content,
-            wno: wno,
-            bbsno: bbsno,
-            writer: writer
-          },
-          { autoCommit: false }
+        var result = await commentsRepository.updateComment(
+          connection,
+          wno,
+          bbsno,
+          writer,
+          content
         );
 
         if (!result.rowsAffected) {
@@ -1995,15 +1877,7 @@ router.post('/wdelete', async function (req, res, next) {
   try {
     var deleteSucceeded = await withConnection(async function (connection) {
       try {
-        var sql =
-          "UPDATE BBSW SET OK = 0, CONTENT = '삭제된 댓글입니다.', UPDATEDATE = SYSDATE " +
-          'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
-
-        var result = await connection.execute(
-          sql,
-          { wno: wno, bbsno: bbsno, writer: writer },
-          { autoCommit: false }
-        );
+        var result = await commentsRepository.deleteComment(connection, wno, bbsno, writer);
 
         if (!result.rowsAffected) {
           await connection.rollback();

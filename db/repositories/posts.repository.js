@@ -62,34 +62,12 @@ async function findPostById(connection, brdno) {
   return connection.execute(sql, { brdno: brdno });
 }
 
-async function findCommentsByPostId(connection, brdno) {
-  var commentSql =
-    'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
-    "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
-    "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK " +
-    'FROM BBSW ' +
-    'WHERE BBSNO = :bbsno ' +
-    'START WITH PARENT_NO IS NULL ' +
-    'CONNECT BY PRIOR NO = PARENT_NO ' +
-    'ORDER SIBLINGS BY NO ASC';
-  return connection.execute(commentSql, { bbsno: brdno });
-}
-
 async function findFilesByPostId(connection, brdno) {
   var fileSql =
     'SELECT NO, BBSNO, ORG_FILENAME, SAVE_FILENAME, FILEPATH, FILESIZE, MIMETYPE, ' +
     "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE " +
     'FROM BBS_FILE WHERE BBSNO = :bbsno AND OK = 1 ORDER BY NO ASC';
   return connection.execute(fileSql, { bbsno: brdno });
-}
-
-async function findReactionByPostAndUser(connection, brdno, userId) {
-  var reactionSql =
-    'SELECT REACTION_TYPE FROM BBS_REACTION WHERE BBSNO = :bbsno AND USER_ID = :userId';
-  return connection.execute(reactionSql, {
-    bbsno: brdno,
-    userId: userId
-  });
 }
 
 async function findPostForEdit(connection, brdno) {
@@ -107,6 +85,26 @@ async function findPostFilesForEdit(connection, brdno) {
   return connection.execute(fileSql, { bbsno: brdno });
 }
 
+async function softDeletePost(connection, bbsno, writer) {
+  var sql = 'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND WRITER = :writer AND OK = 1';
+  return connection.execute(sql, { bbsno: bbsno, writer: writer }, { autoCommit: false });
+}
+
+async function updatePost(connection, brdno, title, content, writer) {
+  var sql =
+    'UPDATE BBS SET TITLE = :title, CONTENT = :content WHERE NO = :brdno AND WRITER = :writer';
+  return connection.execute(
+    sql,
+    {
+      title: title,
+      content: content,
+      brdno: brdno,
+      writer: writer
+    },
+    { autoCommit: false }
+  );
+}
+
 module.exports = {
   countPosts: countPosts,
   findPosts: findPosts,
@@ -114,9 +112,9 @@ module.exports = {
   findSearchPosts: findSearchPosts,
   incrementViewCount: incrementViewCount,
   findPostById: findPostById,
-  findCommentsByPostId: findCommentsByPostId,
   findFilesByPostId: findFilesByPostId,
-  findReactionByPostAndUser: findReactionByPostAndUser,
   findPostForEdit: findPostForEdit,
-  findPostFilesForEdit: findPostFilesForEdit
+  findPostFilesForEdit: findPostFilesForEdit,
+  softDeletePost: softDeletePost,
+  updatePost: updatePost
 };

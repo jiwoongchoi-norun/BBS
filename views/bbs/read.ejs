@@ -85,7 +85,9 @@
             <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-end gap-2">
                 <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
                 <a href="/bbs/update?brdno=<%=column[0]%>" class="btn btn-primary btn-action">수정</a>
-                <a href="/bbs/delete?brdno=<%=column[0]%>" class="btn btn-danger btn-action">삭제</a>
+                <% if (isPostOwner) { %>
+                    <button type="button" class="btn btn-danger btn-action" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">삭제</button>
+                <% } %>
             </div>
         </div>
 
@@ -317,9 +319,7 @@
             (function() {
                 document.addEventListener('DOMContentLoaded', function() {
                     var updateLink = document.querySelector('a[href="/bbs/update?brdno=<%=column[0]%>"]');
-                    var deleteLink = document.querySelector('a[href="/bbs/delete?brdno=<%=column[0]%>"]');
                     var updateModal = new bootstrap.Modal(document.getElementById('updateConfirmModal'));
-                    var deleteModal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
 
                     if (updateLink) {
                         updateLink.addEventListener('click', function(event) {
@@ -328,12 +328,6 @@
                         });
                     }
 
-                    if (deleteLink) {
-                        deleteLink.addEventListener('click', function(event) {
-                            event.preventDefault();
-                            deleteModal.show();
-                        });
-                    }
                 });
             })();
         </script>
@@ -342,10 +336,8 @@
             (function() {
                 document.addEventListener('DOMContentLoaded', function() {
                     var updateLink = document.querySelector('a[href="/bbs/update?brdno=<%=column[0]%>"]');
-                    var deleteLink = document.querySelector('a[href="/bbs/delete?brdno=<%=column[0]%>"]');
 
                     if (updateLink) updateLink.remove();
-                    if (deleteLink) deleteLink.remove();
                 });
             })();
         </script>
