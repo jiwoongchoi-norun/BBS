@@ -100,3 +100,37 @@
 - Manual test status: browser/DB manual tests were not executed, so feature test statuses remain not executed.
 - Remaining checks: DB tests are still needed for post update/delete, comment create/reply/update/delete, and reaction create/switch/cancel.
 - Deferred SQL: post creation, file upload, and users SQL remain deferred for stability because they are coupled to transaction/upload/auth flows.
+
+## route split step 5 note
+
+- Scope changed: moved only reaction and comment POST route handlers out of `routes/bbs.js`.
+- New route files: `routes/bbs/reactions.routes.js`, `routes/bbs/comments.routes.js`.
+- URL behavior: existing paths such as `/bbs/reaction`, `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, and `/bbs/wdelete` are kept.
+- Deferred route areas: auth/user routes, post CRUD routes, file upload/download routes, EJS partial split, and README cleanup were not changed.
+- Validation record: `npm run verify:app`, `npm run lint`, and `npm run format:check` passed after the split.
+- Manual test status: browser/DB manual tests were not executed, so comment and reaction feature statuses remain not executed.
+
+## route split step 5 high-intensity note
+
+- Scope changed: split `routes/bbs.js` into feature routers while keeping the `/bbs` mount path in `app.js` unchanged.
+- Final route files: `routes/bbs/auth.routes.js`, `routes/bbs/posts-read.routes.js`, `routes/bbs/posts-write.routes.js`, `routes/bbs/files.routes.js`, `routes/bbs/comments.routes.js`, `routes/bbs/reactions.routes.js`.
+- Helper files added/used: `routes/helpers/upload.js`, `routes/helpers/response.js`, `routes/helpers/validation.js`, `routes/middleware/auth.js`.
+- `routes/bbs.js` responsibility after split: CSRF middleware, `res.locals.csrfToken`, `/` to `/list` redirect, feature router mounting, and CSRF error handler.
+- URL behavior intended to remain unchanged: `/bbs/list`, `/bbs/search`, `/bbs/read`, `/bbs/form`, `/bbs/save`, `/bbs/update`, `/bbs/updatesave`, `/bbs/delete`, `/bbs/download`, `/bbs/login`, `/bbs/logincheck`, `/bbs/logout`, `/bbs/signup`, `/bbs/signupsave`, `/bbs/updatesignup`, `/bbs/updatesignsave`, `/bbs/withdraw`, `/bbs/find-id`, `/bbs/reset-password`, `/bbs/reset-password/request`, `/bbs/reset-password/confirm`, `/bbs/check-id`, `/bbs/myinfo`, `/bbs/reaction`, `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, `/bbs/wdelete`.
+- Automatic validation record: `npm run verify:app`, `npm run lint`, and `npm run format:check` passed after each split group and at the end.
+- Route loading check: `app` and all split route modules loaded with `require(...)` without runtime load errors.
+- Manual test status: browser/DB/file manual tests were not executed, so feature statuses remain not executed.
+- Step 5 closeout status: implementation complete, manual tests not executed.
+- Remaining manual checks: route split after member/auth real flow test needed; post list/read/create/update/delete real DB test needed; file upload/download real file test needed; comment/reaction real DB test needed.
+- Out of scope confirmed: no new feature implementation, no EJS UI change, no README cleanup, and no DB schema change.
+
+## post step 5 submission stability check
+
+- Scope check: current changes are limited to route split files, upload helper, `routes/bbs.js` composition, and this manual test document.
+- Automatic validation record: `npm run verify:app`, `npm run lint`, and `npm run format:check` passed.
+- Server execution check: Express app was started on a temporary local port with `app.listen(...)` and handled an HTTP request.
+- Executed URL check: `GET /bbs/list` returned HTTP 200 with `text/html; charset=utf-8`.
+- DB-dependent result: `/bbs/list` loaded successfully, so the list route and its DB query path were reachable in this environment.
+- Manual browser status: a real browser was not used.
+- Not executed: signup, login, write, read detail, update, delete, comment, reply, comment update/delete, reaction, file upload/download, and logout remain not executed.
+- Remaining checks: full browser flow and real DB data mutation tests are still needed before treating all features as manually passed.
