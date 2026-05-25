@@ -158,7 +158,8 @@ function createPostsReadRouter(options) {
           return;
         }
 
-        var commentRows = await commentsRepository.findCommentsByPostId(connection, brdno);
+        var userId = req.session.user ? req.session.user.id : '';
+        var commentRows = await commentsRepository.findCommentsByPostId(connection, brdno, userId);
         var fileRows = await postsRepository.findFilesByPostId(connection, brdno);
 
         if (!req.session.user) {

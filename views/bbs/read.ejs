@@ -156,6 +156,7 @@
                             var commentDislikeCount = comment[7] || 0;
                             var updatedAt = comment[9] || '';
                             var isDeletedComment = Number(comment[10]) === 0;
+                            var selectedCommentReaction = comment[11] || '';
                             var isEditedComment = !!updatedAt && !isDeletedComment;
                             var isMine = !isDeletedComment && loginUser && loginUser.id === comment[3];
                         %>
@@ -201,14 +202,39 @@
                                     <% } else { %>
                                         <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
                                         <div class="comment-reaction-summary" aria-label="댓글 추천 현황">
-                                            <span class="comment-reaction-stat reaction-like" title="좋아요">
-                                                <span class="reaction-icon" aria-hidden="true"></span>
-                                                <span class="reaction-count"><%= commentLikeCount %></span>
-                                            </span>
-                                            <span class="comment-reaction-stat reaction-dislike" title="싫어요">
-                                                <span class="reaction-icon" aria-hidden="true"></span>
-                                                <span class="reaction-count"><%= commentDislikeCount %></span>
-                                            </span>
+                                            <% if (loginUser) { %>
+                                                <form action="/bbs/wreaction" method="post" class="d-inline">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                                    <input type="hidden" name="wno" value="<%=comment[0]%>">
+                                                    <input type="hidden" name="reaction_type" value="LIKE">
+                                                    <button type="submit" class="comment-reaction-stat reaction-like <%= selectedCommentReaction === 'LIKE' ? 'is-active' : '' %>"
+                                                        aria-label="댓글 좋아요 <%= selectedCommentReaction === 'LIKE' ? '취소' : '선택' %>">
+                                                        <span class="reaction-icon" aria-hidden="true"></span>
+                                                        <span class="reaction-count"><%= commentLikeCount %></span>
+                                                    </button>
+                                                </form>
+                                                <form action="/bbs/wreaction" method="post" class="d-inline">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="bbsno" value="<%=column[0]%>">
+                                                    <input type="hidden" name="wno" value="<%=comment[0]%>">
+                                                    <input type="hidden" name="reaction_type" value="DISLIKE">
+                                                    <button type="submit" class="comment-reaction-stat reaction-dislike <%= selectedCommentReaction === 'DISLIKE' ? 'is-active' : '' %>"
+                                                        aria-label="댓글 싫어요 <%= selectedCommentReaction === 'DISLIKE' ? '취소' : '선택' %>">
+                                                        <span class="reaction-icon" aria-hidden="true"></span>
+                                                        <span class="reaction-count"><%= commentDislikeCount %></span>
+                                                    </button>
+                                                </form>
+                                            <% } else { %>
+                                                <span class="comment-reaction-stat reaction-like" title="좋아요">
+                                                    <span class="reaction-icon" aria-hidden="true"></span>
+                                                    <span class="reaction-count"><%= commentLikeCount %></span>
+                                                </span>
+                                                <span class="comment-reaction-stat reaction-dislike" title="싫어요">
+                                                    <span class="reaction-icon" aria-hidden="true"></span>
+                                                    <span class="reaction-count"><%= commentDislikeCount %></span>
+                                                </span>
+                                            <% } %>
                                         </div>
                                     <% } %>
                                 </div>

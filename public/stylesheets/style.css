@@ -443,6 +443,33 @@ main > .d-flex:first-child p {
   gap: 0.24rem;
   min-height: 28px;
   padding: 0.14rem 0.48rem 0.14rem 0.18rem;
+  transition:
+    background-color var(--bbs-transition),
+    border-color var(--bbs-transition),
+    box-shadow var(--bbs-transition),
+    color var(--bbs-transition),
+    transform var(--bbs-transition);
+}
+
+button.comment-reaction-stat {
+  cursor: pointer;
+  font: inherit;
+}
+
+button.comment-reaction-stat:hover,
+button.comment-reaction-stat:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 10px 24px rgba(17, 17, 19, 0.1);
+  transform: translateY(-1px);
+}
+
+button.comment-reaction-stat:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 0 0 3px var(--bbs-primary-focus),
+    0 10px 24px rgba(17, 17, 19, 0.1);
 }
 
 .comment-reaction-stat .reaction-icon {
@@ -464,12 +491,28 @@ main > .d-flex:first-child p {
   color: #2478b8;
 }
 
+.comment-reaction-stat.is-active.reaction-like {
+  background: rgba(231, 248, 255, 0.9);
+  border-color: rgba(94, 188, 230, 0.5);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 8px 22px rgba(74, 169, 226, 0.18);
+}
+
 .comment-reaction-stat.reaction-dislike {
   background:
     linear-gradient(180deg, rgba(255, 245, 247, 0.88), rgba(255, 255, 255, 0.5)),
     rgba(255, 237, 242, 0.58);
   border-color: rgba(223, 91, 119, 0.24);
   color: var(--bbs-danger);
+}
+
+.comment-reaction-stat.is-active.reaction-dislike {
+  background: rgba(255, 237, 242, 0.92);
+  border-color: rgba(223, 91, 119, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    0 8px 22px rgba(201, 74, 94, 0.16);
 }
 
 .btn-sm {

@@ -1,5 +1,9 @@
 var express = require('express');
 
+function isValidReactionType(value) {
+  return value === 'LIKE' || value === 'DISLIKE';
+}
+
 function createCommentsRouter(options) {
   var router = express.Router();
   var withConnection = options.withConnection;
@@ -10,6 +14,7 @@ function createCommentsRouter(options) {
   var cleanText = options.cleanText;
   var toValidNumber = options.toValidNumber;
   var setFlash = options.setFlash;
+  var redirectReadWithoutViewCount = options.redirectReadWithoutViewCount;
 
   router.post('/wsave', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
@@ -211,6 +216,77 @@ function createCommentsRouter(options) {
 
       setFlash(req, 'success', '\ub313\uae00\uc774 \uc0ad\uc81c\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
+    } catch (err) {
+      console.error('err : ' + err);
+      next(err);
+    }
+  });
+
+  router.post('/wreaction', async function (req, res, next) {
+    if (!requireLogin(req, res)) return;
+
+    var bbsno = toValidNumber(req.body.bbsno);
+    var wno = toValidNumber(req.body.wno);
+    var reactionType = cleanText(req.body.reaction_type, 10).toUpperCase();
+    var userId = req.session.user.id;
+
+    if (!bbsno || !wno || !isValidReactionType(reactionType)) {
+      renderBadRequest(
+        res,
+        '\ub313\uae00 \ucd94\ucc9c \uc785\ub825\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.'
+      );
+      return;
+    }
+
+    try {
+      var commentExists = await withConnection(async function (connection) {
+        try {
+          var commentSql =
+            'SELECT W.NO FROM BBSW W JOIN BBS B ON B.NO = W.BBSNO ' +
+            'WHERE W.NO = :wno AND W.BBSNO = :bbsno AND W.OK = 1 AND B.OK = 1';
+          var commentRows = await connection.execute(commentSql, { wno: wno, bbsno: bbsno });
+
+          if (commentRows.rows.length < 1) {
+            await connection.rollback();
+            return false;
+          }
+
+          var reactionRows = await commentsRepository.findCommentReactionByUser(
+            connection,
+            wno,
+            userId
+          );
+          var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
+
+          if (!currentReaction) {
+            await commentsRepository.createCommentReaction(connection, wno, userId, reactionType);
+          } else if (currentReaction === reactionType) {
+            await commentsRepository.deleteCommentReaction(connection, wno, userId, reactionType);
+          } else {
+            await commentsRepository.updateCommentReaction(connection, wno, userId, reactionType);
+          }
+
+          await connection.commit();
+          return true;
+        } catch (err) {
+          try {
+            await connection.rollback();
+          } catch (rollbackErr) {
+            console.error('rollback failed : ' + rollbackErr);
+          }
+          throw err;
+        }
+      });
+
+      if (!commentExists) {
+        renderBadRequest(
+          res,
+          '\ub313\uae00 \ubc88\ud638\uac00 \uc62c\ubc14\ub974\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.'
+        );
+        return;
+      }
+
+      redirectReadWithoutViewCount(req, res, next, bbsno);
     } catch (err) {
       console.error('err : ' + err);
       next(err);

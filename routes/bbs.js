@@ -165,7 +165,8 @@ router.use(
     renderForbidden: renderForbidden,
     cleanText: cleanText,
     toValidNumber: toValidNumber,
-    setFlash: setFlash
+    setFlash: setFlash,
+    redirectReadWithoutViewCount: redirectReadWithoutViewCount
   })
 );
 

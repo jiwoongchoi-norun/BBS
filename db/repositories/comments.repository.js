@@ -1,14 +1,19 @@
-async function findCommentsByPostId(connection, brdno) {
+async function findCommentsByPostId(connection, brdno, userId) {
   var commentSql =
     'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
     "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
-    "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK " +
-    'FROM BBSW ' +
-    'WHERE BBSNO = :bbsno ' +
+    "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK, USER_REACTION " +
+    'FROM ( ' +
+    'SELECT W.NO, W.BBSNO, W.PARENT_NO, W.WRITER, W.CONTENT, W.DEPTH, W.LIKE_COUNT, W.DISLIKE_COUNT, ' +
+    'W.REGDATE, W.UPDATEDATE, W.OK, R.REACTION_TYPE AS USER_REACTION ' +
+    'FROM BBSW W ' +
+    'LEFT JOIN BBSW_REACTION R ON R.WNO = W.NO AND R.USER_ID = :userId ' +
+    'WHERE W.BBSNO = :bbsno ' +
+    ') ' +
     'START WITH PARENT_NO IS NULL ' +
     'CONNECT BY PRIOR NO = PARENT_NO ' +
     'ORDER SIBLINGS BY NO ASC';
-  return connection.execute(commentSql, { bbsno: brdno });
+  return connection.execute(commentSql, { bbsno: brdno, userId: userId || '' });
 }
 
 async function createComment(connection, bbsno, writer, content) {
@@ -80,6 +85,72 @@ async function deleteComment(connection, wno, bbsno, writer) {
   return connection.execute(sql, { wno: wno, bbsno: bbsno, writer: writer }, { autoCommit: false });
 }
 
+async function findCommentReactionByUser(connection, wno, userId) {
+  var sql = 'SELECT REACTION_TYPE FROM BBSW_REACTION WHERE WNO = :wno AND USER_ID = :userId';
+  return connection.execute(sql, { wno: wno, userId: userId });
+}
+
+async function createCommentReaction(connection, wno, userId, reactionType) {
+  var sql =
+    reactionType === 'LIKE'
+      ? 'BEGIN ' +
+        'INSERT INTO BBSW_REACTION (WNO, USER_ID, REACTION_TYPE, REGDATE) VALUES (:wno, :userId, :reactionType, SYSDATE); ' +
+        'UPDATE BBSW SET LIKE_COUNT = NVL(LIKE_COUNT, 0) + 1 WHERE NO = :wno; ' +
+        'END;'
+      : 'BEGIN ' +
+        'INSERT INTO BBSW_REACTION (WNO, USER_ID, REACTION_TYPE, REGDATE) VALUES (:wno, :userId, :reactionType, SYSDATE); ' +
+        'UPDATE BBSW SET DISLIKE_COUNT = NVL(DISLIKE_COUNT, 0) + 1 WHERE NO = :wno; ' +
+        'END;';
+
+  return connection.execute(
+    sql,
+    {
+      wno: wno,
+      userId: userId,
+      reactionType: reactionType
+    },
+    { autoCommit: false }
+  );
+}
+
+async function deleteCommentReaction(connection, wno, userId, reactionType) {
+  var sql =
+    reactionType === 'LIKE'
+      ? 'BEGIN ' +
+        'DELETE FROM BBSW_REACTION WHERE WNO = :wno AND USER_ID = :userId; ' +
+        'UPDATE BBSW SET LIKE_COUNT = GREATEST(NVL(LIKE_COUNT, 0) - 1, 0) WHERE NO = :wno; ' +
+        'END;'
+      : 'BEGIN ' +
+        'DELETE FROM BBSW_REACTION WHERE WNO = :wno AND USER_ID = :userId; ' +
+        'UPDATE BBSW SET DISLIKE_COUNT = GREATEST(NVL(DISLIKE_COUNT, 0) - 1, 0) WHERE NO = :wno; ' +
+        'END;';
+
+  return connection.execute(sql, { wno: wno, userId: userId }, { autoCommit: false });
+}
+
+async function updateCommentReaction(connection, wno, userId, reactionType) {
+  var sql =
+    reactionType === 'LIKE'
+      ? 'BEGIN ' +
+        'UPDATE BBSW_REACTION SET REACTION_TYPE = :reactionType, UPDATEDATE = SYSDATE WHERE WNO = :wno AND USER_ID = :userId; ' +
+        'UPDATE BBSW SET LIKE_COUNT = NVL(LIKE_COUNT, 0) + 1, DISLIKE_COUNT = GREATEST(NVL(DISLIKE_COUNT, 0) - 1, 0) WHERE NO = :wno; ' +
+        'END;'
+      : 'BEGIN ' +
+        'UPDATE BBSW_REACTION SET REACTION_TYPE = :reactionType, UPDATEDATE = SYSDATE WHERE WNO = :wno AND USER_ID = :userId; ' +
+        'UPDATE BBSW SET DISLIKE_COUNT = NVL(DISLIKE_COUNT, 0) + 1, LIKE_COUNT = GREATEST(NVL(LIKE_COUNT, 0) - 1, 0) WHERE NO = :wno; ' +
+        'END;';
+
+  return connection.execute(
+    sql,
+    {
+      wno: wno,
+      userId: userId,
+      reactionType: reactionType
+    },
+    { autoCommit: false }
+  );
+}
+
 module.exports = {
   findCommentsByPostId: findCommentsByPostId,
   createComment: createComment,
@@ -87,5 +158,9 @@ module.exports = {
   createReply: createReply,
   incrementChildCount: incrementChildCount,
   updateComment: updateComment,
-  deleteComment: deleteComment
+  deleteComment: deleteComment,
+  findCommentReactionByUser: findCommentReactionByUser,
+  createCommentReaction: createCommentReaction,
+  deleteCommentReaction: deleteCommentReaction,
+  updateCommentReaction: updateCommentReaction
 };
