@@ -200,9 +200,15 @@
                                         <div class="comment-content mb-0 text-secondary fst-italic text-break">사용자가 삭제한 댓글입니다.</div>
                                     <% } else { %>
                                         <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
-                                        <div class="text-secondary small d-flex flex-wrap gap-2">
-                                            <span>좋아요 <%= commentLikeCount %></span>
-                                            <span>싫어요 <%= commentDislikeCount %></span>
+                                        <div class="comment-reaction-summary" aria-label="댓글 추천 현황">
+                                            <span class="comment-reaction-stat reaction-like" title="좋아요">
+                                                <span class="reaction-icon" aria-hidden="true"></span>
+                                                <span class="reaction-count"><%= commentLikeCount %></span>
+                                            </span>
+                                            <span class="comment-reaction-stat reaction-dislike" title="싫어요">
+                                                <span class="reaction-icon" aria-hidden="true"></span>
+                                                <span class="reaction-count"><%= commentDislikeCount %></span>
+                                            </span>
                                         </div>
                                     <% } %>
                                 </div>
