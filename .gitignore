@@ -16,6 +16,7 @@ pnpm-debug.log*
 *.bak
 *.swp
 *.swo
+.tmp-chrome-capture-*/
 Thumbs.db
 .DS_Store
 

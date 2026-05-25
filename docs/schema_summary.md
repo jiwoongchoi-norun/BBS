@@ -16,7 +16,7 @@
 | `BBS`          | 게시글               | `NO`, `TITLE`, `CONTENT`, `WRITER`, `REGDATE`, `VIEW_COUNT`, `LIKE_COUNT`, `DISLIKE_COUNT`, `OK`                                        |
 | `BBSW`         | 댓글/대댓글          | `NO`, `BBSNO`, `PARENT_NO`, `DEPTH`, `WRITER`, `CONTENT`, `REGDATE`, `UPDATEDATE`, `OK`                                                 |
 | `BBS_REACTION` | 좋아요/싫어요        | `BBSNO`, `USER_ID`, `REACTION_TYPE`, `REGDATE`, `UPDATEDATE`                                                                            |
-| `BBS_FILE`     | 첨부파일 메타데이터  | `NO`, `BBSNO`, `ORG_FILENAME`, `SAVE_FILENAME`, `FILE_PATH`, `FILE_SIZE`, `MIME_TYPE`, `REGDATE`, `OK`                                  |
+| `BBS_FILE`     | 첨부파일 메타데이터  | `NO`, `BBSNO`, `ORG_FILENAME`, `SAVE_FILENAME`, `FILEPATH`, `FILESIZE`, `MIMETYPE`, `REGDATE`, `OK`                                     |
 | `RESET_TOKEN`  | 비밀번호 재설정 토큰 | `NO`, `USER_ID`, `TOKEN`, `EXPIRES_AT`, `USED`, `REGDATE`, `USEDATE`                                                                    |
 
 ## 시퀀스와 인덱스

@@ -8,6 +8,7 @@ async function findReactionByUserAndPost(connection, bbsno, userId) {
 }
 
 async function createReaction(connection, bbsno, userId, reactionType) {
+  // PL/SQL block keeps the reaction row and denormalized counts in one DB call.
   var reactionSql =
     reactionType === 'LIKE'
       ? 'BEGIN ' +

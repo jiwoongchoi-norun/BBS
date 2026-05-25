@@ -32,6 +32,9 @@ var deleteStoredFile = uploadHelpers.deleteStoredFile;
 var deleteStoredFiles = uploadHelpers.deleteStoredFiles;
 var csrfProtection = csrf();
 var skipViewCountTokens = Object.create(null);
+
+// 추천/댓글 처리 뒤 상세 페이지로 돌아올 때는 사용자가 글을 새로 읽은 것이 아니므로
+// 일회성 토큰을 만들어 조회수 증가를 막는다.
 function createSkipViewCountToken(bbsno) {
   var token = crypto.randomBytes(16).toString('hex');
   skipViewCountTokens[token] = bbsno;
@@ -39,6 +42,7 @@ function createSkipViewCountToken(bbsno) {
 }
 
 // 일반 글 읽기는 조회수를 올리고 좋아요/싫어요 이동은 조회수를 올리지 않는다.
+// 토큰 또는 세션 플래그가 현재 게시글 번호와 맞을 때만 조회수 증가를 건너뛴다.
 function shouldSkipViewCount(req, brdno) {
   var token = cleanText(req.query.skip_view_token, 64);
 
@@ -56,6 +60,7 @@ function shouldSkipViewCount(req, brdno) {
 }
 
 // express-session 저장 타이밍 때문에 리다이렉트 전에 session.save를 명시적으로 호출한다.
+// redirect 전에 세션 저장을 보장해 다음 /read 요청에서 조회수 제외 플래그가 보이게 한다.
 function redirectReadWithoutViewCount(req, res, next, bbsno) {
   var token = createSkipViewCountToken(bbsno);
   req.session.skipViewCountBbsno = bbsno;
@@ -73,7 +78,7 @@ function redirectReadWithoutViewCount(req, res, next, bbsno) {
   });
 }
 
-// 기존 SHA-512 + salt 계정 검증용 해시 함수. 로그인 성공 후 bcrypt로 자동 전환한다.
+// 글쓰기/수정에서 공통으로 사용하는 제목/내용 검증이다.
 function validatePostInput(title, content) {
   if (!title) return '제목을 입력해주세요.';
   if (!content) return '내용을 입력해주세요.';
@@ -91,6 +96,7 @@ function setFlash(req, type, text) {
 router.use(csrfProtection);
 
 router.use(function (req, res, next) {
+  // /bbs 하위의 모든 EJS form에서 같은 방식으로 CSRF 토큰을 꺼내 쓴다.
   res.locals.csrfToken = req.csrfToken();
   next();
 });
@@ -110,6 +116,7 @@ router.use(
   })
 );
 
+// URL은 기존 /bbs/... 형태를 유지하고, 책임만 기능별 라우터로 나눈다.
 router.use(
   createPostsReadRouter({
     withConnection: withConnection,

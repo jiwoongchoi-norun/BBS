@@ -3,6 +3,8 @@ async function countPosts(connection, whereSql, binds) {
   return connection.execute(countSql, binds);
 }
 
+// whereSql/orderBy are built by route-level whitelists. Values still go through
+// bind variables so search, paging, and owner filters are not string-concatenated.
 async function findPosts(connection, whereSql, orderBy, binds, offset, pageSize) {
   var sql =
     "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
@@ -86,6 +88,7 @@ async function findPostFilesForEdit(connection, brdno) {
 }
 
 async function softDeletePost(connection, bbsno, writer) {
+  // Posts are soft-deleted so test/demo data can be audited without being shown.
   var sql = 'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND WRITER = :writer AND OK = 1';
   return connection.execute(sql, { bbsno: bbsno, writer: writer }, { autoCommit: false });
 }

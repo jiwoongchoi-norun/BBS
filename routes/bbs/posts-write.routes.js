@@ -19,14 +19,17 @@ function createPostsWriteRouter(options) {
   var deleteStoredFile = options.deleteStoredFile;
   var deleteStoredFiles = options.deleteStoredFiles;
 
+  // 글쓰기 화면은 로그인 사용자만 접근할 수 있다.
   router.get('/form', function (req, res) {
     if (!requireLogin(req, res)) return;
     res.render('bbs/form');
   });
 
+  // 게시글 등록: 파일 업로드 검증 후 게시글과 파일 메타데이터를 같은 트랜잭션으로 저장한다.
   router.post('/save', function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
+    // 업로드 오류는 입력 화면으로 되돌려야 하므로 multer를 라우트 내부에서 실행한다.
     upload.single('uploadFile')(req, res, async function (uploadErr) {
       if (uploadErr) {
         var uploadMessage = getUploadErrorMessage(uploadErr);
@@ -69,6 +72,7 @@ function createPostsWriteRouter(options) {
 
         await withConnection(async function (connection) {
           try {
+            // 게시글과 파일 메타데이터는 하나의 작업 단위이므로 둘 다 성공한 뒤 commit한다.
             var nextNoSql = 'SELECT BBS_SEQ.NEXTVAL FROM DUAL';
             var seqResult = await connection.execute(nextNoSql);
             var bbsno = seqResult.rows[0][0];
@@ -138,6 +142,7 @@ function createPostsWriteRouter(options) {
   router.get('/delete', function (req, res) {
     if (!requireLogin(req, res)) return;
 
+    // GET 요청은 데이터를 삭제하지 않고 상세 화면의 확인 UI로 돌려보낸다.
     var bbsno = toValidNumber(req.query.brdno);
     setFlash(req, 'warning', '게시글 삭제는 확인 창의 삭제 버튼을 통해서만 처리됩니다.');
 
@@ -149,6 +154,7 @@ function createPostsWriteRouter(options) {
     res.redirect('/bbs/list');
   });
 
+  // 게시글 삭제는 작성자 본인만 가능하며 DB는 soft delete로 처리한다.
   router.post('/delete', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -164,6 +170,7 @@ function createPostsWriteRouter(options) {
     try {
       var deleteSucceeded = await withConnection(async function (connection) {
         try {
+          // DB 상태를 먼저 확정한 뒤 실제 파일 삭제를 시도해 데이터 정합성을 우선한다.
           var result = await postsRepository.softDeletePost(connection, bbsno, writer);
 
           if (!result.rowsAffected) {
@@ -204,6 +211,7 @@ function createPostsWriteRouter(options) {
     }
   });
 
+  // 수정 화면: 게시글 작성자와 현재 로그인 사용자가 일치할 때만 보여준다.
   router.get(
     '/update',
     asyncHandler(async function (req, res) {
@@ -240,6 +248,7 @@ function createPostsWriteRouter(options) {
     })
   );
 
+  // 게시글 수정: 새 파일이 있으면 기존 파일을 비활성화하고 새 메타데이터를 등록한다.
   router.post('/updatesave', function (req, res, next) {
     if (!requireLogin(req, res)) return;
 

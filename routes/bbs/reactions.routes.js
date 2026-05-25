@@ -1,6 +1,7 @@
 var express = require('express');
 
 function isValidReactionType(value) {
+  // 게시글 추천 값은 LIKE/DISLIKE만 허용해 잘못된 값이 DB에 들어가지 않게 한다.
   return value === 'LIKE' || value === 'DISLIKE';
 }
 
@@ -14,6 +15,7 @@ function createReactionsRouter(options) {
   var toValidNumber = options.toValidNumber;
   var redirectReadWithoutViewCount = options.redirectReadWithoutViewCount;
 
+  // 게시글 추천/비추천 처리. 로그인 사용자별로 게시글당 하나의 반응만 유지한다.
   router.post('/reaction', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -22,10 +24,7 @@ function createReactionsRouter(options) {
     var userId = req.session.user.id;
 
     if (!bbsno || !isValidReactionType(reactionType)) {
-      renderBadRequest(
-        res,
-        '\ucd94\ucc9c \uc785\ub825\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.'
-      );
+      renderBadRequest(res, '추천 입력값을 확인하세요.');
       return;
     }
 
@@ -47,6 +46,7 @@ function createReactionsRouter(options) {
           );
           var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
 
+          // 같은 추천은 취소, 반대 추천은 변경, 첫 추천은 생성한다.
           if (!currentReaction) {
             await reactionsRepository.createReaction(connection, bbsno, userId, reactionType);
           } else if (currentReaction === reactionType) {
@@ -68,10 +68,7 @@ function createReactionsRouter(options) {
       });
 
       if (!postExists) {
-        renderBadRequest(
-          res,
-          '\uac8c\uc2dc\uae00 \ubc88\ud638\uac00 \uc62c\ubc14\ub974\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.'
-        );
+        renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
         return;
       }
 

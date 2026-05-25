@@ -1,4 +1,5 @@
 async function findCommentsByPostId(connection, brdno, userId) {
+  // Oracle hierarchical query keeps replies directly under their parent comment.
   var commentSql =
     'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
     "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
@@ -91,6 +92,7 @@ async function findCommentReactionByUser(connection, wno, userId) {
 }
 
 async function createCommentReaction(connection, wno, userId, reactionType) {
+  // PL/SQL block keeps the reaction row and denormalized counts in one DB call.
   var sql =
     reactionType === 'LIKE'
       ? 'BEGIN ' +

@@ -12,6 +12,8 @@ async function closeConnection(connection) {
   connection.release();
 }
 
+// Central connection wrapper for route/repository code. This keeps release
+// handling in one place and lets each route focus on its business flow.
 async function withConnection(callback) {
   var connection = await oracledb.getConnection(dbconfig);
 

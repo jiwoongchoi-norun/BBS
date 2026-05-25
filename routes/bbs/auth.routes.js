@@ -4,6 +4,7 @@ var bcrypt = require('bcrypt');
 
 var bcryptSaltRounds = 12;
 
+// 과거 과제 코드에서 사용하던 SHA-512 + salt 비밀번호를 검증할 때만 사용한다.
 function createPasswordHash(password, salt) {
   return crypto
     .createHash('sha512')
@@ -16,6 +17,7 @@ function isBcryptPassword(algo, storedPassword) {
 }
 
 // 신규 가입과 회원정보 수정은 bcrypt만 사용한다.
+// 신규 가입, 회원정보 수정, 비밀번호 재설정은 모두 bcrypt로 저장한다.
 function createBcryptPassword(password, callback) {
   bcrypt.hash(password, bcryptSaltRounds, callback);
 }
@@ -49,6 +51,7 @@ function validateAccountInput(id, email, phone, options) {
   return '';
 }
 
+// 과제용 기본 정책: 8자 이상이며 영문과 숫자를 모두 포함해야 한다.
 function validatePasswordPolicy(password) {
   if (!password) return '비밀번호를 입력해주세요.';
   if (password.length < 8) return '비밀번호는 최소 8자 이상이어야 합니다.';
@@ -67,6 +70,7 @@ function createAuthRouter(options) {
   var cleanText = options.cleanText;
   var setFlash = options.setFlash;
 
+  // 이미 로그인한 사용자는 로그인 화면 대신 목록으로 보낸다.
   router.get('/login', function (req, res) {
     if (req.session.user) {
       setFlash(req, 'info', '이미 로그인되어 있습니다.');
@@ -91,6 +95,7 @@ function createAuthRouter(options) {
     });
   });
 
+  // 이름과 이메일이 일치하는 활성 계정의 ID를 조회한다.
   router.post('/find-id', async function (req, res, next) {
     var name = cleanText(req.body.name, 100);
     var email = cleanText(req.body.email, 200);
@@ -137,6 +142,7 @@ function createAuthRouter(options) {
     });
   });
 
+  // 실제 메일 발송 대신 화면에 재설정 링크를 보여주는 과제용 흐름이다.
   router.post('/reset-password/request', async function (req, res, next) {
     var id = cleanText(req.body.id, 50);
     var email = cleanText(req.body.email, 200);
@@ -172,6 +178,7 @@ function createAuthRouter(options) {
           "VALUES(RESET_TOKEN_SEQ.NEXTVAL, :id, :token, SYSDATE + INTERVAL '1' HOUR)";
 
         try {
+          // 사용자당 활성 재설정 토큰은 하나만 남긴다.
           await connection.execute(disableOldSql, { id: id }, { autoCommit: false });
 
           var insertResult = await connection.execute(
@@ -244,6 +251,7 @@ function createAuthRouter(options) {
     })
   );
 
+  // 유효한 재설정 토큰을 확인한 뒤 새 비밀번호를 bcrypt로 갱신한다.
   router.post('/reset-password/confirm', async function (req, res, next) {
     var token = cleanText(req.body.token, 128);
     var pw1 = cleanText(req.body.pw1, 100);
@@ -349,6 +357,7 @@ function createAuthRouter(options) {
     }
   });
 
+  // bcrypt 계정은 바로 검증하고, legacy SHA-512 계정은 로그인 성공 시 bcrypt로 전환한다.
   router.post('/logincheck', async function (req, res, next) {
     var pw = cleanText(req.body.password, 100);
     var id = cleanText(req.body.id, 50); // 입력값 검증
@@ -469,6 +478,7 @@ function createAuthRouter(options) {
     }
   });
 
+  // 세션을 제거해 로그아웃 처리한다.
   router.get('/logout', function (req, res) {
     if (!req.session.user) {
       res.redirect('/bbs/list');
@@ -513,6 +523,7 @@ function createAuthRouter(options) {
     })
   );
 
+  // 회원 탈퇴는 실제 삭제 대신 OK=0으로 비활성화한다.
   router.post('/withdraw', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -607,6 +618,7 @@ function createAuthRouter(options) {
     res.render('bbs/signup', { code: 0, formData: {}, idCheckMessage: '', idCheckAvailable: null });
   });
 
+  // AJAX 중복 확인 결과를 세션에 저장해 가입 제출 시 같은 ID인지 다시 확인한다.
   router.get(
     '/check-id',
     asyncHandler(async function (req, res) {
@@ -639,6 +651,7 @@ function createAuthRouter(options) {
     })
   );
 
+  // 가입 처리: 입력 검증, 중복 확인 세션 검증, bcrypt 저장을 수행한다.
   router.post('/signupsave', async function (req, res) {
     var id = cleanText(req.body.id, 50);
     var pw1 = cleanText(req.body.pw1, 100);
@@ -781,6 +794,7 @@ function createAuthRouter(options) {
     })
   );
 
+  // 회원정보 수정도 비밀번호를 다시 받아 bcrypt 해시로 갱신한다.
   router.post('/updatesignsave', async function (req, res, next) {
     var pw = cleanText(req.body.pw1, 100);
     var name = cleanText(req.body.name, 100);

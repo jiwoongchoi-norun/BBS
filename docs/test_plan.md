@@ -83,11 +83,13 @@ npm run security:semgrep
 
 ## 제출 전 최종 체크
 
-- [ ] `.env`에 실제 비밀번호나 secret을 문서에 기록하지 않았는가
-- [ ] 신규 DB 또는 기존 DB 마이그레이션 중 하나를 적용했는가
-- [ ] `npm run verify:app` 통과
-- [ ] `npm run lint` 통과
-- [ ] `npm run format:check` 통과
-- [ ] `git diff --check` 통과
-- [ ] 핵심 화면을 브라우저로 1회 이상 수동 확인
-- [ ] README의 실행 방법이 실제 환경과 맞는가
+- [x] `.env`에 실제 비밀번호나 secret을 문서에 기록하지 않았는가
+- [x] 신규 DB 또는 기존 DB 마이그레이션 중 하나를 적용했는가
+- [x] `npm run verify:app` 통과
+- [x] `npm run lint` 통과
+- [x] `npm run format:check` 통과
+- [x] `git diff --check` 통과
+- [x] 핵심 화면을 브라우저로 1회 이상 수동 확인
+- [x] README의 실행 방법이 실제 환경과 맞는가
+
+최종 화면 캡처는 `docs/screenshots/`에 23개 PNG로 저장했다. 캡처 기준 URL은 `http://59.14.91.168:3333/bbs/list`이며, 캡처 중 생성한 `[CAPTURE]` 테스트 게시글은 soft delete로 정리했다.

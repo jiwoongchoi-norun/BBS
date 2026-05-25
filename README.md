@@ -3,7 +3,7 @@
 Node.js, Express, EJS, OracleDB 기반 게시판 과제 프로젝트입니다. 교수님 PPT 요구사항을 기준으로 게시판 필수 기능을 복구하고, 제출 시연에 필요한 회원, 댓글, 파일 업로드, 보안 개선 항목을 정리했습니다.
 
 > 최종 정리 기준: 2026-05-25
-> 상세 요구사항과 구현 상태는 `docs/requirements_summary.md`, 실제 수동 테스트 기록은 `docs/manual_test_result.md`를 기준으로 확인합니다.
+> 처음 인수인계받은 개발자는 `docs/PROJECT_GUIDE.md`를 먼저 확인합니다. 상세 요구사항과 구현 상태는 `docs/requirements_summary.md`, 실제 수동 테스트 기록은 `docs/manual_test_result.md`를 기준으로 확인합니다.
 
 ## 실행 환경
 
@@ -131,7 +131,8 @@ BBS/
 ├─ public/stylesheets/style.css   # Bootstrap 보완 스타일
 ├─ scripts/*.sql                  # DB schema, migration, rollback, sample data
 ├─ uploads/bbs                    # 업로드 파일 저장 경로
-└─ docs/*.md                      # 요구사항, 구조, 테스트, 유지보수 문서
+├─ docs/PROJECT_GUIDE.md          # 인수인계용 파일 안내 지침서
+└─ docs/*.md                      # 요구사항, 구조, DB, 테스트, 문제해결 문서
 ```
 
 ## 구현 완료 기능
@@ -148,23 +149,37 @@ BBS/
 
 ## 제출 전 수동 테스트 체크리스트
 
-- [ ] `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정
-- [ ] OracleDB에 신규 스키마 또는 마이그레이션 적용
-- [ ] `npm install` 완료
-- [ ] `npm run verify:app`, `npm run lint`, `npm run format:check`, `git diff --check` 통과
-- [ ] `http://localhost:3000/bbs/list` 접근 확인
-- [ ] 회원가입, 로그인, 로그아웃, 회원정보 수정 확인
-- [ ] 게시글 목록, 글쓰기, 글읽기, 글수정, 글삭제 확인
-- [ ] 검색, 정렬, 페이징, 조회수 확인
-- [ ] 댓글, 대댓글, 댓글 수정/삭제 확인
-- [ ] 좋아요/싫어요 확인
-- [ ] 파일 업로드/다운로드 확인
-- [ ] 작성자가 아닌 계정의 수정/삭제/다운로드 차단 확인
+- [x] `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정
+- [x] OracleDB에 신규 스키마 또는 마이그레이션 적용
+- [x] `npm install` 완료
+- [x] `npm run verify:app`, `npm run lint`, `npm run format:check`, `git diff --check` 통과
+- [x] `http://59.14.91.168:3333/bbs/list` 접근 확인
+- [x] 회원가입, 로그인, 로그아웃, 회원정보 수정 확인
+- [x] 게시글 목록, 글쓰기, 글읽기, 글수정, 글삭제 확인
+- [x] 검색, 정렬, 페이징, 조회수 확인
+- [x] 댓글, 대댓글, 댓글 수정/삭제 확인
+- [x] 좋아요/싫어요 확인
+- [x] 파일 업로드/다운로드 확인
+- [x] 작성자가 아닌 계정의 수정/삭제/다운로드 차단 확인
+
+제출용 전체 기능 화면 캡처는 `docs/screenshots/`에 `01_게시글목록.png`부터 `23_가산점_비밀번호재설정.png`까지 저장했습니다.
 
 ## 알려진 주의사항
 
 - `.env` 값은 제출 문서나 Git에 기록하지 않습니다.
 - `GET /bbs/delete`는 삭제를 실행하지 않고 안내 후 이동하며, 실제 삭제는 `POST /bbs/delete`에서 수행됩니다.
 - 비밀번호 재설정은 과제 시연용 reset link 흐름이며 실제 이메일 발송 기능은 없습니다.
-- 브라우저 전체 수동 테스트와 DB 데이터 변동 확인은 `docs/manual_test_result.md` 기준으로 별도 기록해야 합니다.
+- 브라우저 전체 수동 테스트와 DB 데이터 변동 확인은 `docs/manual_test_result.md`에 기록했습니다.
 - 관리자 기능, 계정 잠금, 감사 로그, 자동화 테스트 확대는 남은 개선 후보입니다.
+
+## 문서 안내
+
+| 문서                           | 용도                                |
+| ------------------------------ | ----------------------------------- |
+| `docs/PROJECT_GUIDE.md`        | 새 개발자가 처음 볼 인수인계 지침서 |
+| `docs/requirements_summary.md` | 과제 요구사항과 구현 상태           |
+| `docs/architecture.md`         | 서버 구조, 라우터, 보안 흐름        |
+| `docs/schema_summary.md`       | DB 테이블과 상태 컬럼               |
+| `docs/test_plan.md`            | 제출 전 기능별 테스트 절차          |
+| `docs/manual_test_result.md`   | 실제 수행한 테스트 기록             |
+| `docs/troubleshooting.md`      | 자주 나는 오류와 해결 방법          |

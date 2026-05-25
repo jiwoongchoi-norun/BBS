@@ -7,7 +7,6 @@ var logger = require('morgan');
 require('dotenv').config({ quiet: true });
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
 var bbsRouter = require('./routes/bbs');
 var app = express();
 var sessionSecret = process.env.SESSION_SECRET;
@@ -17,9 +16,9 @@ if (!sessionSecret) {
   throw new Error('SESSION_SECRET is required. Set it in your .env file.');
 }
 
-// view engine setup
+// The project uses EJS only. Old Express-generator Jade views were removed so
+// every rendered page is under views/*.ejs or views/bbs/*.ejs.
 app.set('views', path.join(__dirname, 'views'));
-//app.set('view engine', 'jade');
 app.set('view engine', 'ejs');
 
 app.use(logger('dev'));
@@ -27,6 +26,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Keep sessions simple for the assignment, but do not allow a hardcoded secret.
+// Production enables secure cookies, so HTTPS is required if NODE_ENV=production.
 app.use(
   expressSession({
     secret: sessionSecret,
@@ -40,6 +42,9 @@ app.use(
     }
   })
 );
+
+// Common template state. Feature routes set req.flashMessage(), then redirect;
+// the next request displays and clears the message from the session.
 app.use(function (req, res, next) {
   var noticeMessages = {
     logout: {
@@ -63,25 +68,24 @@ app.use(function (req, res, next) {
 });
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 app.use('/bbs', bbsRouter);
-// catch 404 and forward to error handler
+
+// Unknown routes are handled by the shared error page.
 app.use(function (req, res, next) {
   next(createError(404));
 });
 
-// error handler
+// Hide stack traces and internal messages in production, but keep them visible
+// while developing so Oracle/route errors can be fixed quickly.
 app.use(function (err, req, res, _next) {
   var status = err.status || 500;
   var publicMessage =
     status === 404 ? '요청한 페이지를 찾을 수 없습니다.' : '요청 처리 중 문제가 발생했습니다.';
   var displayMessage = isProduction ? publicMessage : err.message;
 
-  // set locals, only providing error in development
   res.locals.message = displayMessage;
   res.locals.error = isProduction ? {} : err;
 
-  // render the error page
   res.status(status);
   res.render('error', {
     message: displayMessage,

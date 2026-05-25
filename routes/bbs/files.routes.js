@@ -12,6 +12,7 @@ function createFilesRouter(options) {
   var toValidNumber = options.toValidNumber;
   var resolveStoredUploadPath = options.resolveStoredUploadPath;
 
+  // 첨부파일 다운로드: 로그인과 작성자 권한을 확인한 뒤 실제 저장 경로를 검증한다.
   router.get(
     '/download',
     asyncHandler(async function (req, res, next) {
@@ -24,6 +25,7 @@ function createFilesRouter(options) {
       }
 
       var result = await withConnection(async function (connection) {
+        // 과제의 작성자 권한 체크 요구사항에 맞춰 게시글 작성자만 다운로드할 수 있게 한다.
         var sql =
           'SELECT F.ORG_FILENAME, F.SAVE_FILENAME, F.FILEPATH ' +
           'FROM BBS_FILE F ' +
@@ -54,6 +56,7 @@ function createFilesRouter(options) {
         .replace(/\\/g, '/');
       var filePath = resolveStoredUploadPath(saveName);
 
+      // 파일을 열기 전에 DB의 상대 경로와 실제 resolve 결과가 기대 위치인지 확인한다.
       if (!filePath || storedRelativePath !== expectedRelativePath || !fs.existsSync(filePath)) {
         renderForbidden(res);
         return;

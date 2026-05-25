@@ -1,6 +1,7 @@
 var express = require('express');
 
 function getPaging(req) {
+  // pageSize는 허용 목록 안에서만 받고, page는 1 이상의 정수로 보정한다.
   var allowedPageSizes = [10, 20, 30, 50];
   var pageSize = parseInt(req.query.pageSize, 10);
   var currentPage = parseInt(req.query.page, 10);
@@ -20,6 +21,7 @@ function getPaging(req) {
 }
 
 function getPagingViewData(currentPage, pageSize, totalCount) {
+  // EJS 페이지네이션 영역에서 필요한 값을 한 객체로 모아 전달한다.
   var totalPage = Math.ceil(totalCount / pageSize);
   var startPage = Math.max(1, currentPage - 5);
   var endPage = Math.min(totalPage, currentPage + 5);
@@ -43,6 +45,7 @@ function getSort(req) {
     created_at: 'REGDATE'
   };
 
+  // 정렬 컬럼은 whitelist 매핑값만 ORDER BY에 넣어 SQL Injection을 막는다.
   if (!sortColumns[sort]) {
     return {
       sort: '',
@@ -74,6 +77,7 @@ function createPostsReadRouter(options) {
   var toValidNumber = options.toValidNumber;
   var shouldSkipViewCount = options.shouldSkipViewCount;
 
+  // 게시글 목록: 페이징, 정렬, 내 글만 보기 조건을 조합한다.
   router.get(
     '/list',
     asyncHandler(async function (req, res) {
@@ -135,6 +139,7 @@ function createPostsReadRouter(options) {
     })
   );
 
+  // 상세 조회: 일반 접근일 때만 조회수를 올리고 댓글/파일/내 추천 상태를 함께 조회한다.
   router.get(
     '/read',
     asyncHandler(async function (req, res) {
@@ -147,6 +152,7 @@ function createPostsReadRouter(options) {
       await withConnection(async function (connection) {
         var skipViewCount = shouldSkipViewCount(req, brdno);
 
+        // 일반 글 읽기만 조회수를 올리고, 댓글/추천 redirect는 제외한다.
         if (!skipViewCount) {
           await postsRepository.incrementViewCount(connection, brdno);
         }
@@ -190,6 +196,7 @@ function createPostsReadRouter(options) {
     })
   );
 
+  // 검색: 검색 대상 컬럼도 whitelist로 제한하고 목록 화면을 재사용한다.
   router.get(
     '/search',
     asyncHandler(async function (req, res) {

@@ -1,6 +1,7 @@
 var express = require('express');
 
 function isValidReactionType(value) {
+  // 댓글 추천 값은 DB 제약과 화면 버튼에서 사용하는 두 값만 허용한다.
   return value === 'LIKE' || value === 'DISLIKE';
 }
 
@@ -16,6 +17,7 @@ function createCommentsRouter(options) {
   var setFlash = options.setFlash;
   var redirectReadWithoutViewCount = options.redirectReadWithoutViewCount;
 
+  // 댓글 등록: 로그인 사용자 ID를 작성자로 사용하고 빈 내용은 차단한다.
   router.post('/wsave', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -24,10 +26,7 @@ function createCommentsRouter(options) {
     var writer = req.session.user.id;
 
     if (!bbsno || !content) {
-      renderBadRequest(
-        res,
-        '\ub313\uae00 \uc785\ub825\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.'
-      );
+      renderBadRequest(res, '댓글 입력값을 확인하세요.');
       return;
     }
 
@@ -47,7 +46,7 @@ function createCommentsRouter(options) {
         }
       });
 
-      setFlash(req, 'success', '\ub313\uae00\uc774 \ub4f1\ub85d\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+      setFlash(req, 'success', '댓글이 등록되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
     } catch (err) {
       console.error('err : ' + err);
@@ -55,6 +54,7 @@ function createCommentsRouter(options) {
     }
   });
 
+  // 대댓글 등록: 부모 댓글 존재 여부를 확인한 뒤 depth와 child count를 함께 갱신한다.
   router.post('/wreply', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -64,10 +64,7 @@ function createCommentsRouter(options) {
     var writer = req.session.user.id;
 
     if (!bbsno || !parentNo || !content) {
-      renderBadRequest(
-        res,
-        '\ub2f5\uae00 \uc785\ub825\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.'
-      );
+      renderBadRequest(res, '답글 입력값을 확인하세요.');
       return;
     }
 
@@ -81,6 +78,7 @@ function createCommentsRouter(options) {
             return false;
           }
 
+          // 대댓글 insert와 부모 댓글 CHILD_COUNT 증가는 같은 트랜잭션으로 처리한다.
           var depth = parentRows.rows[0][0] + 1;
           await commentsRepository.createReply(connection, bbsno, parentNo, writer, content, depth);
           await commentsRepository.incrementChildCount(connection, parentNo);
@@ -98,16 +96,12 @@ function createCommentsRouter(options) {
       });
 
       if (!parentExists) {
-        setFlash(
-          req,
-          'warning',
-          '\ub2f5\uae00 \ub300\uc0c1 \ub313\uae00\uc744 \ucc3e\uc744 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4.'
-        );
+        setFlash(req, 'warning', '답글 대상 댓글을 찾을 수 없습니다.');
         res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
         return;
       }
 
-      setFlash(req, 'success', '\ub2f5\uae00\uc774 \ub4f1\ub85d\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+      setFlash(req, 'success', '답글이 등록되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
     } catch (err) {
       console.error('err : ' + err);
@@ -115,6 +109,7 @@ function createCommentsRouter(options) {
     }
   });
 
+  // 댓글 수정은 작성자 본인의 댓글에 대해서만 repository update가 성공한다.
   router.post('/wupdate', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -124,10 +119,7 @@ function createCommentsRouter(options) {
     var writer = req.session.user.id;
 
     if (!wno || !bbsno || !content) {
-      renderBadRequest(
-        res,
-        '\ub313\uae00 \uc218\uc815\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.'
-      );
+      renderBadRequest(res, '댓글 수정값을 확인하세요.');
       return;
     }
 
@@ -164,7 +156,7 @@ function createCommentsRouter(options) {
         return;
       }
 
-      setFlash(req, 'success', '\ub313\uae00\uc774 \uc218\uc815\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+      setFlash(req, 'success', '댓글이 수정되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
     } catch (err) {
       console.error('err : ' + err);
@@ -172,6 +164,7 @@ function createCommentsRouter(options) {
     }
   });
 
+  // 댓글 삭제도 작성자 검사를 통과한 경우에만 soft delete 처리된다.
   router.post('/wdelete', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -180,10 +173,7 @@ function createCommentsRouter(options) {
     var writer = req.session.user.id;
 
     if (!wno || !bbsno) {
-      renderBadRequest(
-        res,
-        '\ub313\uae00 \ubc88\ud638\uac00 \uc62c\ubc14\ub974\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.'
-      );
+      renderBadRequest(res, '댓글 번호가 올바르지 않습니다.');
       return;
     }
 
@@ -214,7 +204,7 @@ function createCommentsRouter(options) {
         return;
       }
 
-      setFlash(req, 'success', '\ub313\uae00\uc774 \uc0ad\uc81c\ub418\uc5c8\uc2b5\ub2c8\ub2e4.');
+      setFlash(req, 'success', '댓글이 삭제되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
     } catch (err) {
       console.error('err : ' + err);
@@ -222,6 +212,7 @@ function createCommentsRouter(options) {
     }
   });
 
+  // 댓글 추천/비추천은 같은 버튼 재클릭 취소, 반대 버튼 클릭 전환 방식이다.
   router.post('/wreaction', async function (req, res, next) {
     if (!requireLogin(req, res)) return;
 
@@ -231,10 +222,7 @@ function createCommentsRouter(options) {
     var userId = req.session.user.id;
 
     if (!bbsno || !wno || !isValidReactionType(reactionType)) {
-      renderBadRequest(
-        res,
-        '\ub313\uae00 \ucd94\ucc9c \uc785\ub825\uac12\uc744 \ud655\uc778\ud558\uc138\uc694.'
-      );
+      renderBadRequest(res, '댓글 추천 입력값을 확인하세요.');
       return;
     }
 
@@ -258,6 +246,7 @@ function createCommentsRouter(options) {
           );
           var currentReaction = reactionRows.rows.length ? reactionRows.rows[0][0] : '';
 
+          // 같은 추천은 취소, 반대 추천은 변경, 첫 추천은 생성한다.
           if (!currentReaction) {
             await commentsRepository.createCommentReaction(connection, wno, userId, reactionType);
           } else if (currentReaction === reactionType) {
@@ -279,10 +268,7 @@ function createCommentsRouter(options) {
       });
 
       if (!commentExists) {
-        renderBadRequest(
-          res,
-          '\ub313\uae00 \ubc88\ud638\uac00 \uc62c\ubc14\ub974\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.'
-        );
+        renderBadRequest(res, '댓글 번호가 올바르지 않습니다.');
         return;
       }
 

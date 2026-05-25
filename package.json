@@ -11,12 +11,10 @@
     "audit": "npm audit --audit-level=moderate",
     "security:semgrep": "semgrep scan --config auto",
     "security:secrets": "gitleaks detect --source . --redact",
-    "sync:notion": "node scripts/sync-notion.js",
     "verify:app": "node -e \"require('./app'); console.log('app loaded')\"",
     "check": "npm run lint && npm run format:check && npm run audit"
   },
   "dependencies": {
-    "@notionhq/client": "^5.21.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "~1.4.4",
     "csurf": "^1.11.0",
