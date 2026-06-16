@@ -19,6 +19,7 @@ pnpm-debug.log*
 .tmp-chrome-capture-*/
 Thumbs.db
 .DS_Store
+.vscode/
 
 coverage/
 dist/
@@ -32,11 +33,15 @@ routes/bbs_lec.js
 docs/todo.md
 
 docs/*.pdf
-docs/*.ppt     
+docs/*.ppt
 docs/*.pptx
+docs/screenshots/
 AGENTS.md
 notion.md
 !NOTION.md
 docs/result.txt
 pdftotext.exe
 scripts/realdb.txt
+BBS_SUBMISSION_*/
+BBS_SUBMISSION_*.zip
+.github/workflows/sync-notion.yml

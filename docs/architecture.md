@@ -16,7 +16,7 @@ Browser
     -> public/stylesheets/style.css
 ```
 
-이 프로젝트는 과제 제출과 시연을 우선한 Express 라우터 구조이다. 5단계에서 `/bbs` 기능을 회원, 게시글 조회, 게시글 변경, 파일, 댓글, 반응 라우터로 분리했다. `routes/bbs.js`는 공통 CSRF 처리와 feature router 조립을 담당하고, 게시글/댓글/반응 SQL은 `db/repositories/*.js`로 분리되어 있다.
+이 프로젝트는 `/bbs` 기능을 회원, 게시글 조회, 게시글 변경, 파일, 댓글, 반응 라우터로 분리한 Express 기반 게시판이다. `routes/bbs.js`는 공통 CSRF 처리와 feature router 조립을 담당하고, 게시글/댓글/반응 SQL은 `db/repositories/*.js`로 분리되어 있다.
 
 ## 주요 파일
 
@@ -89,7 +89,7 @@ Browser
 
 1. 신규 회원가입과 회원정보 수정은 bcrypt로 비밀번호 저장
 2. 기존 SHA-512 + salt 계정은 로그인 성공 시 bcrypt로 자동 전환
-3. 비밀번호 재설정은 과제 시연용 reset token을 화면에 표시하며 실제 이메일 발송은 하지 않음
+3. 비밀번호 재설정은 개발용 reset token을 화면에 표시하며 실제 이메일 발송은 하지 않음
 4. reset token은 1시간 유효, 사용 후 `USED = 1`로 변경
 
 ## 게시글 상세 흐름

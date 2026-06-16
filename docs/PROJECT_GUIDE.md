@@ -1,20 +1,18 @@
-# BBS 프로젝트 지침서
+# BBS 프로젝트 가이드
 
-최종 정리일: 2026-05-25
+최종 정리일: 2026-06-17
 
-이 문서는 새 개발자가 프로젝트를 처음 받았을 때 어디를 보면 되는지 안내하는 한 장짜리 기준 문서이다. 먼저 이 파일을 읽고, 필요한 항목만 아래 파일로 이동한다.
+이 문서는 프로젝트 구조와 유지보수 기준을 빠르게 파악하기 위한 안내 문서이다. 먼저 이 파일을 읽고, 필요한 항목만 아래 파일로 이동한다.
 
 ## 가장 먼저 볼 파일
 
-| 궁금한 내용                    | 확인할 파일                    |
-| ------------------------------ | ------------------------------ |
-| 설치, 실행, 주요 URL           | `README.md`                    |
-| 과제 요구사항과 구현 완료 여부 | `docs/requirements_summary.md` |
-| 서버 구조와 요청 흐름          | `docs/architecture.md`         |
-| DB 테이블, 시퀀스, 상태 컬럼   | `docs/schema_summary.md`       |
-| 실제 수동 테스트 결과          | `docs/manual_test_result.md`   |
-| 제출 전 테스트 절차            | `docs/test_plan.md`            |
-| 오류 해결 방법                 | `docs/troubleshooting.md`      |
+| 궁금한 내용                  | 확인할 파일               |
+| ---------------------------- | ------------------------- |
+| 설치, 실행, 주요 URL         | `README.md`               |
+| 서버 구조와 요청 흐름        | `docs/architecture.md`    |
+| DB 테이블, 시퀀스, 상태 컬럼 | `docs/schema_summary.md`  |
+| 기능별 테스트 절차           | `docs/test_plan.md`       |
+| 오류 해결 방법               | `docs/troubleshooting.md` |
 
 ## 서버 코드 기준
 
@@ -74,7 +72,7 @@
 | 롤백 참고      | `scripts/rollback.sql`                                                                                         |
 | 부분 보강 참고 | `scripts/add-view-count.sql`, `scripts/add-login-salt.sql`, `scripts/add-bbsw.sql`, `scripts/add-bbs-file.sql` |
 
-## 제출 전 확인 순서
+## 기본 확인 순서
 
 1. `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정
 2. OracleDB에 `scripts/schema.sql` 또는 `scripts/migration.sql` 적용
@@ -88,9 +86,10 @@
 
 ## 유지보수 원칙
 
-- URL은 기존 과제 경로인 `/bbs/...`를 유지한다.
+- URL은 기존 경로인 `/bbs/...`를 유지한다.
 - DB 값은 bind variable을 사용하고, 검색/정렬 컬럼은 whitelist에서만 고른다.
 - 삭제는 기본적으로 `OK = 0` soft delete를 사용한다.
 - 주요 POST form에는 CSRF token을 포함한다.
 - 업로드 파일은 DB 메타데이터와 실제 파일 경로를 함께 검증한다.
 - `.env` 실제 값은 문서, 로그, Git에 남기지 않는다.
+- 공개용 안정 상태는 `main`, 보안 실험과 추가 보안 개선은 `security-lab`에서 진행한다.

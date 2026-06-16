@@ -43,7 +43,7 @@
 - `BBS_FILE.BBSNO` -> `BBS.NO`
 - `RESET_TOKEN.USER_ID` -> `LOGIN.ID`
 
-마이그레이션은 기존 데이터와 과제 환경을 고려해 일부 FK를 `ENABLE NOVALIDATE`로 추가한다.
+마이그레이션은 기존 데이터를 고려해 일부 FK를 `ENABLE NOVALIDATE`로 추가한다.
 
 ## 상태 컬럼 정책
 
@@ -67,6 +67,6 @@
 ## 주의사항
 
 - `LOGIN.ID`는 작성자 FK와 맞추기 위해 `VARCHAR2(100)` 기준으로 확장되어 있다.
-- reset token은 과제 시연용이며 실제 이메일 발송 기능은 없다.
+- reset token은 개발용이며 실제 이메일 발송 기능은 없다.
 - 첨부파일 물리 파일은 DB rollback만으로 복구되지 않는다.
 - `rollback.sql`은 주로 FK/index 제거 참고용이며 모든 컬럼/데이터를 원상복구하지 않는다.

@@ -5,6 +5,8 @@ package-lock.json
 uploads
 public/uploads
 BBS_pro_Ver
+BBS_SUBMISSION_*/
+BBS_SUBMISSION_*.zip
 routes/bbs_lec.js
 docs/*.pdf
 docs/*.ppt
