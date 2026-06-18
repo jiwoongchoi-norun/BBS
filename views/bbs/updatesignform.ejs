@@ -36,6 +36,18 @@
                         <label class="form-label fw-semibold" for="email">이메일</label>
                         <input class="form-control" type="email" id="email" name="email" maxlength="20" value="<%=column[3]%>">
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="nickname">닉네임</label>
+                        <input class="form-control" type="text" id="nickname" name="nickname" maxlength="80" value="<%=column[4] || ''%>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="avatar_url">아바타 URL</label>
+                        <input class="form-control" type="url" id="avatar_url" name="avatar_url" maxlength="500" value="<%=column[6] || ''%>">
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold" for="bio">소개</label>
+                        <textarea class="form-control" id="bio" name="bio" rows="4" maxlength="500"><%=column[5] || ''%></textarea>
+                    </div>
                     <div class="d-flex flex-column flex-sm-row justify-content-end gap-2">
                         <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
                         <button type="submit" class="btn btn-primary btn-action">정보 수정</button>

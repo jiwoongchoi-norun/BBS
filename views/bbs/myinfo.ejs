@@ -18,8 +18,22 @@
                     <dt class="col-sm-4 text-secondary">이름</dt>
                     <dd class="col-sm-8"><%= userInfo.name %></dd>
 
+                    <dt class="col-sm-4 text-secondary">닉네임</dt>
+                    <dd class="col-sm-8"><%= userInfo.nickname || '-' %></dd>
+
+                    <dt class="col-sm-4 text-secondary">상태</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge <%= userInfo.status === 'SUSPENDED' ? 'text-bg-danger' : 'text-bg-success' %>"><%= userInfo.status %></span>
+                        <% if (userInfo.status === 'SUSPENDED') { %>
+                            <div class="text-danger small mt-1"><%= userInfo.suspendReason || '관리자 정지' %></div>
+                        <% } %>
+                    </dd>
+
                     <dt class="col-sm-4 text-secondary">전화번호</dt>
                     <dd class="col-sm-8"><%= userInfo.phone || '-' %></dd>
+
+                    <dt class="col-sm-4 text-secondary">소개</dt>
+                    <dd class="col-sm-8 text-break"><%= userInfo.bio || '-' %></dd>
 
                     <dt class="col-sm-4 text-secondary">정보 갱신일</dt>
                     <dd class="col-sm-8"><%= userInfo.passwordUpdatedAt || '-' %></dd>

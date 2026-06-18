@@ -10,11 +10,12 @@
                 <a class="nav-link" href="/bbs/list">목록</a>
                 <% if (currentUser) { %>
                     <a class="nav-link" href="/bbs/form">글쓰기</a>
+                    <a class="nav-link" href="/bbs/bookmarks">북마크</a>
                     <% if (isAdmin) { %>
                         <a class="nav-link" href="/bbs/admin">관리</a>
                     <% } %>
                     <span class="navbar-text small text-secondary px-lg-2">
-                        <%= currentUser.name || currentUser.id %>님
+                        <%= currentUser.nickname || currentUser.name || currentUser.id %>님
                     </span>
                     <a class="nav-link" href="/bbs/myinfo">내 정보</a>
                     <a class="nav-link" href="/bbs/logout">로그아웃</a>

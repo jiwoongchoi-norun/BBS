@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<%- include('partials/head', { title: '내 북마크' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="container py-4 py-lg-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="h3 fw-bold mb-1">내 북마크</h1>
+                <p class="text-secondary mb-0">스크랩한 게시글을 다시 확인합니다.</p>
+            </div>
+            <a href="/bbs/list" class="btn btn-outline-secondary px-4">목록</a>
+        </div>
+
+        <section class="card board-card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 90px;">번호</th>
+                                <th scope="col">제목</th>
+                                <th scope="col" style="width: 140px;">카테고리</th>
+                                <th scope="col" style="width: 140px;">작성자</th>
+                                <th scope="col" style="width: 180px;">북마크일</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (rows.length) { %>
+                                <% rows.forEach(function(row) { %>
+                                    <tr>
+                                        <td class="text-secondary"><%= row[0] %></td>
+                                        <td><a class="fw-semibold text-dark text-decoration-none" href="/bbs/read?brdno=<%= row[0] %>"><%= row[1] %></a></td>
+                                        <td><span class="badge text-bg-light border"><%= row[5] %></span></td>
+                                        <td><a href="/bbs/users/<%= encodeURIComponent(row[2]) %>" class="text-secondary text-decoration-none"><%= row[2] %></a></td>
+                                        <td class="text-secondary"><%= row[4] %></td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="5" class="text-center text-secondary py-5">북마크한 게시글이 없습니다.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

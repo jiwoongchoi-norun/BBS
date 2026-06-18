@@ -24,7 +24,24 @@ function requireAdmin(req, res) {
   return true;
 }
 
+function requireActiveUser(req, res) {
+  if (!requireLogin(req, res)) {
+    return false;
+  }
+
+  if (req.session.user.status === 'SUSPENDED') {
+    if (req.flashMessage) {
+      req.flashMessage('danger', '정지된 계정은 쓰기 기능을 사용할 수 없습니다.');
+    }
+    res.redirect('/bbs/myinfo');
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = {
   requireLogin: requireLogin,
+  requireActiveUser: requireActiveUser,
   requireAdmin: requireAdmin
 };

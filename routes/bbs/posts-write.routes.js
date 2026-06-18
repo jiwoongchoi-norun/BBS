@@ -5,8 +5,10 @@ function createPostsWriteRouter(options) {
   var router = express.Router();
   var withConnection = options.withConnection;
   var postsRepository = options.postsRepository;
+  var categoriesRepository = options.categoriesRepository;
   var asyncHandler = options.asyncHandler;
   var requireLogin = options.requireLogin;
+  var requireActiveUser = options.requireActiveUser;
   var renderBadRequest = options.renderBadRequest;
   var renderForbidden = options.renderForbidden;
   var cleanText = options.cleanText;
@@ -20,28 +22,40 @@ function createPostsWriteRouter(options) {
   var deleteStoredFiles = options.deleteStoredFiles;
 
   // 글쓰기 화면은 로그인 사용자만 접근할 수 있다.
-  router.get('/form', function (req, res) {
-    if (!requireLogin(req, res)) return;
-    res.render('bbs/form');
-  });
+  router.get(
+    '/form',
+    asyncHandler(async function (req, res) {
+      if (!requireActiveUser(req, res)) return;
+
+      await withConnection(async function (connection) {
+        var categories = await categoriesRepository.findActiveCategories(connection);
+        res.render('bbs/form', { categories: categories.rows });
+      });
+    })
+  );
 
   // 게시글 등록: 파일 업로드 검증 후 게시글과 파일 메타데이터를 같은 트랜잭션으로 저장한다.
   router.post('/save', function (req, res, next) {
-    if (!requireLogin(req, res)) return;
+    if (!requireActiveUser(req, res)) return;
 
     // 업로드 오류는 입력 화면으로 되돌려야 하므로 multer를 라우트 내부에서 실행한다.
     upload.single('uploadFile')(req, res, async function (uploadErr) {
       if (uploadErr) {
         var uploadMessage = getUploadErrorMessage(uploadErr);
         setFlash(req, 'warning', uploadMessage);
+        var categoriesForUploadError = await withConnection(async function (connection) {
+          return categoriesRepository.findActiveCategories(connection);
+        });
         res.render('bbs/form', {
           flashMessage: {
             type: 'warning',
             text: uploadMessage
           },
+          categories: categoriesForUploadError.rows,
           formData: {
             title: cleanText(req.body.brdtitle, 200),
-            content: cleanText(req.body.brdmemo, 4000)
+            content: cleanText(req.body.brdmemo, 4000),
+            categoryId: toValidNumber(req.body.category_id) || ''
           }
         });
         return;
@@ -50,6 +64,7 @@ function createPostsWriteRouter(options) {
       var content = cleanText(req.body.brdmemo, 4000);
       var title = cleanText(req.body.brdtitle, 200);
       var writer = req.session.user.id;
+      var categoryId = toValidNumber(req.body.category_id);
       var postError = validatePostInput(title, content);
 
       if (postError || !writer) {
@@ -57,28 +72,47 @@ function createPostsWriteRouter(options) {
           deleteStoredFile(req.file.filename);
         }
         setFlash(req, 'warning', postError || '작성자 정보를 확인해주세요.');
+        var categoriesForInputError = await withConnection(async function (connection) {
+          return categoriesRepository.findActiveCategories(connection);
+        });
         res.render('bbs/form', {
           flashMessage: {
             type: 'warning',
             text: postError || '작성자 정보를 확인해주세요.'
           },
-          formData: { title: title, content: content }
+          categories: categoriesForInputError.rows,
+          formData: { title: title, content: content, categoryId: categoryId || '' }
         });
         return;
       }
 
       try {
         var hasUploadFile = !!req.file;
-
-        await withConnection(async function (connection) {
+        var saveSucceeded = await withConnection(async function (connection) {
           try {
-            // 게시글과 파일 메타데이터는 하나의 작업 단위이므로 둘 다 성공한 뒤 commit한다.
             var nextNoSql = 'SELECT BBS_SEQ.NEXTVAL FROM DUAL';
             var seqResult = await connection.execute(nextNoSql);
             var bbsno = seqResult.rows[0][0];
+            var validCategoryId = null;
+
+            if (categoryId) {
+              var categoryRows = await categoriesRepository.findActiveCategoryById(
+                connection,
+                categoryId
+              );
+
+              if (categoryRows.rows.length < 1) {
+                await connection.rollback();
+                return false;
+              }
+
+              validCategoryId = categoryId;
+            }
+
+            // 게시글과 파일 메타데이터는 하나의 작업 단위이므로 둘 다 성공한 뒤 commit한다.
             var sql =
-              'INSERT INTO BBS(NO, TITLE, CONTENT, WRITER, REGDATE) ' +
-              'VALUES(:bbsno, :title, :content, :writer, sysdate)';
+              'INSERT INTO BBS(NO, TITLE, CONTENT, WRITER, CATEGORY_ID, REGDATE) ' +
+              'VALUES(:bbsno, :title, :content, :writer, :categoryId, sysdate)';
 
             await connection.execute(
               sql,
@@ -86,7 +120,8 @@ function createPostsWriteRouter(options) {
                 bbsno: bbsno,
                 title: title,
                 content: content,
-                writer: writer
+                writer: writer,
+                categoryId: validCategoryId
               },
               { autoCommit: false }
             );
@@ -113,6 +148,7 @@ function createPostsWriteRouter(options) {
             }
 
             await connection.commit();
+            return true;
           } catch (err) {
             try {
               await connection.rollback();
@@ -122,6 +158,25 @@ function createPostsWriteRouter(options) {
             throw err;
           }
         });
+
+        if (!saveSucceeded) {
+          if (req.file) {
+            deleteStoredFile(req.file.filename);
+          }
+          setFlash(req, 'warning', '선택한 카테고리를 사용할 수 없습니다.');
+          var categoriesForCategoryError = await withConnection(async function (connection) {
+            return categoriesRepository.findActiveCategories(connection);
+          });
+          res.render('bbs/form', {
+            flashMessage: {
+              type: 'warning',
+              text: '선택한 카테고리를 사용할 수 없습니다.'
+            },
+            categories: categoriesForCategoryError.rows,
+            formData: { title: title, content: content, categoryId: categoryId || '' }
+          });
+          return;
+        }
 
         setFlash(
           req,
@@ -156,7 +211,7 @@ function createPostsWriteRouter(options) {
 
   // 게시글 삭제는 작성자 본인만 가능하며 DB는 soft delete로 처리한다.
   router.post('/delete', async function (req, res, next) {
-    if (!requireLogin(req, res)) return;
+    if (!requireActiveUser(req, res)) return;
 
     var bbsno = toValidNumber(req.body.brdno);
     var writer = req.session.user.id;
@@ -215,7 +270,7 @@ function createPostsWriteRouter(options) {
   router.get(
     '/update',
     asyncHandler(async function (req, res) {
-      if (!requireLogin(req, res)) return;
+      if (!requireActiveUser(req, res)) return;
       var brdno = toValidNumber(req.query.brdno);
       if (!brdno) {
         renderBadRequest(res, '게시글 번호가 올바르지 않습니다.');
@@ -239,10 +294,12 @@ function createPostsWriteRouter(options) {
         }
 
         var fileRows = await postsRepository.findPostFilesForEdit(connection, brdno);
+        var categoryRows = await categoriesRepository.findActiveCategories(connection);
 
         res.render('bbs/updateform', {
           rows: rows.rows,
-          files: fileRows.rows
+          files: fileRows.rows,
+          categories: categoryRows.rows
         });
       });
     })
@@ -250,7 +307,7 @@ function createPostsWriteRouter(options) {
 
   // 게시글 수정: 새 파일이 있으면 기존 파일을 비활성화하고 새 메타데이터를 등록한다.
   router.post('/updatesave', function (req, res, next) {
-    if (!requireLogin(req, res)) return;
+    if (!requireActiveUser(req, res)) return;
 
     upload.single('uploadFile')(req, res, async function (uploadErr) {
       var brdno = toValidNumber(req.body.brdno);
@@ -268,6 +325,7 @@ function createPostsWriteRouter(options) {
       var title = cleanText(req.body.brdtitle, 200);
       var content = cleanText(req.body.brdmemo, 4000);
       var writer = req.session.user.id;
+      var categoryId = toValidNumber(req.body.category_id);
       var postError = validatePostInput(title, content);
 
       if (!brdno || postError) {
@@ -288,12 +346,25 @@ function createPostsWriteRouter(options) {
       try {
         var updateSucceeded = await withConnection(async function (connection) {
           try {
+            if (categoryId) {
+              var categoryRows = await categoriesRepository.findActiveCategoryById(
+                connection,
+                categoryId
+              );
+
+              if (categoryRows.rows.length < 1) {
+                await connection.rollback();
+                return false;
+              }
+            }
+
             var result = await postsRepository.updatePost(
               connection,
               brdno,
               title,
               content,
-              writer
+              writer,
+              categoryId || null
             );
 
             if (!result.rowsAffected) {

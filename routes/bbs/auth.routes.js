@@ -380,7 +380,9 @@ function createAuthRouter(options) {
 
     try {
       var loginResult = await withConnection(async function (connection) {
-        var sql = 'SELECT OK, PASSWORD, SALT, PASSWORD_ALGO, NAME, ROLE FROM LOGIN WHERE ID = :id';
+        var sql =
+          "SELECT OK, PASSWORD, SALT, PASSWORD_ALGO, NAME, ROLE, NVL(USER_STATUS, 'ACTIVE'), NVL(NICKNAME, NAME) " +
+          'FROM LOGIN WHERE ID = :id';
         var result = await connection.execute(sql, { id: id });
 
         if (result.rows.length < 1) {
@@ -393,6 +395,8 @@ function createAuthRouter(options) {
         var storedAlgo = result.rows[0][3] || 'sha512';
         var userName = result.rows[0][4];
         var userRole = result.rows[0][5] || 'USER';
+        var userStatus = result.rows[0][6] || 'ACTIVE';
+        var userNickname = result.rows[0][7] || userName;
         var isActiveUser = result.rows[0][0] === 1;
 
         if (!isActiveUser) {
@@ -407,7 +411,13 @@ function createAuthRouter(options) {
             return { success: false, code: 2, message: loginFailureMessage };
           }
 
-          return { success: true, userName: userName, userRole: userRole };
+          return {
+            success: true,
+            userName: userName,
+            userRole: userRole,
+            userStatus: userStatus,
+            userNickname: userNickname
+          };
         }
 
         if (!storedSalt) {
@@ -452,7 +462,13 @@ function createAuthRouter(options) {
           throw err;
         }
 
-        return { success: true, userName: userName, userRole: userRole };
+        return {
+          success: true,
+          userName: userName,
+          userRole: userRole,
+          userStatus: userStatus,
+          userNickname: userNickname
+        };
       });
 
       if (!loginResult.success) {
@@ -468,6 +484,8 @@ function createAuthRouter(options) {
           id: id,
           name: loginResult.userName,
           role: loginResult.userRole || 'USER',
+          status: loginResult.userStatus || 'ACTIVE',
+          nickname: loginResult.userNickname || loginResult.userName,
           authorized: true
         };
       }
@@ -499,7 +517,7 @@ function createAuthRouter(options) {
 
       await withConnection(async function (connection) {
         var sql =
-          'SELECT ID, NAME, PHONE, ' +
+          "SELECT ID, NAME, PHONE, NICKNAME, BIO, AVATAR_URL, NVL(USER_STATUS, 'ACTIVE'), SUSPEND_REASON, " +
           "TO_CHAR(PASSWORD_UPDATED_AT, 'yyyy-mm-dd') AS PASSWORD_UPDATED_AT " +
           'FROM LOGIN WHERE ID = :id AND OK = 1';
 
@@ -512,13 +530,20 @@ function createAuthRouter(options) {
 
         var row = result.rows[0];
         req.session.user.name = row[1];
+        req.session.user.nickname = row[3] || row[1];
+        req.session.user.status = row[6] || 'ACTIVE';
 
         res.render('bbs/myinfo', {
           userInfo: {
             id: row[0],
             name: row[1],
             phone: row[2],
-            passwordUpdatedAt: row[3]
+            nickname: row[3],
+            bio: row[4],
+            avatarUrl: row[5],
+            status: row[6],
+            suspendReason: row[7],
+            passwordUpdatedAt: row[8]
           }
         });
       });
@@ -706,8 +731,8 @@ function createAuthRouter(options) {
     }
 
     var sql =
-      'INSERT INTO LOGIN(ID,PASSWORD,NAME,EMAIL,PHONE,SALT,PASSWORD_ALGO,PASSWORD_UPDATED_AT) ' +
-      "VALUES(:id,:password,:name,:email,:phone,NULL,'bcrypt',SYSDATE)";
+      'INSERT INTO LOGIN(ID,PASSWORD,NAME,EMAIL,PHONE,NICKNAME,SALT,PASSWORD_ALGO,PASSWORD_UPDATED_AT) ' +
+      "VALUES(:id,:password,:name,:email,:phone,:nickname,NULL,'bcrypt',SYSDATE)";
 
     try {
       var hashPassword = await new Promise(function (resolve, reject) {
@@ -737,7 +762,8 @@ function createAuthRouter(options) {
               password: hashPassword,
               name: name,
               email: email,
-              phone: phone
+              phone: phone,
+              nickname: name
             },
             { autoCommit: false }
           );
@@ -779,7 +805,7 @@ function createAuthRouter(options) {
     asyncHandler(async function (req, res) {
       if (req.session.user) {
         await withConnection(async function (connection) {
-          var sql = 'SELECT ID, NAME, EMAIL FROM LOGIN WHERE ID = :id';
+          var sql = 'SELECT ID, NAME, EMAIL, NICKNAME, BIO, AVATAR_URL FROM LOGIN WHERE ID = :id';
           var result = await connection.execute(sql, { id: req.session.user.id });
 
           if (result.rows.length < 1) {
@@ -788,7 +814,9 @@ function createAuthRouter(options) {
 
           var row = result.rows[0];
           // 비밀번호 해시가 화면에 다시 출력되지 않도록 빈 값으로 넘긴다.
-          res.render('bbs/updatesignform', { rows: [[row[0], '', row[1], row[2]]] });
+          res.render('bbs/updatesignform', {
+            rows: [[row[0], '', row[1], row[2], row[3], row[4], row[5]]]
+          });
         });
       } else {
         res.redirect('/bbs/login');
@@ -801,13 +829,16 @@ function createAuthRouter(options) {
     var pw = cleanText(req.body.pw1, 100);
     var name = cleanText(req.body.name, 100);
     var email = cleanText(req.body.email, 200);
+    var nickname = cleanText(req.body.nickname, 80);
+    var bio = cleanText(req.body.bio, 500);
+    var avatarUrl = cleanText(req.body.avatar_url, 500);
     var pw2 = cleanText(req.body.pw2, 100);
     var id = cleanText(req.body.id, 50); // 입력값 검증
     if (!requireLogin(req, res)) return;
 
     if (pw != pw2) {
       res.render('bbs/updatesignform', {
-        rows: [[id, '', name, email]],
+        rows: [[id, '', name, email, nickname, bio, avatarUrl]],
         flashMessage: { type: 'warning', text: '비밀번호 확인이 일치하지 않습니다.' }
       });
       return;
@@ -817,7 +848,7 @@ function createAuthRouter(options) {
     var updatePasswordError = validatePasswordPolicy(pw);
     if (updateAccountError || updatePasswordError || name == '') {
       return res.render('bbs/updatesignform', {
-        rows: [[id, '', name, email]],
+        rows: [[id, '', name, email, nickname, bio, avatarUrl]],
         flashMessage: {
           type: 'warning',
           text: updateAccountError || updatePasswordError || '이름을 입력해주세요.'
@@ -827,7 +858,7 @@ function createAuthRouter(options) {
 
     var oldId = req.session.user.id;
     var sql =
-      "UPDATE LOGIN SET ID = :id, PASSWORD = :password, NAME = :name, EMAIL = :email, SALT = NULL, PASSWORD_ALGO = 'bcrypt', PASSWORD_UPDATED_AT = SYSDATE WHERE ID = :oldId";
+      "UPDATE LOGIN SET ID = :id, PASSWORD = :password, NAME = :name, EMAIL = :email, NICKNAME = :nickname, BIO = :bio, AVATAR_URL = :avatarUrl, SALT = NULL, PASSWORD_ALGO = 'bcrypt', PASSWORD_UPDATED_AT = SYSDATE WHERE ID = :oldId";
 
     try {
       var hashPassword = await new Promise(function (resolve, reject) {
@@ -849,6 +880,9 @@ function createAuthRouter(options) {
               password: hashPassword,
               name: name,
               email: email,
+              nickname: nickname || name,
+              bio: bio,
+              avatarUrl: avatarUrl,
               oldId: oldId
             },
             { autoCommit: false }
@@ -878,6 +912,7 @@ function createAuthRouter(options) {
 
       req.session.user.id = id;
       req.session.user.name = name;
+      req.session.user.nickname = nickname || name;
       req.session.user.role = req.session.user.role || 'USER';
       setFlash(req, 'success', '회원정보가 수정되었습니다.');
       res.redirect('/bbs/list');

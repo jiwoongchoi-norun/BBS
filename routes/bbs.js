@@ -9,16 +9,24 @@ var withConnection = require('../db/oracle').withConnection;
 var postsRepository = require('../db/repositories/posts.repository');
 var commentsRepository = require('../db/repositories/comments.repository');
 var reactionsRepository = require('../db/repositories/reactions.repository');
+var categoriesRepository = require('../db/repositories/categories.repository');
+var bookmarksRepository = require('../db/repositories/bookmarks.repository');
+var reportsRepository = require('../db/repositories/reports.repository');
+var usersRepository = require('../db/repositories/users.repository');
 var asyncHandler = require('./asyncHandler');
 var createAuthRouter = require('./bbs/auth.routes');
 var createAdminRouter = require('./bbs/admin.routes');
+var createBookmarksRouter = require('./bbs/bookmarks.routes');
 var createCommentsRouter = require('./bbs/comments.routes');
 var createFilesRouter = require('./bbs/files.routes');
+var createProfileRouter = require('./bbs/profile.routes');
 var createPostsReadRouter = require('./bbs/posts-read.routes');
 var createPostsWriteRouter = require('./bbs/posts-write.routes');
 var createReactionsRouter = require('./bbs/reactions.routes');
+var createReportsRouter = require('./bbs/reports.routes');
 var authMiddleware = require('./middleware/auth');
 var requireLogin = authMiddleware.requireLogin;
+var requireActiveUser = authMiddleware.requireActiveUser;
 var requireAdmin = authMiddleware.requireAdmin;
 var responseHelpers = require('./helpers/response');
 var uploadHelpers = require('./helpers/upload');
@@ -104,6 +112,36 @@ router.use(function (req, res, next) {
   next();
 });
 
+router.use(
+  asyncHandler(async function (req, res, next) {
+    if (!req.session.user) {
+      next();
+      return;
+    }
+
+    await withConnection(async function (connection) {
+      var result = await connection.execute(
+        "SELECT NAME, ROLE, NVL(USER_STATUS, 'ACTIVE'), NVL(NICKNAME, NAME) FROM LOGIN WHERE ID = :id AND OK = 1",
+        { id: req.session.user.id }
+      );
+
+      if (result.rows.length < 1) {
+        req.session.user = null;
+        next();
+        return;
+      }
+
+      req.session.user.name = result.rows[0][0];
+      req.session.user.role = result.rows[0][1] || 'USER';
+      req.session.user.status = result.rows[0][2] || 'ACTIVE';
+      req.session.user.nickname = result.rows[0][3] || result.rows[0][0];
+      res.locals.currentUser = req.session.user;
+      res.locals.isAdmin = req.session.user.role === 'ADMIN';
+      next();
+    });
+  })
+);
+
 router.get('/', function (req, res) {
   res.redirect('/bbs/list');
 });
@@ -124,6 +162,9 @@ router.use(
     withConnection: withConnection,
     postsRepository: postsRepository,
     commentsRepository: commentsRepository,
+    categoriesRepository: categoriesRepository,
+    reportsRepository: reportsRepository,
+    usersRepository: usersRepository,
     asyncHandler: asyncHandler,
     requireAdmin: requireAdmin,
     renderBadRequest: renderBadRequest,
@@ -140,6 +181,8 @@ router.use(
     postsRepository: postsRepository,
     commentsRepository: commentsRepository,
     reactionsRepository: reactionsRepository,
+    categoriesRepository: categoriesRepository,
+    bookmarksRepository: bookmarksRepository,
     asyncHandler: asyncHandler,
     renderBadRequest: renderBadRequest,
     cleanText: cleanText,
@@ -152,8 +195,10 @@ router.use(
   createPostsWriteRouter({
     withConnection: withConnection,
     postsRepository: postsRepository,
+    categoriesRepository: categoriesRepository,
     asyncHandler: asyncHandler,
     requireLogin: requireLogin,
+    requireActiveUser: requireActiveUser,
     renderBadRequest: renderBadRequest,
     renderForbidden: renderForbidden,
     cleanText: cleanText,
@@ -172,7 +217,7 @@ router.use(
   createReactionsRouter({
     withConnection: withConnection,
     reactionsRepository: reactionsRepository,
-    requireLogin: requireLogin,
+    requireLogin: requireActiveUser,
     renderBadRequest: renderBadRequest,
     cleanText: cleanText,
     toValidNumber: toValidNumber,
@@ -184,13 +229,48 @@ router.use(
   createCommentsRouter({
     withConnection: withConnection,
     commentsRepository: commentsRepository,
-    requireLogin: requireLogin,
+    requireLogin: requireActiveUser,
     renderBadRequest: renderBadRequest,
     renderForbidden: renderForbidden,
     cleanText: cleanText,
     toValidNumber: toValidNumber,
     setFlash: setFlash,
     redirectReadWithoutViewCount: redirectReadWithoutViewCount
+  })
+);
+
+router.use(
+  createBookmarksRouter({
+    withConnection: withConnection,
+    bookmarksRepository: bookmarksRepository,
+    asyncHandler: asyncHandler,
+    requireLogin: requireLogin,
+    requireActiveUser: requireActiveUser,
+    renderBadRequest: renderBadRequest,
+    toValidNumber: toValidNumber,
+    setFlash: setFlash
+  })
+);
+
+router.use(
+  createReportsRouter({
+    withConnection: withConnection,
+    reportsRepository: reportsRepository,
+    requireActiveUser: requireActiveUser,
+    renderBadRequest: renderBadRequest,
+    cleanText: cleanText,
+    toValidNumber: toValidNumber,
+    setFlash: setFlash
+  })
+);
+
+router.use(
+  createProfileRouter({
+    withConnection: withConnection,
+    usersRepository: usersRepository,
+    asyncHandler: asyncHandler,
+    renderBadRequest: renderBadRequest,
+    cleanText: cleanText
   })
 );
 

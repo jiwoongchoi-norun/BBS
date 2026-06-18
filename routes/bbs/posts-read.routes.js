@@ -72,6 +72,8 @@ function createPostsReadRouter(options) {
   var postsRepository = options.postsRepository;
   var commentsRepository = options.commentsRepository;
   var reactionsRepository = options.reactionsRepository;
+  var categoriesRepository = options.categoriesRepository;
+  var bookmarksRepository = options.bookmarksRepository;
   var asyncHandler = options.asyncHandler;
   var renderBadRequest = options.renderBadRequest;
   var cleanText = options.cleanText;
@@ -87,6 +89,7 @@ function createPostsReadRouter(options) {
       var myPostsOnly = req.query.mine === '1' && req.session.user;
       var whereSql = 'OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
       var binds = {};
+      var selectedCategorySlug = cleanText(req.query.category, 80);
 
       if (myPostsOnly) {
         whereSql += ' AND (WRITER = :writerId OR WRITER = :writerName)';
@@ -95,6 +98,22 @@ function createPostsReadRouter(options) {
       }
 
       await withConnection(async function (connection) {
+        var selectedCategory = null;
+        var categories = await categoriesRepository.findActiveCategories(connection);
+
+        if (selectedCategorySlug) {
+          var categoryRows = await categoriesRepository.findCategoryBySlug(
+            connection,
+            selectedCategorySlug
+          );
+
+          if (categoryRows.rows.length) {
+            selectedCategory = categoryRows.rows[0];
+            whereSql += ' AND CATEGORY_ID = :categoryId';
+            binds.categoryId = selectedCategory[0];
+          }
+        }
+
         var countResult = await postsRepository.countPosts(connection, whereSql, binds);
         var totalCount = countResult.rows[0][0];
         var totalPage = Math.ceil(totalCount / paging.pageSize);
@@ -104,7 +123,11 @@ function createPostsReadRouter(options) {
         }
 
         var offset = (paging.currentPage - 1) * paging.pageSize;
-        var listBaseParams = 'pageSize=' + paging.pageSize + (myPostsOnly ? '&mine=1' : '');
+        var listBaseParams =
+          'pageSize=' +
+          paging.pageSize +
+          (myPostsOnly ? '&mine=1' : '') +
+          (selectedCategory ? '&category=' + encodeURIComponent(selectedCategory[2]) : '');
         var paginationBaseUrl = sortInfo.sort
           ? '/bbs/list?' +
             listBaseParams +
@@ -131,6 +154,8 @@ function createPostsReadRouter(options) {
             searchKeyword: '',
             isSearch: false,
             myPostsOnly: !!myPostsOnly,
+            categories: categories.rows,
+            selectedCategory: selectedCategory,
             sort: sortInfo.sort,
             order: sortInfo.order,
             paginationBaseUrl: paginationBaseUrl
@@ -174,6 +199,9 @@ function createPostsReadRouter(options) {
           isAdmin
         );
         var fileRows = await postsRepository.findFilesByPostId(connection, brdno);
+        var bookmarkRows = req.session.user
+          ? await bookmarksRepository.findBookmark(connection, brdno, req.session.user.id)
+          : { rows: [] };
 
         if (!req.session.user) {
           res.render('bbs/read', {
@@ -182,6 +210,7 @@ function createPostsReadRouter(options) {
             files: fileRows.rows,
             currentUser: null,
             userReaction: '',
+            isBookmarked: false,
             isAdmin: false
           });
           return;
@@ -199,6 +228,7 @@ function createPostsReadRouter(options) {
           files: fileRows.rows,
           currentUser: req.session.user,
           userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : '',
+          isBookmarked: bookmarkRows.rows.length > 0,
           isAdmin: isAdmin
         });
       });
@@ -220,6 +250,7 @@ function createPostsReadRouter(options) {
       var sortInfo = getSort(req);
       var searchKeyword = cleanText(req.query.search, 200);
       var myPostsOnly = req.query.mine === '1' && req.session.user;
+      var selectedCategorySlug = cleanText(req.query.category, 80);
 
       if (!searchColumns[choice]) {
         choice = 'TITLE';
@@ -228,6 +259,8 @@ function createPostsReadRouter(options) {
       await withConnection(async function (connection) {
         var whereSql;
         var binds = { search: '%' + searchKeyword + '%' };
+        var selectedCategory = null;
+        var categories = await categoriesRepository.findActiveCategories(connection);
 
         if (choice == 'TITLE_CONTENT') {
           whereSql =
@@ -241,6 +274,19 @@ function createPostsReadRouter(options) {
           whereSql += ' AND (WRITER = :writerId OR WRITER = :writerName)';
           binds.writerId = req.session.user.id;
           binds.writerName = req.session.user.name || req.session.user.id;
+        }
+
+        if (selectedCategorySlug) {
+          var categoryRows = await categoriesRepository.findCategoryBySlug(
+            connection,
+            selectedCategorySlug
+          );
+
+          if (categoryRows.rows.length) {
+            selectedCategory = categoryRows.rows[0];
+            whereSql += ' AND CATEGORY_ID = :categoryId';
+            binds.categoryId = selectedCategory[0];
+          }
         }
 
         var countResult = await postsRepository.countSearchPosts(connection, whereSql, binds);
@@ -260,6 +306,7 @@ function createPostsReadRouter(options) {
           '&pageSize=' +
           paging.pageSize +
           (myPostsOnly ? '&mine=1' : '') +
+          (selectedCategory ? '&category=' + encodeURIComponent(selectedCategory[2]) : '') +
           (sortInfo.sort
             ? '&sort=' +
               encodeURIComponent(sortInfo.sort) +
@@ -285,6 +332,8 @@ function createPostsReadRouter(options) {
             searchKeyword: searchKeyword,
             isSearch: true,
             myPostsOnly: !!myPostsOnly,
+            categories: categories.rows,
+            selectedCategory: selectedCategory,
             sort: sortInfo.sort,
             order: sortInfo.order,
             paginationBaseUrl: paginationBaseUrl

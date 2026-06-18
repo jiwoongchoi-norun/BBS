@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<%- include('partials/head', { title: '회원 관리' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="container py-4 py-lg-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="h3 fw-bold mb-1">회원 관리</h1>
+                <p class="text-secondary mb-0">회원 권한과 정지 상태를 관리합니다.</p>
+            </div>
+            <a href="/bbs/admin" class="btn btn-outline-secondary px-4">대시보드</a>
+        </div>
+
+        <section class="card board-card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col">회원</th>
+                                <th scope="col" style="width: 110px;">권한</th>
+                                <th scope="col" style="width: 120px;">상태</th>
+                                <th scope="col" class="text-center" style="width: 100px;">작성글</th>
+                                <th scope="col" class="text-center" style="width: 100px;">댓글</th>
+                                <th scope="col" class="text-end" style="width: 360px;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% rows.forEach(function(row) { var suspended = row[5] === 'SUSPENDED'; var self = currentUser && currentUser.id === row[0]; %>
+                                <tr>
+                                    <td>
+                                        <a href="/bbs/users/<%= encodeURIComponent(row[0]) %>" class="fw-semibold text-dark text-decoration-none"><%= row[0] %></a>
+                                        <div class="text-secondary small"><%= row[1] %> · <%= row[2] || '-' %></div>
+                                        <% if (suspended) { %>
+                                            <div class="text-danger small"><%= row[6] || '관리자 정지' %></div>
+                                        <% } %>
+                                    </td>
+                                    <td><span class="badge <%= row[4] === 'ADMIN' ? 'text-bg-primary' : 'text-bg-light border' %>"><%= row[4] %></span></td>
+                                    <td><span class="badge <%= suspended ? 'text-bg-danger' : 'text-bg-success' %>"><%= row[5] %></span></td>
+                                    <td class="text-center"><%= row[9] %></td>
+                                    <td class="text-center"><%= row[10] %></td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-2 align-items-end">
+                                            <form action="/bbs/admin/users/role" method="post" class="d-flex gap-2">
+                                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                <input type="hidden" name="user_id" value="<%= row[0] %>">
+                                                <select class="form-select form-select-sm w-auto" name="role" <%= self ? 'disabled' : '' %>>
+                                                    <option value="USER" <%= row[4] === 'USER' ? 'selected' : '' %>>USER</option>
+                                                    <option value="ADMIN" <%= row[4] === 'ADMIN' ? 'selected' : '' %>>ADMIN</option>
+                                                </select>
+                                                <button type="submit" class="btn btn-sm btn-outline-primary" <%= self ? 'disabled' : '' %>>권한</button>
+                                            </form>
+                                            <% if (suspended) { %>
+                                                <form action="/bbs/admin/users/restore" method="post">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="user_id" value="<%= row[0] %>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-success">정지 해제</button>
+                                                </form>
+                                            <% } else { %>
+                                                <form action="/bbs/admin/users/suspend" method="post" class="d-flex gap-2">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="user_id" value="<%= row[0] %>">
+                                                    <input class="form-control form-control-sm" name="reason" placeholder="정지 사유" <%= self ? 'disabled' : '' %>>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" <%= self ? 'disabled' : '' %>>정지</button>
+                                                </form>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                            <% if (!rows.length) { %>
+                                <tr>
+                                    <td colspan="6" class="text-center text-secondary py-5">회원이 없습니다.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

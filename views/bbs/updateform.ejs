@@ -9,6 +9,8 @@
         <%
             var column = rows[0];
             var fileRows = typeof files !== 'undefined' ? files : [];
+            var categoryRows = typeof categories !== 'undefined' ? categories : [];
+            var selectedCategoryId = column[5] || '';
 
             function formatFileSize(bytes) {
                 bytes = Number(bytes || 0);
@@ -28,6 +30,17 @@
                         <label class="form-label fw-semibold" for="brdwriter">작성자</label>
                         <input class="form-control" type="text" id="brdwriter" name="brdwriter"
                             maxlength="20" value="<%=column[3]%>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="category_id">카테고리</label>
+                        <select class="form-select" id="category_id" name="category_id">
+                            <option value="">미분류</option>
+                            <% categoryRows.forEach(function(category) { %>
+                                <option value="<%= category[0] %>" <%= Number(selectedCategoryId || 0) === Number(category[0]) ? 'selected' : '' %>>
+                                    <%= category[1] %>
+                                </option>
+                            <% }) %>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold" for="brdtitle">제목</label>

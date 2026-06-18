@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<%- include('partials/head', { title: '사용자 프로필' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="container py-4 py-lg-5">
+        <%
+            var avatarUrl = profile[7] || '';
+            var status = profile[8] || 'ACTIVE';
+        %>
+        <div class="card board-card mx-auto content-card">
+            <div class="card-body">
+                <div class="d-flex flex-column flex-md-row gap-3 align-items-md-center">
+                    <% if (avatarUrl) { %>
+                        <img src="<%= avatarUrl %>" alt="" class="rounded border" style="width: 96px; height: 96px; object-fit: cover;">
+                    <% } else { %>
+                        <div class="rounded border bg-light d-flex align-items-center justify-content-center fw-bold" style="width: 96px; height: 96px;">
+                            <%= String(profile[5] || profile[0]).slice(0, 1).toUpperCase() %>
+                        </div>
+                    <% } %>
+                    <div class="min-w-0">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                            <h1 class="h4 fw-bold mb-0"><%= profile[5] || profile[1] %></h1>
+                            <% if (profile[4] === 'ADMIN') { %>
+                                <span class="badge text-bg-primary">관리자</span>
+                            <% } %>
+                            <% if (status === 'SUSPENDED') { %>
+                                <span class="badge text-bg-danger">정지</span>
+                            <% } %>
+                        </div>
+                        <div class="text-secondary small mb-2">@<%= profile[0] %></div>
+                        <p class="mb-0 text-break"><%= profile[6] || '등록된 소개글이 없습니다.' %></p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body border-top">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <div class="text-secondary small">작성글</div>
+                            <div class="h4 mb-0"><%= summary.postCount %></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded p-3">
+                            <div class="text-secondary small">댓글</div>
+                            <div class="h4 mb-0"><%= summary.commentCount %></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section class="card board-card mx-auto content-card mt-4">
+            <div class="card-header bg-white">
+                <h2 class="h5 fw-bold mb-0">최근 작성글</h2>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    <% if (recentPosts.length) { %>
+                        <% recentPosts.forEach(function(post) { %>
+                            <a href="/bbs/read?brdno=<%= post[0] %>" class="list-group-item list-group-item-action d-flex justify-content-between gap-3">
+                                <span class="fw-semibold text-truncate"><%= post[1] %></span>
+                                <span class="text-secondary small flex-shrink-0"><%= post[2] %></span>
+                            </a>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="list-group-item text-center text-secondary py-4">표시할 게시글이 없습니다.</div>
+                    <% } %>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

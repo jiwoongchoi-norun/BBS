@@ -20,6 +20,9 @@
         var currentOrder = typeof order !== 'undefined' ? order : 'desc';
         var searchMode = typeof isSearch !== 'undefined' ? isSearch : !!selectedKeyword;
         var mineMode = typeof myPostsOnly !== 'undefined' ? myPostsOnly : false;
+        var categoryRows = typeof categories !== 'undefined' ? categories : [];
+        var activeCategory = typeof selectedCategory !== 'undefined' ? selectedCategory : null;
+        var activeCategorySlug = activeCategory ? activeCategory[2] : '';
         var hasRows = rows && rows.length;
         var searchChoiceLabels = {
             TITLE: '제목',
@@ -78,6 +81,10 @@
                 params.push('mine=1');
             }
 
+            if (activeCategorySlug) {
+                params.push('category=' + encodeURIComponent(activeCategorySlug));
+            }
+
             params.push('pageSize=' + encodeURIComponent(currentPageSize));
             params.push('sort=' + encodeURIComponent(sortName));
             params.push('order=' + encodeURIComponent(nextSortOrder(sortName)));
@@ -99,6 +106,10 @@
                 params.push('mine=1');
             }
 
+            if (activeCategorySlug) {
+                params.push('category=' + encodeURIComponent(activeCategorySlug));
+            }
+
             if (currentSort) {
                 params.push('sort=' + encodeURIComponent(currentSort));
                 params.push('order=' + encodeURIComponent(currentOrder));
@@ -113,6 +124,9 @@
             <div>
                 <h1 class="h3 fw-bold mb-1">자유게시판</h1>
                 <p class="text-secondary mb-0">게시글을 확인하고 원하는 글을 검색할 수 있습니다.</p>
+                <% if (activeCategory) { %>
+                    <span class="badge text-bg-primary mt-2"><%= activeCategory[1] %></span>
+                <% } %>
             </div>
             <div class="d-flex flex-column flex-sm-row gap-2">
                 <% if (currentUser) { %>
@@ -132,6 +146,9 @@
                     <input type="hidden" name="pageSize" value="<%= currentPageSize %>">
                     <% if (mineMode) { %>
                         <input type="hidden" name="mine" value="1">
+                    <% } %>
+                    <% if (activeCategorySlug) { %>
+                        <input type="hidden" name="category" value="<%= activeCategorySlug %>">
                     <% } %>
                     <% if (currentSort) { %>
                         <input type="hidden" name="sort" value="<%= currentSort %>">
@@ -182,6 +199,9 @@
                     <% if (mineMode) { %>
                         <input type="hidden" name="mine" value="1">
                     <% } %>
+                    <% if (activeCategorySlug) { %>
+                        <input type="hidden" name="category" value="<%= activeCategorySlug %>">
+                    <% } %>
                     <% if (currentSort) { %>
                         <input type="hidden" name="sort" value="<%= currentSort %>">
                         <input type="hidden" name="order" value="<%= currentOrder %>">
@@ -196,6 +216,18 @@
                         <% }) %>
                     </select>
                 </form>
+                <% if (categoryRows.length) { %>
+                    <div class="d-flex flex-wrap gap-2 mt-3">
+                        <a href="/bbs/list?pageSize=<%= currentPageSize %><%= mineMode ? '&mine=1' : '' %>"
+                            class="btn btn-sm <%= activeCategorySlug ? 'btn-outline-secondary' : 'btn-primary' %>">전체</a>
+                        <% categoryRows.forEach(function(category) { %>
+                            <a href="/bbs/list?pageSize=<%= currentPageSize %><%= mineMode ? '&mine=1' : '' %><%= currentSort ? '&sort=' + encodeURIComponent(currentSort) + '&order=' + encodeURIComponent(currentOrder) : '' %>&category=<%= encodeURIComponent(category[2]) %>"
+                                class="btn btn-sm <%= activeCategorySlug === category[2] ? 'btn-primary' : 'btn-outline-secondary' %>">
+                                <%= category[1] %>
+                            </a>
+                        <% }) %>
+                    </div>
+                <% } %>
             </div>
         </section>
 
@@ -227,13 +259,14 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; var commentCount = column[9] || 0; var isNotice = Number(column[10]) === 1; %>
+                            <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; var commentCount = column[9] || 0; var isNotice = Number(column[10]) === 1; var categoryName = column[12] || '미분류'; %>
                                     <tr>
                                         <td class="text-center text-secondary"><%= isNotice ? '공지' : displayNo %></td>
                                         <td>
                                             <% if (isNotice) { %>
                                                 <span class="badge text-bg-primary me-1">공지</span>
                                             <% } %>
+                                            <span class="badge text-bg-light border me-1"><%= categoryName %></span>
                                             <a class="d-inline-block text-truncate text-decoration-none fw-semibold text-dark"
                                                 style="max-width: min(520px, 55vw);"
                                                 href="/bbs/read?brdno=<%=postId%>"
@@ -247,7 +280,7 @@
                                                 <span><%=commentCount%></span>
                                             </a>
                                         </td>
-                                        <td class="text-secondary"><%=column[2]%></td>
+                                        <td class="text-secondary"><a href="/bbs/users/<%= encodeURIComponent(column[2]) %>" class="text-secondary text-decoration-none"><%=column[2]%></a></td>
                                         <td class="text-center"><%=column[5]%></td>
                                         <td class="text-center"><%=column[7] || 0%></td>
                                         <td class="text-secondary"><%=formatListDate(column[4])%></td>
