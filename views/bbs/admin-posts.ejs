@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<%- include('partials/head', { title: '게시글 관리' }) %>
+
+<body>
+    <%- include('partials/nav') %>
+
+    <main class="container py-4 py-lg-5">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+            <div>
+                <h1 class="h3 fw-bold mb-1">게시글 관리</h1>
+                <p class="text-secondary mb-0">공지 설정과 숨김 처리를 관리합니다.</p>
+            </div>
+            <a href="/bbs/admin" class="btn btn-outline-secondary px-4">대시보드</a>
+        </div>
+
+        <section class="card board-card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" style="width: 80px;">번호</th>
+                                <th scope="col">제목</th>
+                                <th scope="col" style="width: 130px;">작성자</th>
+                                <th scope="col" style="width: 130px;">상태</th>
+                                <th scope="col" style="width: 170px;">작성일</th>
+                                <th scope="col" class="text-end" style="width: 260px;">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (rows.length) { %>
+                                <% rows.forEach(function (row) { var isNotice = Number(row[5]) === 1; var isHidden = Number(row[6]) === 1; %>
+                                    <tr>
+                                        <td class="text-secondary"><%= row[0] %></td>
+                                        <td>
+                                            <a href="/bbs/read?brdno=<%= row[0] %>" class="fw-semibold text-dark text-decoration-none"><%= row[1] %></a>
+                                            <% if (isHidden) { %>
+                                                <div class="text-secondary small">숨김 처리자 <%= row[8] || '-' %> · <%= row[7] || '-' %></div>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-secondary"><%= row[2] %></td>
+                                        <td>
+                                            <% if (isNotice) { %>
+                                                <span class="badge text-bg-primary">공지</span>
+                                            <% } %>
+                                            <% if (isHidden) { %>
+                                                <span class="badge text-bg-danger">숨김</span>
+                                            <% } %>
+                                            <% if (!isNotice && !isHidden) { %>
+                                                <span class="badge text-bg-light border">일반</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-secondary"><%= row[3] %></td>
+                                        <td>
+                                            <div class="d-flex flex-column flex-lg-row justify-content-end gap-2">
+                                                <form action="/bbs/admin/posts/notice" method="post">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="brdno" value="<%= row[0] %>">
+                                                    <input type="hidden" name="is_notice" value="<%= isNotice ? '0' : '1' %>">
+                                                    <button class="btn btn-sm btn-outline-primary" type="submit"><%= isNotice ? '공지 해제' : '공지' %></button>
+                                                </form>
+                                                <% if (isHidden) { %>
+                                                    <form action="/bbs/admin/posts/restore" method="post">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                        <input type="hidden" name="brdno" value="<%= row[0] %>">
+                                                        <button class="btn btn-sm btn-outline-success" type="submit">복구</button>
+                                                    </form>
+                                                <% } else { %>
+                                                    <form action="/bbs/admin/posts/hide" method="post">
+                                                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                        <input type="hidden" name="brdno" value="<%= row[0] %>">
+                                                        <button class="btn btn-sm btn-outline-danger" type="submit">숨김</button>
+                                                    </form>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center text-secondary py-5">관리할 게시글이 없습니다.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <% if (totalPage > 1) { %>
+            <nav class="mt-4" aria-label="관리 게시글 페이지">
+                <ul class="pagination justify-content-center mb-0">
+                    <% for (var pageNo = 1; pageNo <= totalPage; pageNo++) { %>
+                        <li class="page-item <%= pageNo === currentPage ? 'active' : '' %>">
+                            <a class="page-link" href="/bbs/admin/posts?page=<%= pageNo %>"><%= pageNo %></a>
+                        </li>
+                    <% } %>
+                </ul>
+            </nav>
+        <% } %>
+    </main>
+
+    <%- include('partials/footer') %>
+</body>
+</html>

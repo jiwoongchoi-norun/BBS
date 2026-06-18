@@ -17,6 +17,9 @@
             var selectedReaction = typeof userReaction !== 'undefined' ? userReaction : '';
             var likeCount = column[6] || 0;
             var dislikeCount = column[7] || 0;
+            var isNotice = Number(column[8]) === 1;
+            var isHiddenByAdmin = Number(column[9]) === 1;
+            var canAdminManage = typeof isAdmin !== 'undefined' ? isAdmin : false;
             var isPostOwner = loginUser && (loginUser.id === column[3] || loginUser.name === column[3]);
 
             function formatFileSize(bytes) {
@@ -30,6 +33,14 @@
             <div class="card-header bg-white">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-3">
                     <div>
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <% if (isNotice) { %>
+                                <span class="badge text-bg-primary">공지</span>
+                            <% } %>
+                            <% if (isHiddenByAdmin) { %>
+                                <span class="badge text-bg-danger">숨김</span>
+                            <% } %>
+                        </div>
                         <h1 class="h4 fw-bold mb-2"><%=column[1]%></h1>
                         <div class="text-secondary small">
                             작성자 <span class="fw-semibold"><%=column[3]%></span>
@@ -82,10 +93,41 @@
                     <% } %>
                 </div>
             </div>
+            <% if (canAdminManage) { %>
+                <div class="card-body border-top">
+                    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+                        <div>
+                            <h2 class="h6 fw-bold mb-1">관리자 조치</h2>
+                            <p class="text-secondary small mb-0">공지 설정과 게시글 숨김 상태를 관리합니다.</p>
+                        </div>
+                        <div class="d-flex flex-column flex-sm-row gap-2">
+                            <form action="/bbs/admin/posts/notice" method="post">
+                                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                <input type="hidden" name="brdno" value="<%=column[0]%>">
+                                <input type="hidden" name="is_notice" value="<%= isNotice ? '0' : '1' %>">
+                                <button type="submit" class="btn btn-sm btn-outline-primary"><%= isNotice ? '공지 해제' : '공지 설정' %></button>
+                            </form>
+                            <% if (isHiddenByAdmin) { %>
+                                <form action="/bbs/admin/posts/restore" method="post">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <input type="hidden" name="brdno" value="<%=column[0]%>">
+                                    <button type="submit" class="btn btn-sm btn-outline-success">숨김 해제</button>
+                                </form>
+                            <% } else { %>
+                                <form action="/bbs/admin/posts/hide" method="post">
+                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                    <input type="hidden" name="brdno" value="<%=column[0]%>">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">숨김</button>
+                                </form>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            <% } %>
             <div class="card-footer bg-white d-flex flex-column flex-sm-row justify-content-end gap-2">
                 <a href="/bbs/list" class="btn btn-outline-secondary btn-action">목록</a>
-                <a href="/bbs/update?brdno=<%=column[0]%>" class="btn btn-primary btn-action">수정</a>
                 <% if (isPostOwner) { %>
+                    <a href="/bbs/update?brdno=<%=column[0]%>" class="btn btn-primary btn-action">수정</a>
                     <button type="button" class="btn btn-danger btn-action" data-bs-toggle="modal" data-bs-target="#deleteConfirmModal">삭제</button>
                 <% } %>
             </div>
@@ -157,10 +199,12 @@
                             var updatedAt = comment[9] || '';
                             var isDeletedComment = Number(comment[10]) === 0;
                             var selectedCommentReaction = comment[11] || '';
+                            var isAdminHiddenComment = Number(comment[12]) === 1;
                             var isEditedComment = !!updatedAt && !isDeletedComment;
                             var isMine = !isDeletedComment && loginUser && loginUser.id === comment[3];
+                            var canInteractWithComment = !isDeletedComment && !isAdminHiddenComment;
                         %>
-                            <div class="border rounded p-3 <%= depthClass %> <%= depth > 0 ? 'border-start border-3 bg-light bg-opacity-50' : '' %> <%= isMine ? 'border-primary' : '' %> <%= isDeletedComment ? 'bg-light bg-opacity-75' : '' %>">
+                            <div class="border rounded p-3 <%= depthClass %> <%= depth > 0 ? 'border-start border-3 bg-light bg-opacity-50' : '' %> <%= isMine ? 'border-primary' : '' %> <%= (isDeletedComment || isAdminHiddenComment) ? 'bg-light bg-opacity-75' : '' %>">
                                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-start gap-2 mb-2">
                                     <div class="min-w-0">
                                         <div class="d-flex flex-wrap align-items-center gap-2">
@@ -175,6 +219,9 @@
                                             <% if (isDeletedComment) { %>
                                                 <span class="badge text-bg-light border">삭제됨</span>
                                             <% } %>
+                                            <% if (isAdminHiddenComment) { %>
+                                                <span class="badge text-bg-danger">관리자 숨김</span>
+                                            <% } %>
                                         </div>
                                         <div class="text-secondary small mt-1">
                                             작성 <%= comment[8] %>
@@ -187,22 +234,39 @@
                                         <% } %>
                                     </div>
                                     <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                                        <% if (loginUser && !isDeletedComment) { %>
+                                        <% if (loginUser && canInteractWithComment) { %>
                                             <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm<%= comment[0] %>">답글</button>
                                         <% } %>
-                                        <% if (isMine) { %>
+                                        <% if (isMine && canInteractWithComment) { %>
                                             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target=".commentEditToggle<%= comment[0] %>" aria-expanded="false" aria-controls="commentContent<%= comment[0] %> editCommentForm<%= comment[0] %>">수정</button>
                                             <button class="btn btn-sm btn-outline-danger" type="button" data-bs-toggle="modal" data-bs-target="#deleteCommentModal<%= comment[0] %>">삭제</button>
+                                        <% } %>
+                                        <% if (canAdminManage && !isDeletedComment) { %>
+                                            <% if (isAdminHiddenComment) { %>
+                                                <form action="/bbs/admin/comments/restore" method="post" class="d-inline">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="wno" value="<%=comment[0]%>">
+                                                    <button class="btn btn-sm btn-outline-success" type="submit">숨김 해제</button>
+                                                </form>
+                                            <% } else { %>
+                                                <form action="/bbs/admin/comments/hide" method="post" class="d-inline">
+                                                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                                                    <input type="hidden" name="wno" value="<%=comment[0]%>">
+                                                    <button class="btn btn-sm btn-outline-danger" type="submit">숨김</button>
+                                                </form>
+                                            <% } %>
                                         <% } %>
                                     </div>
                                 </div>
                                 <div class="collapse show commentEditToggle<%= comment[0] %>" id="commentContent<%= comment[0] %>">
                                     <% if (isDeletedComment) { %>
                                         <div class="comment-content mb-0 text-secondary fst-italic text-break">사용자가 삭제한 댓글입니다.</div>
+                                    <% } else if (isAdminHiddenComment && !canAdminManage) { %>
+                                        <div class="comment-content mb-0 text-secondary fst-italic text-break"><%= comment[4] %></div>
                                     <% } else { %>
                                         <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
                                         <div class="comment-reaction-summary" aria-label="댓글 추천 현황">
-                                            <% if (loginUser) { %>
+                                            <% if (loginUser && canInteractWithComment) { %>
                                                 <form action="/bbs/wreaction" method="post" class="d-inline">
                                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                     <input type="hidden" name="bbsno" value="<%=column[0]%>">
@@ -239,7 +303,7 @@
                                     <% } %>
                                 </div>
 
-                                <% if (loginUser && !isDeletedComment) { %>
+                                <% if (loginUser && canInteractWithComment) { %>
                                     <div class="collapse mt-3" id="replyForm<%= comment[0] %>">
                                         <form action="/bbs/wreply" method="post" class="border-top pt-3">
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -253,7 +317,7 @@
                                         </form>
                                     </div>
                                 <% } %>
-                                <% if (isMine) { %>
+                                <% if (isMine && canInteractWithComment) { %>
                                     <div class="collapse commentEditToggle<%= comment[0] %>" id="editCommentForm<%= comment[0] %>">
                                         <form action="/bbs/wupdate" method="post" class="mt-2">
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -268,7 +332,7 @@
                                         </form>
                                     </div>
                                 <% } %>
-                                <% if (isMine) { %>
+                                <% if (isMine && canInteractWithComment) { %>
                                     <div class="modal fade" id="deleteCommentModal<%= comment[0] %>" tabindex="-1" aria-labelledby="deleteCommentModalLabel<%= comment[0] %>" aria-hidden="true">
                                         <div class="modal-dialog modal-dialog-centered modal-sm">
                                             <div class="modal-content">
@@ -359,17 +423,6 @@
                             updateModal.show();
                         });
                     }
-
-                });
-            })();
-        </script>
-    <% } else { %>
-        <script>
-            (function() {
-                document.addEventListener('DOMContentLoaded', function() {
-                    var updateLink = document.querySelector('a[href="/bbs/update?brdno=<%=column[0]%>"]');
-
-                    if (updateLink) updateLink.remove();
                 });
             })();
         </script>

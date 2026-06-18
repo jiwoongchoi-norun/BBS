@@ -31,11 +31,17 @@ function createCommentsRouter(options) {
     }
 
     try {
-      await withConnection(async function (connection) {
+      var commentCreated = await withConnection(async function (connection) {
         try {
-          await commentsRepository.createComment(connection, bbsno, writer, content);
+          var result = await commentsRepository.createComment(connection, bbsno, writer, content);
+
+          if (!result.rowsAffected) {
+            await connection.rollback();
+            return false;
+          }
 
           await connection.commit();
+          return true;
         } catch (err) {
           try {
             await connection.rollback();
@@ -45,6 +51,11 @@ function createCommentsRouter(options) {
           throw err;
         }
       });
+
+      if (!commentCreated) {
+        renderBadRequest(res, '댓글을 작성할 수 없는 게시글입니다.');
+        return;
+      }
 
       setFlash(req, 'success', '댓글이 등록되었습니다.');
       res.redirect('/bbs/read?brdno=' + encodeURIComponent(bbsno));
@@ -231,7 +242,8 @@ function createCommentsRouter(options) {
         try {
           var commentSql =
             'SELECT W.NO FROM BBSW W JOIN BBS B ON B.NO = W.BBSNO ' +
-            'WHERE W.NO = :wno AND W.BBSNO = :bbsno AND W.OK = 1 AND B.OK = 1';
+            'WHERE W.NO = :wno AND W.BBSNO = :bbsno AND W.OK = 1 AND B.OK = 1 ' +
+            'AND NVL(W.ADMIN_HIDDEN, 0) = 0 AND NVL(B.ADMIN_HIDDEN, 0) = 0';
           var commentRows = await connection.execute(commentSql, { wno: wno, bbsno: bbsno });
 
           if (commentRows.rows.length < 1) {

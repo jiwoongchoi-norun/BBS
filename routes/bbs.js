@@ -11,12 +11,15 @@ var commentsRepository = require('../db/repositories/comments.repository');
 var reactionsRepository = require('../db/repositories/reactions.repository');
 var asyncHandler = require('./asyncHandler');
 var createAuthRouter = require('./bbs/auth.routes');
+var createAdminRouter = require('./bbs/admin.routes');
 var createCommentsRouter = require('./bbs/comments.routes');
 var createFilesRouter = require('./bbs/files.routes');
 var createPostsReadRouter = require('./bbs/posts-read.routes');
 var createPostsWriteRouter = require('./bbs/posts-write.routes');
 var createReactionsRouter = require('./bbs/reactions.routes');
-var requireLogin = require('./middleware/auth').requireLogin;
+var authMiddleware = require('./middleware/auth');
+var requireLogin = authMiddleware.requireLogin;
+var requireAdmin = authMiddleware.requireAdmin;
 var responseHelpers = require('./helpers/response');
 var uploadHelpers = require('./helpers/upload');
 var validationHelpers = require('./helpers/validation');
@@ -112,6 +115,20 @@ router.use(
     requireLogin: requireLogin,
     renderForbidden: renderForbidden,
     cleanText: cleanText,
+    setFlash: setFlash
+  })
+);
+
+router.use(
+  createAdminRouter({
+    withConnection: withConnection,
+    postsRepository: postsRepository,
+    commentsRepository: commentsRepository,
+    asyncHandler: asyncHandler,
+    requireAdmin: requireAdmin,
+    renderBadRequest: renderBadRequest,
+    cleanText: cleanText,
+    toValidNumber: toValidNumber,
     setFlash: setFlash
   })
 );

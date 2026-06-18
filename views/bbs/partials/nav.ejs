@@ -10,6 +10,9 @@
                 <a class="nav-link" href="/bbs/list">목록</a>
                 <% if (currentUser) { %>
                     <a class="nav-link" href="/bbs/form">글쓰기</a>
+                    <% if (isAdmin) { %>
+                        <a class="nav-link" href="/bbs/admin">관리</a>
+                    <% } %>
                     <span class="navbar-text small text-secondary px-lg-2">
                         <%= currentUser.name || currentUser.id %>님
                     </span>

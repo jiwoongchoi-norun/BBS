@@ -10,6 +10,21 @@ function requireLogin(req, res) {
   return true;
 }
 
+function requireAdmin(req, res) {
+  if (!requireLogin(req, res)) {
+    return false;
+  }
+
+  if (req.session.user.role !== 'ADMIN') {
+    res.status(403);
+    res.send('관리자 권한이 필요합니다.');
+    return false;
+  }
+
+  return true;
+}
+
 module.exports = {
-  requireLogin: requireLogin
+  requireLogin: requireLogin,
+  requireAdmin: requireAdmin
 };

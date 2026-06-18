@@ -54,6 +54,7 @@ app.use(function (req, res, next) {
   };
 
   res.locals.currentUser = req.session.user || null;
+  res.locals.isAdmin = !!(req.session.user && req.session.user.role === 'ADMIN');
   res.locals.flashMessage = req.session.flashMessage || noticeMessages[req.query.notice] || null;
   delete req.session.flashMessage;
 

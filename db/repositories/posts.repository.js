@@ -9,7 +9,8 @@ async function findPosts(connection, whereSql, orderBy, binds, offset, pageSize)
   var sql =
     "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
     'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
-    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
+    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
+    'NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0) ' +
     'FROM BBS WHERE ' +
     whereSql +
     ' ORDER BY ' +
@@ -33,7 +34,8 @@ async function findSearchPosts(connection, whereSql, orderBy, binds, offset, pag
   var sql =
     "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
     'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
-    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT ' +
+    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
+    'NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0) ' +
     'FROM BBS WHERE ' +
     whereSql +
     ' ORDER BY ' +
@@ -50,17 +52,20 @@ async function findSearchPosts(connection, whereSql, orderBy, binds, offset, pag
 }
 
 async function incrementViewCount(connection, brdno) {
-  var updateSql = 'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 WHERE OK = 1 AND NO = :brdno';
+  var updateSql =
+    'UPDATE BBS SET VIEW_COUNT = NVL(VIEW_COUNT, 0) + 1 ' +
+    'WHERE OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0 AND NO = :brdno';
   return connection.execute(updateSql, { brdno: brdno });
 }
 
-async function findPostById(connection, brdno) {
+async function findPostById(connection, brdno, includeHidden) {
   var sql =
     'SELECT NO, TITLE, CONTENT, ' +
     "WRITER, to_char(REGDATE,'yyyy-mm-dd'), VIEW_COUNT, " +
-    'NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0) ' +
+    'NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0) ' +
     ' FROM BBS' +
-    ' WHERE OK = 1 AND NO = :brdno';
+    ' WHERE OK = 1 AND NO = :brdno' +
+    (includeHidden ? '' : ' AND NVL(ADMIN_HIDDEN, 0) = 0');
   return connection.execute(sql, { brdno: brdno });
 }
 
@@ -75,7 +80,7 @@ async function findFilesByPostId(connection, brdno) {
 async function findPostForEdit(connection, brdno) {
   var sql =
     "SELECT NO, TITLE, CONTENT, WRITER, to_char(REGDATE,'yyyy-mm-dd') " +
-    'FROM BBS WHERE OK = 1 AND NO = :brdno';
+    'FROM BBS WHERE OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0 AND NO = :brdno';
   return connection.execute(sql, { brdno: brdno });
 }
 
@@ -89,13 +94,16 @@ async function findPostFilesForEdit(connection, brdno) {
 
 async function softDeletePost(connection, bbsno, writer) {
   // Posts are soft-deleted so test/demo data can be audited without being shown.
-  var sql = 'UPDATE BBS SET OK = 0 WHERE NO = :bbsno AND WRITER = :writer AND OK = 1';
+  var sql =
+    'UPDATE BBS SET OK = 0 ' +
+    'WHERE NO = :bbsno AND WRITER = :writer AND OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
   return connection.execute(sql, { bbsno: bbsno, writer: writer }, { autoCommit: false });
 }
 
 async function updatePost(connection, brdno, title, content, writer) {
   var sql =
-    'UPDATE BBS SET TITLE = :title, CONTENT = :content WHERE NO = :brdno AND WRITER = :writer';
+    'UPDATE BBS SET TITLE = :title, CONTENT = :content ' +
+    'WHERE NO = :brdno AND WRITER = :writer AND NVL(ADMIN_HIDDEN, 0) = 0';
   return connection.execute(
     sql,
     {
@@ -106,6 +114,53 @@ async function updatePost(connection, brdno, title, content, writer) {
     },
     { autoCommit: false }
   );
+}
+
+async function findAdminPosts(connection, offset, pageSize) {
+  var sql =
+    "SELECT NO, TITLE, WRITER, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+    'VIEW_COUNT, NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0), ' +
+    "TO_CHAR(ADMIN_HIDDEN_AT, 'yyyy-mm-dd hh24:mi:ss'), ADMIN_HIDDEN_BY " +
+    'FROM BBS WHERE OK = 1 ' +
+    'ORDER BY NVL(ADMIN_HIDDEN, 0) DESC, NVL(IS_NOTICE, 0) DESC, NO DESC ' +
+    'OFFSET :offset ROWS FETCH NEXT :pageSize ROWS ONLY';
+
+  return connection.execute(sql, { offset: offset, pageSize: pageSize });
+}
+
+async function countAdminPosts(connection) {
+  return connection.execute('SELECT COUNT(*) FROM BBS WHERE OK = 1');
+}
+
+async function countHiddenPosts(connection) {
+  return connection.execute('SELECT COUNT(*) FROM BBS WHERE OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 1');
+}
+
+async function countNoticePosts(connection) {
+  return connection.execute('SELECT COUNT(*) FROM BBS WHERE OK = 1 AND NVL(IS_NOTICE, 0) = 1');
+}
+
+async function setNotice(connection, bbsno, isNotice) {
+  var sql = 'UPDATE BBS SET IS_NOTICE = :isNotice WHERE NO = :bbsno AND OK = 1';
+  return connection.execute(
+    sql,
+    { bbsno: bbsno, isNotice: isNotice ? 1 : 0 },
+    { autoCommit: false }
+  );
+}
+
+async function hidePostByAdmin(connection, bbsno, adminId) {
+  var sql =
+    'UPDATE BBS SET ADMIN_HIDDEN = 1, ADMIN_HIDDEN_AT = SYSDATE, ADMIN_HIDDEN_BY = :adminId ' +
+    'WHERE NO = :bbsno AND OK = 1';
+  return connection.execute(sql, { bbsno: bbsno, adminId: adminId }, { autoCommit: false });
+}
+
+async function restorePostByAdmin(connection, bbsno) {
+  var sql =
+    'UPDATE BBS SET ADMIN_HIDDEN = 0, ADMIN_HIDDEN_AT = NULL, ADMIN_HIDDEN_BY = NULL ' +
+    'WHERE NO = :bbsno AND OK = 1';
+  return connection.execute(sql, { bbsno: bbsno }, { autoCommit: false });
 }
 
 module.exports = {
@@ -119,5 +174,12 @@ module.exports = {
   findPostForEdit: findPostForEdit,
   findPostFilesForEdit: findPostFilesForEdit,
   softDeletePost: softDeletePost,
-  updatePost: updatePost
+  updatePost: updatePost,
+  findAdminPosts: findAdminPosts,
+  countAdminPosts: countAdminPosts,
+  countHiddenPosts: countHiddenPosts,
+  countNoticePosts: countNoticePosts,
+  setNotice: setNotice,
+  hidePostByAdmin: hidePostByAdmin,
+  restorePostByAdmin: restorePostByAdmin
 };

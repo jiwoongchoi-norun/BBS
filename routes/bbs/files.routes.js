@@ -33,6 +33,7 @@ function createFilesRouter(options) {
           'WHERE F.NO = :fno ' +
           'AND F.OK = 1 ' +
           'AND B.OK = 1 ' +
+          'AND NVL(B.ADMIN_HIDDEN, 0) = 0 ' +
           'AND (B.WRITER = :writer OR B.WRITER = :writerName)';
 
         return connection.execute(sql, {

@@ -1,12 +1,18 @@
-async function findCommentsByPostId(connection, brdno, userId) {
+async function findCommentsByPostId(connection, brdno, userId, includeHidden) {
   // Oracle hierarchical query keeps replies directly under their parent comment.
   var commentSql =
     'SELECT NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, LIKE_COUNT, DISLIKE_COUNT, ' +
     "TO_CHAR(REGDATE, 'yyyy-mm-dd hh24:mi:ss') AS REGDATE, " +
-    "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK, USER_REACTION " +
+    "TO_CHAR(UPDATEDATE, 'yyyy-mm-dd hh24:mi:ss') AS UPDATEDATE, OK, USER_REACTION, ADMIN_HIDDEN, " +
+    "TO_CHAR(ADMIN_HIDDEN_AT, 'yyyy-mm-dd hh24:mi:ss') AS ADMIN_HIDDEN_AT, ADMIN_HIDDEN_BY " +
     'FROM ( ' +
-    'SELECT W.NO, W.BBSNO, W.PARENT_NO, W.WRITER, W.CONTENT, W.DEPTH, W.LIKE_COUNT, W.DISLIKE_COUNT, ' +
-    'W.REGDATE, W.UPDATEDATE, W.OK, R.REACTION_TYPE AS USER_REACTION ' +
+    'SELECT W.NO, W.BBSNO, W.PARENT_NO, W.WRITER, ' +
+    (includeHidden
+      ? 'W.CONTENT, '
+      : "CASE WHEN NVL(W.ADMIN_HIDDEN, 0) = 1 THEN '관리자에 의해 숨김 처리된 댓글입니다.' ELSE W.CONTENT END AS CONTENT, ") +
+    'W.DEPTH, W.LIKE_COUNT, W.DISLIKE_COUNT, ' +
+    'W.REGDATE, W.UPDATEDATE, W.OK, R.REACTION_TYPE AS USER_REACTION, ' +
+    'NVL(W.ADMIN_HIDDEN, 0) AS ADMIN_HIDDEN, W.ADMIN_HIDDEN_AT, W.ADMIN_HIDDEN_BY ' +
     'FROM BBSW W ' +
     'LEFT JOIN BBSW_REACTION R ON R.WNO = W.NO AND R.USER_ID = :userId ' +
     'WHERE W.BBSNO = :bbsno ' +
@@ -17,10 +23,29 @@ async function findCommentsByPostId(connection, brdno, userId) {
   return connection.execute(commentSql, { bbsno: brdno, userId: userId || '' });
 }
 
+async function countHiddenComments(connection) {
+  return connection.execute('SELECT COUNT(*) FROM BBSW WHERE OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 1');
+}
+
+async function hideCommentByAdmin(connection, wno, adminId) {
+  var sql =
+    'UPDATE BBSW SET ADMIN_HIDDEN = 1, ADMIN_HIDDEN_AT = SYSDATE, ADMIN_HIDDEN_BY = :adminId ' +
+    'WHERE NO = :wno AND OK = 1';
+  return connection.execute(sql, { wno: wno, adminId: adminId }, { autoCommit: false });
+}
+
+async function restoreCommentByAdmin(connection, wno) {
+  var sql =
+    'UPDATE BBSW SET ADMIN_HIDDEN = 0, ADMIN_HIDDEN_AT = NULL, ADMIN_HIDDEN_BY = NULL ' +
+    'WHERE NO = :wno AND OK = 1';
+  return connection.execute(sql, { wno: wno }, { autoCommit: false });
+}
+
 async function createComment(connection, bbsno, writer, content) {
   var sql =
     'INSERT INTO BBSW (NO, BBSNO, PARENT_NO, WRITER, CONTENT, DEPTH, REGDATE, OK) ' +
-    'VALUES (BBSW_SEQ.NEXTVAL, :bbsno, NULL, :writer, :content, 0, SYSDATE, 1)';
+    'SELECT BBSW_SEQ.NEXTVAL, :bbsno, NULL, :writer, :content, 0, SYSDATE, 1 ' +
+    'FROM BBS WHERE NO = :bbsno AND OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
 
   return connection.execute(
     sql,
@@ -34,7 +59,10 @@ async function createComment(connection, bbsno, writer, content) {
 }
 
 async function findCommentDepth(connection, parentNo, bbsno) {
-  var parentSql = 'SELECT DEPTH FROM BBSW WHERE NO = :parentNo AND BBSNO = :bbsno AND OK = 1';
+  var parentSql =
+    'SELECT W.DEPTH FROM BBSW W JOIN BBS B ON B.NO = W.BBSNO ' +
+    'WHERE W.NO = :parentNo AND W.BBSNO = :bbsno AND W.OK = 1 AND B.OK = 1 ' +
+    'AND NVL(W.ADMIN_HIDDEN, 0) = 0 AND NVL(B.ADMIN_HIDDEN, 0) = 0';
   return connection.execute(parentSql, { parentNo: parentNo, bbsno: bbsno });
 }
 
@@ -64,7 +92,7 @@ async function incrementChildCount(connection, parentNo) {
 async function updateComment(connection, wno, bbsno, writer, content) {
   var sql =
     'UPDATE BBSW SET CONTENT = :content, UPDATEDATE = SYSDATE ' +
-    'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
+    'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
 
   return connection.execute(
     sql,
@@ -81,7 +109,7 @@ async function updateComment(connection, wno, bbsno, writer, content) {
 async function deleteComment(connection, wno, bbsno, writer) {
   var sql =
     "UPDATE BBSW SET OK = 0, CONTENT = '삭제된 댓글입니다.', UPDATEDATE = SYSDATE " +
-    'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1';
+    'WHERE NO = :wno AND BBSNO = :bbsno AND WRITER = :writer AND OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
 
   return connection.execute(sql, { wno: wno, bbsno: bbsno, writer: writer }, { autoCommit: false });
 }
@@ -164,5 +192,8 @@ module.exports = {
   findCommentReactionByUser: findCommentReactionByUser,
   createCommentReaction: createCommentReaction,
   deleteCommentReaction: deleteCommentReaction,
-  updateCommentReaction: updateCommentReaction
+  updateCommentReaction: updateCommentReaction,
+  countHiddenComments: countHiddenComments,
+  hideCommentByAdmin: hideCommentByAdmin,
+  restoreCommentByAdmin: restoreCommentByAdmin
 };

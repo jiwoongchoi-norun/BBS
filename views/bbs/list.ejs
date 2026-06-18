@@ -227,10 +227,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; var commentCount = column[9] || 0; %>
+                            <% for(var i=0; i<rows.length; i++){ var column=rows[i]; var postId = column[0]; var displayNo = resultTotalCount - ((pageCurrent - 1) * currentPageSize) - i; var commentCount = column[9] || 0; var isNotice = Number(column[10]) === 1; %>
                                     <tr>
-                                        <td class="text-center text-secondary"><%=displayNo%></td>
+                                        <td class="text-center text-secondary"><%= isNotice ? '공지' : displayNo %></td>
                                         <td>
+                                            <% if (isNotice) { %>
+                                                <span class="badge text-bg-primary me-1">공지</span>
+                                            <% } %>
                                             <a class="d-inline-block text-truncate text-decoration-none fw-semibold text-dark"
                                                 style="max-width: min(520px, 55vw);"
                                                 href="/bbs/read?brdno=<%=postId%>"

@@ -31,7 +31,8 @@ function createReactionsRouter(options) {
     try {
       var postExists = await withConnection(async function (connection) {
         try {
-          var postSql = 'SELECT NO FROM BBS WHERE NO = :bbsno AND OK = 1';
+          var postSql =
+            'SELECT NO FROM BBS WHERE NO = :bbsno AND OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
           var postRows = await connection.execute(postSql, { bbsno: bbsno });
 
           if (postRows.rows.length < 1) {

@@ -69,6 +69,7 @@ npm run dev
 | 보안        | 세션, CSRF, bcrypt 비밀번호 저장      |
 | 상호작용    | 조회수, 댓글, 대댓글, 좋아요/싫어요   |
 | 파일        | 첨부파일 업로드와 다운로드            |
+| 운영        | 관리자, 공지글, 게시글/댓글 숨김 관리 |
 
 ## 주요 URL
 
@@ -92,6 +93,8 @@ npm run dev
 | POST       | `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, `/bbs/wdelete` | 댓글/대댓글 작성 및 수정/삭제                  |
 | POST       | `/bbs/reaction`                                             | 좋아요/싫어요                                  |
 | GET        | `/bbs/download`                                             | 첨부파일 다운로드                              |
+| GET        | `/bbs/admin`, `/bbs/admin/posts`                            | 관리자 대시보드, 게시글 운영 관리              |
+| POST       | `/bbs/admin/posts/*`, `/bbs/admin/comments/*`               | 공지 설정, 게시글/댓글 숨김 및 복구            |
 
 ## 검증
 

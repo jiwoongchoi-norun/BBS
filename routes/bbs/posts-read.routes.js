@@ -50,7 +50,7 @@ function getSort(req) {
     return {
       sort: '',
       order: 'desc',
-      orderBy: 'NO DESC'
+      orderBy: 'NVL(IS_NOTICE, 0) DESC, NO DESC'
     };
   }
 
@@ -61,7 +61,8 @@ function getSort(req) {
   return {
     sort: sort,
     order: order,
-    orderBy: sortColumns[sort] + ' ' + order.toUpperCase() + ', NO DESC'
+    orderBy:
+      'NVL(IS_NOTICE, 0) DESC, ' + sortColumns[sort] + ' ' + order.toUpperCase() + ', NO DESC'
   };
 }
 
@@ -84,7 +85,7 @@ function createPostsReadRouter(options) {
       var paging = getPaging(req);
       var sortInfo = getSort(req);
       var myPostsOnly = req.query.mine === '1' && req.session.user;
-      var whereSql = 'OK = 1';
+      var whereSql = 'OK = 1 AND NVL(ADMIN_HIDDEN, 0) = 0';
       var binds = {};
 
       if (myPostsOnly) {
@@ -157,7 +158,8 @@ function createPostsReadRouter(options) {
           await postsRepository.incrementViewCount(connection, brdno);
         }
 
-        var rows = await postsRepository.findPostById(connection, brdno);
+        var isAdmin = !!(req.session.user && req.session.user.role === 'ADMIN');
+        var rows = await postsRepository.findPostById(connection, brdno, isAdmin);
 
         if (rows.rows.length < 1) {
           res.redirect('/bbs/list');
@@ -165,7 +167,12 @@ function createPostsReadRouter(options) {
         }
 
         var userId = req.session.user ? req.session.user.id : '';
-        var commentRows = await commentsRepository.findCommentsByPostId(connection, brdno, userId);
+        var commentRows = await commentsRepository.findCommentsByPostId(
+          connection,
+          brdno,
+          userId,
+          isAdmin
+        );
         var fileRows = await postsRepository.findFilesByPostId(connection, brdno);
 
         if (!req.session.user) {
@@ -174,7 +181,8 @@ function createPostsReadRouter(options) {
             comments: commentRows.rows,
             files: fileRows.rows,
             currentUser: null,
-            userReaction: ''
+            userReaction: '',
+            isAdmin: false
           });
           return;
         }
@@ -190,7 +198,8 @@ function createPostsReadRouter(options) {
           comments: commentRows.rows,
           files: fileRows.rows,
           currentUser: req.session.user,
-          userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : ''
+          userReaction: reactionRows.rows.length ? reactionRows.rows[0][0] : '',
+          isAdmin: isAdmin
         });
       });
     })
@@ -221,9 +230,11 @@ function createPostsReadRouter(options) {
         var binds = { search: '%' + searchKeyword + '%' };
 
         if (choice == 'TITLE_CONTENT') {
-          whereSql = 'OK=1 AND (TITLE LIKE :search OR CONTENT LIKE :search)';
+          whereSql =
+            'OK=1 AND NVL(ADMIN_HIDDEN, 0) = 0 AND (TITLE LIKE :search OR CONTENT LIKE :search)';
         } else {
-          whereSql = 'OK=1 AND ' + searchColumns[choice] + ' LIKE :search';
+          whereSql =
+            'OK=1 AND NVL(ADMIN_HIDDEN, 0) = 0 AND ' + searchColumns[choice] + ' LIKE :search';
         }
 
         if (myPostsOnly) {

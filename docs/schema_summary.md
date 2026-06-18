@@ -10,27 +10,30 @@
 
 ## 테이블
 
-| 테이블         | 역할                 | 주요 컬럼                                                                                                                               |
-| -------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `LOGIN`        | 회원 계정            | `ID`, `PASSWORD`, `SALT`, `PASSWORD_ALGO`, `NAME`, `EMAIL`, `PHONE`, `OK`, `PASSWORD_UPDATED_AT`, `LOGIN_FAILED_COUNT`, `LAST_LOGIN_AT` |
-| `BBS`          | 게시글               | `NO`, `TITLE`, `CONTENT`, `WRITER`, `REGDATE`, `VIEW_COUNT`, `LIKE_COUNT`, `DISLIKE_COUNT`, `OK`                                        |
-| `BBSW`         | 댓글/대댓글          | `NO`, `BBSNO`, `PARENT_NO`, `DEPTH`, `WRITER`, `CONTENT`, `REGDATE`, `UPDATEDATE`, `OK`                                                 |
-| `BBS_REACTION` | 좋아요/싫어요        | `BBSNO`, `USER_ID`, `REACTION_TYPE`, `REGDATE`, `UPDATEDATE`                                                                            |
-| `BBS_FILE`     | 첨부파일 메타데이터  | `NO`, `BBSNO`, `ORG_FILENAME`, `SAVE_FILENAME`, `FILEPATH`, `FILESIZE`, `MIMETYPE`, `REGDATE`, `OK`                                     |
-| `RESET_TOKEN`  | 비밀번호 재설정 토큰 | `NO`, `USER_ID`, `TOKEN`, `EXPIRES_AT`, `USED`, `REGDATE`, `USEDATE`                                                                    |
+| 테이블         | 역할                 | 주요 컬럼                                                                                                                                       |
+| -------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `LOGIN`        | 회원 계정            | `ID`, `PASSWORD`, `SALT`, `PASSWORD_ALGO`, `NAME`, `EMAIL`, `PHONE`, `ROLE`, `OK`, `PASSWORD_UPDATED_AT`, `LOGIN_FAILED_COUNT`, `LAST_LOGIN_AT` |
+| `BBS`          | 게시글               | `NO`, `TITLE`, `CONTENT`, `WRITER`, `REGDATE`, `VIEW_COUNT`, `LIKE_COUNT`, `DISLIKE_COUNT`, `IS_NOTICE`, `ADMIN_HIDDEN`, `OK`                   |
+| `BBSW`         | 댓글/대댓글          | `NO`, `BBSNO`, `PARENT_NO`, `DEPTH`, `WRITER`, `CONTENT`, `ADMIN_HIDDEN`, `REGDATE`, `UPDATEDATE`, `OK`                                         |
+| `BBS_REACTION` | 좋아요/싫어요        | `BBSNO`, `USER_ID`, `REACTION_TYPE`, `REGDATE`, `UPDATEDATE`                                                                                    |
+| `BBS_FILE`     | 첨부파일 메타데이터  | `NO`, `BBSNO`, `ORG_FILENAME`, `SAVE_FILENAME`, `FILEPATH`, `FILESIZE`, `MIMETYPE`, `REGDATE`, `OK`                                             |
+| `RESET_TOKEN`  | 비밀번호 재설정 토큰 | `NO`, `USER_ID`, `TOKEN`, `EXPIRES_AT`, `USED`, `REGDATE`, `USEDATE`                                                                            |
 
 ## 시퀀스와 인덱스
 
-| 객체                    | 용도                           |
-| ----------------------- | ------------------------------ |
-| `BBS_SEQ`               | 게시글 번호                    |
-| `BBSW_SEQ`              | 댓글 번호                      |
-| `BBS_FILE_SEQ`          | 첨부파일 번호                  |
-| `RESET_TOKEN_SEQ`       | reset token 번호               |
-| `IDX_BBS_REACTION_USER` | 사용자별 추천 조회 보조        |
-| `IDX_BBS_FILE_BBSNO`    | 게시글별 첨부파일 조회 보조    |
-| `UX_RESET_TOKEN_TOKEN`  | reset token 중복 방지          |
-| `IDX_RESET_TOKEN_USER`  | 사용자별 reset token 조회 보조 |
+| 객체                    | 용도                            |
+| ----------------------- | ------------------------------- |
+| `BBS_SEQ`               | 게시글 번호                     |
+| `BBSW_SEQ`              | 댓글 번호                       |
+| `BBS_FILE_SEQ`          | 첨부파일 번호                   |
+| `RESET_TOKEN_SEQ`       | reset token 번호                |
+| `IDX_BBS_REACTION_USER` | 사용자별 추천 조회 보조         |
+| `IDX_BBS_NOTICE`        | 공지글 상단 정렬 보조           |
+| `IDX_BBS_ADMIN_HIDDEN`  | 숨김 게시글 제외/관리 조회 보조 |
+| `IDX_BBSW_ADMIN_HIDDEN` | 댓글 숨김 상태 조회 보조        |
+| `IDX_BBS_FILE_BBSNO`    | 게시글별 첨부파일 조회 보조     |
+| `UX_RESET_TOKEN_TOKEN`  | reset token 중복 방지           |
+| `IDX_RESET_TOKEN_USER`  | 사용자별 reset token 조회 보조  |
 
 ## 관계
 
@@ -49,10 +52,15 @@
 
 - `LOGIN.OK = 1`: 활성 계정
 - `LOGIN.OK = 0`: 탈퇴 계정
+- `LOGIN.ROLE = 'ADMIN'`: 관리자 계정
+- `LOGIN.ROLE = 'USER'`: 일반 사용자 계정
 - `BBS.OK = 1`: 활성 게시글
 - `BBS.OK = 0`: 삭제 게시글
+- `BBS.IS_NOTICE = 1`: 공지글
+- `BBS.ADMIN_HIDDEN = 1`: 관리자 숨김 게시글
 - `BBSW.OK = 1`: 활성 댓글
 - `BBSW.OK = 0`: 삭제 댓글
+- `BBSW.ADMIN_HIDDEN = 1`: 관리자 숨김 댓글
 - `BBS_FILE.OK = 1`: 활성 첨부파일
 - `BBS_FILE.OK = 0`: 비활성 첨부파일
 - `RESET_TOKEN.USED = 0`: 사용 가능 토큰

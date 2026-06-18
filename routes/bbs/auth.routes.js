@@ -380,7 +380,7 @@ function createAuthRouter(options) {
 
     try {
       var loginResult = await withConnection(async function (connection) {
-        var sql = 'SELECT OK, PASSWORD, SALT, PASSWORD_ALGO, NAME FROM LOGIN WHERE ID = :id';
+        var sql = 'SELECT OK, PASSWORD, SALT, PASSWORD_ALGO, NAME, ROLE FROM LOGIN WHERE ID = :id';
         var result = await connection.execute(sql, { id: id });
 
         if (result.rows.length < 1) {
@@ -392,6 +392,7 @@ function createAuthRouter(options) {
         var storedSalt = result.rows[0][2];
         var storedAlgo = result.rows[0][3] || 'sha512';
         var userName = result.rows[0][4];
+        var userRole = result.rows[0][5] || 'USER';
         var isActiveUser = result.rows[0][0] === 1;
 
         if (!isActiveUser) {
@@ -406,7 +407,7 @@ function createAuthRouter(options) {
             return { success: false, code: 2, message: loginFailureMessage };
           }
 
-          return { success: true, userName: userName };
+          return { success: true, userName: userName, userRole: userRole };
         }
 
         if (!storedSalt) {
@@ -451,7 +452,7 @@ function createAuthRouter(options) {
           throw err;
         }
 
-        return { success: true, userName: userName };
+        return { success: true, userName: userName, userRole: userRole };
       });
 
       if (!loginResult.success) {
@@ -466,6 +467,7 @@ function createAuthRouter(options) {
         req.session.user = {
           id: id,
           name: loginResult.userName,
+          role: loginResult.userRole || 'USER',
           authorized: true
         };
       }
@@ -876,6 +878,7 @@ function createAuthRouter(options) {
 
       req.session.user.id = id;
       req.session.user.name = name;
+      req.session.user.role = req.session.user.role || 'USER';
       setFlash(req, 'success', '회원정보가 수정되었습니다.');
       res.redirect('/bbs/list');
     } catch (err) {

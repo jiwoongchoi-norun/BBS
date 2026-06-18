@@ -30,14 +30,15 @@
 
 ## 기능별 라우터
 
-| 기능                                | 파일                               | 주요 URL                                                                      |
-| ----------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
-| 회원, 로그인, 비밀번호 재설정       | `routes/bbs/auth.routes.js`        | `/bbs/login`, `/bbs/signup`, `/bbs/myinfo`, `/bbs/reset-password/*`           |
-| 목록, 검색, 상세 읽기               | `routes/bbs/posts-read.routes.js`  | `/bbs/list`, `/bbs/search`, `/bbs/read`                                       |
-| 글쓰기, 수정, 삭제, 파일 메타데이터 | `routes/bbs/posts-write.routes.js` | `/bbs/form`, `/bbs/save`, `/bbs/update`, `/bbs/delete`                        |
-| 첨부파일 다운로드                   | `routes/bbs/files.routes.js`       | `/bbs/download`                                                               |
-| 댓글, 대댓글, 댓글 반응             | `routes/bbs/comments.routes.js`    | `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, `/bbs/wdelete`, `/bbs/wreaction` |
-| 게시글 좋아요/싫어요                | `routes/bbs/reactions.routes.js`   | `/bbs/reaction`                                                               |
+| 기능                                | 파일                               | 주요 URL                                                                        |
+| ----------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------- |
+| 회원, 로그인, 비밀번호 재설정       | `routes/bbs/auth.routes.js`        | `/bbs/login`, `/bbs/signup`, `/bbs/myinfo`, `/bbs/reset-password/*`             |
+| 목록, 검색, 상세 읽기               | `routes/bbs/posts-read.routes.js`  | `/bbs/list`, `/bbs/search`, `/bbs/read`                                         |
+| 글쓰기, 수정, 삭제, 파일 메타데이터 | `routes/bbs/posts-write.routes.js` | `/bbs/form`, `/bbs/save`, `/bbs/update`, `/bbs/delete`                          |
+| 첨부파일 다운로드                   | `routes/bbs/files.routes.js`       | `/bbs/download`                                                                 |
+| 댓글, 대댓글, 댓글 반응             | `routes/bbs/comments.routes.js`    | `/bbs/wsave`, `/bbs/wreply`, `/bbs/wupdate`, `/bbs/wdelete`, `/bbs/wreaction`   |
+| 게시글 좋아요/싫어요                | `routes/bbs/reactions.routes.js`   | `/bbs/reaction`                                                                 |
+| 관리자 운영                         | `routes/bbs/admin.routes.js`       | `/bbs/admin`, `/bbs/admin/posts`, `/bbs/admin/posts/*`, `/bbs/admin/comments/*` |
 
 ## DB 접근 파일
 
@@ -49,19 +50,20 @@
 
 ## 화면 파일
 
-| 화면                 | 파일                                                       |
-| -------------------- | ---------------------------------------------------------- |
-| 목록                 | `views/bbs/list.ejs`                                       |
-| 상세, 댓글, reaction | `views/bbs/read.ejs`                                       |
-| 글쓰기               | `views/bbs/form.ejs`                                       |
-| 글수정               | `views/bbs/updateform.ejs`                                 |
-| 로그인               | `views/bbs/login.ejs`                                      |
-| 회원가입             | `views/bbs/signup.ejs`                                     |
-| 내 정보              | `views/bbs/myinfo.ejs`                                     |
-| 회원정보 수정        | `views/bbs/updatesignform.ejs`                             |
-| ID 찾기              | `views/bbs/findid.ejs`                                     |
-| 비밀번호 재설정      | `views/bbs/resetrequest.ejs`, `views/bbs/resetconfirm.ejs` |
-| 공통 UI              | `views/bbs/partials/*.ejs`                                 |
+| 화면                 | 파일                                                         |
+| -------------------- | ------------------------------------------------------------ |
+| 목록                 | `views/bbs/list.ejs`                                         |
+| 상세, 댓글, reaction | `views/bbs/read.ejs`                                         |
+| 관리자 화면          | `views/bbs/admin-dashboard.ejs`, `views/bbs/admin-posts.ejs` |
+| 글쓰기               | `views/bbs/form.ejs`                                         |
+| 글수정               | `views/bbs/updateform.ejs`                                   |
+| 로그인               | `views/bbs/login.ejs`                                        |
+| 회원가입             | `views/bbs/signup.ejs`                                       |
+| 내 정보              | `views/bbs/myinfo.ejs`                                       |
+| 회원정보 수정        | `views/bbs/updatesignform.ejs`                               |
+| ID 찾기              | `views/bbs/findid.ejs`                                       |
+| 비밀번호 재설정      | `views/bbs/resetrequest.ejs`, `views/bbs/resetconfirm.ejs`   |
+| 공통 UI              | `views/bbs/partials/*.ejs`                                   |
 
 ## DB 스크립트
 
@@ -91,5 +93,6 @@
 - 삭제는 기본적으로 `OK = 0` soft delete를 사용한다.
 - 주요 POST form에는 CSRF token을 포함한다.
 - 업로드 파일은 DB 메타데이터와 실제 파일 경로를 함께 검증한다.
+- 관리자 기능은 `LOGIN.ROLE = 'ADMIN'` 계정만 접근할 수 있다.
 - `.env` 실제 값은 문서, 로그, Git에 남기지 않는다.
 - 이 repo는 자유게시판 과제 기능만 유지한다. 취약점 학습 연구소는 별도 Security Labs repo에서 관리한다.
