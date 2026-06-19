@@ -1,6 +1,6 @@
 # 테스트 계획
 
-최종 업데이트: 2026-05-25
+최종 업데이트: 2026-06-20
 
 ## 명령어 검증
 
@@ -8,6 +8,7 @@
 npm run verify:app
 npm run lint
 npm run format:check
+npm run ui:check
 ```
 
 선택 검증:
@@ -24,9 +25,10 @@ npm run security:semgrep
 2. PostgreSQL 실행 확인 또는 `docker compose up -d postgres`
 3. `psql "$DATABASE_URL" -f scripts/schema.sql` 실행
 4. `psql "$DATABASE_URL" -f scripts/sample-data.sql` 실행
-5. `npm install`
-6. `npm start`
-7. `http://localhost:3000/bbs/list` 접속
+5. 로컬에 `psql`이 없으면 `docker compose exec -T postgres psql -U bbs -d bbs < scripts/schema.sql`와 `docker compose exec -T postgres psql -U bbs -d bbs < scripts/sample-data.sql` 실행
+6. `npm install`
+7. `npm start`
+8. `http://localhost:3000/bbs/list` 접속
 
 ## 기능 테스트
 
@@ -37,6 +39,7 @@ npm run security:semgrep
 | 페이지 크기      | `pageSize=10/20/30/50` 선택                      | 선택한 개수 기준 표시                           |
 | 검색             | 제목/작성자/내용/제목+내용 검색                  | 조건에 맞는 게시글 표시                         |
 | 정렬             | 조회수/좋아요/작성일 정렬                        | 선택한 기준대로 정렬                            |
+| 정렬 토글        | 같은 정렬 헤더를 반복 클릭                       | 기본 → 내림차순 → 오름차순 → 기본으로 순환      |
 | 내 글만 보기     | 로그인 후 `mine=1` 사용                          | 본인 작성 글만 표시                             |
 | 글쓰기 접근 제한 | 로그아웃 상태에서 `/bbs/form` 접속               | 로그인 화면으로 이동                            |
 | 글쓰기           | 로그인 후 제목/내용 저장                         | 목록과 상세에 새 글 표시                        |
@@ -96,6 +99,7 @@ npm run security:semgrep
 - [ ] `npm run verify:app` 통과
 - [ ] `npm run lint` 통과
 - [ ] `npm run format:check` 통과
+- [ ] `npm run ui:check` 통과
 - [ ] `git diff --check` 통과
 - [ ] 핵심 화면을 브라우저로 1회 이상 수동 확인
 - [ ] README의 실행 방법이 실제 환경과 맞는가

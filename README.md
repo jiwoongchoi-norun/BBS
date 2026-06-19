@@ -46,6 +46,13 @@ psql "$DATABASE_URL" -f scripts/schema.sql
 psql "$DATABASE_URL" -f scripts/sample-data.sql
 ```
 
+로컬에 `psql`이 없으면 Docker 컨테이너에서 실행할 수 있습니다.
+
+```bash
+docker compose exec -T postgres psql -U bbs -d bbs < scripts/schema.sql
+docker compose exec -T postgres psql -U bbs -d bbs < scripts/sample-data.sql
+```
+
 모의해킹용 더미 데이터를 추가합니다.
 
 ```bash
@@ -107,6 +114,7 @@ npm run dev
 npm run verify:app
 npm run lint
 npm run format:check
+npm run ui:check
 git diff --check
 ```
 
@@ -120,6 +128,8 @@ npm run security:semgrep
 ```
 
 `npm run check`는 `lint`, `format:check`, `audit`를 함께 실행합니다.
+
+`npm run ui:check`는 Playwright로 핵심 화면을 실제 브라우저에서 확인합니다. `BASE_URL`을 지정하지 않으면 `http://127.0.0.1:3010`에 테스트용 서버를 자동으로 띄웁니다.
 
 ## 로컬 테스트 계정
 

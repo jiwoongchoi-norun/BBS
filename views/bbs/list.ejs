@@ -64,6 +64,10 @@
             return currentSort === sortName && currentOrder === 'desc' ? 'asc' : 'desc';
         }
 
+        function isSortResetClick(sortName) {
+            return currentSort === sortName && currentOrder === 'asc';
+        }
+
         function sortMark(sortName) {
             if (currentSort !== sortName) return '';
             return currentOrder === 'asc' ? '▲' : '▼';
@@ -86,8 +90,11 @@
             }
 
             params.push('pageSize=' + encodeURIComponent(currentPageSize));
-            params.push('sort=' + encodeURIComponent(sortName));
-            params.push('order=' + encodeURIComponent(nextSortOrder(sortName)));
+
+            if (!isSortResetClick(sortName)) {
+                params.push('sort=' + encodeURIComponent(sortName));
+                params.push('order=' + encodeURIComponent(nextSortOrder(sortName)));
+            }
 
             return (searchMode ? '/bbs/search?' : '/bbs/list?') + params.join('&');
         }

@@ -1,6 +1,6 @@
 {
   "name": "bbs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A Node.js, Express, EJS, and PostgreSQL based open source bulletin board system.",
   "license": "MIT",
   "repository": {
@@ -17,13 +17,14 @@
   "scripts": {
     "start": "node ./bin/www",
     "dev": "nodemon ./bin/www",
-    "lint": "eslint app.js config/**/*.js db/**/*.js routes/**/*.js bin/www",
+    "lint": "eslint app.js config/**/*.js db/**/*.js routes/**/*.js playwright.config.js tests/**/*.js bin/www",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
     "audit": "npm audit --audit-level=moderate",
     "security:semgrep": "semgrep scan --config auto",
     "security:secrets": "gitleaks detect --source . --redact",
     "db:seed": "node scripts/seed-pentest.js",
+    "ui:check": "playwright test",
     "verify:app": "node -e \"require('./app'); console.log('app loaded')\"",
     "check": "npm run lint && npm run format:check && npm run audit"
   },
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.61.0",
     "eslint": "^9.39.4",
     "globals": "^17.6.0",
     "nodemon": "^3.1.14",

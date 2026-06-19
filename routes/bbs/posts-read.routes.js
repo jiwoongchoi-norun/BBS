@@ -40,9 +40,9 @@ function getSort(req) {
   var sort = req.query.sort;
   var order = (req.query.order || 'desc').toLowerCase();
   var sortColumns = {
-    views: 'VIEW_COUNT',
-    likes: 'NVL(LIKE_COUNT, 0)',
-    created_at: 'REGDATE'
+    views: 'B.VIEW_COUNT',
+    likes: 'COALESCE(B.LIKE_COUNT, 0)',
+    created_at: 'B.REGDATE'
   };
 
   // 정렬 컬럼은 whitelist 매핑값만 ORDER BY에 넣어 SQL Injection을 막는다.
@@ -50,7 +50,7 @@ function getSort(req) {
     return {
       sort: '',
       order: 'desc',
-      orderBy: 'NVL(IS_NOTICE, 0) DESC, NO DESC'
+      orderBy: 'B.REGDATE DESC, B.NO DESC'
     };
   }
 
@@ -61,8 +61,7 @@ function getSort(req) {
   return {
     sort: sort,
     order: order,
-    orderBy:
-      'NVL(IS_NOTICE, 0) DESC, ' + sortColumns[sort] + ' ' + order.toUpperCase() + ', NO DESC'
+    orderBy: sortColumns[sort] + ' ' + order.toUpperCase() + ', B.REGDATE DESC, B.NO DESC'
   };
 }
 

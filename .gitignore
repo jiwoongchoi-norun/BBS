@@ -22,6 +22,8 @@ Thumbs.db
 .vscode/
 
 coverage/
+test-results/
+playwright-report/
 dist/
 build/
 

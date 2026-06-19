@@ -8,9 +8,10 @@ async function countPosts(connection, whereSql, binds) {
 async function findPosts(connection, whereSql, orderBy, binds, offset, pageSize) {
   var sql =
     "SELECT B.NO, B.TITLE, B.WRITER, B.CONTENT, to_char(B.REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-    'B.VIEW_COUNT, B.OK, NVL(B.LIKE_COUNT, 0), NVL(B.DISLIKE_COUNT, 0), ' +
+    'B.VIEW_COUNT, B.OK, NVL(B.LIKE_COUNT, 0) AS LIKE_COUNT, ' +
+    'NVL(B.DISLIKE_COUNT, 0) AS DISLIKE_COUNT, ' +
     '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = B.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
-    'NVL(B.IS_NOTICE, 0), NVL(B.ADMIN_HIDDEN, 0), ' +
+    'NVL(B.IS_NOTICE, 0) AS IS_NOTICE, NVL(B.ADMIN_HIDDEN, 0) AS ADMIN_HIDDEN, ' +
     "NVL(C.NAME, '미분류') AS CATEGORY_NAME, NVL(C.SLUG, '') AS CATEGORY_SLUG " +
     'FROM BBS B LEFT JOIN BBS_CATEGORY C ON C.ID = B.CATEGORY_ID WHERE ' +
     whereSql +
@@ -34,9 +35,10 @@ async function countSearchPosts(connection, whereSql, binds) {
 async function findSearchPosts(connection, whereSql, orderBy, binds, offset, pageSize) {
   var sql =
     "SELECT B.NO, B.TITLE, B.WRITER, B.CONTENT, to_char(B.REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-    'B.VIEW_COUNT, B.OK, NVL(B.LIKE_COUNT, 0), NVL(B.DISLIKE_COUNT, 0), ' +
+    'B.VIEW_COUNT, B.OK, NVL(B.LIKE_COUNT, 0) AS LIKE_COUNT, ' +
+    'NVL(B.DISLIKE_COUNT, 0) AS DISLIKE_COUNT, ' +
     '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = B.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
-    'NVL(B.IS_NOTICE, 0), NVL(B.ADMIN_HIDDEN, 0), ' +
+    'NVL(B.IS_NOTICE, 0) AS IS_NOTICE, NVL(B.ADMIN_HIDDEN, 0) AS ADMIN_HIDDEN, ' +
     "NVL(C.NAME, '미분류') AS CATEGORY_NAME, NVL(C.SLUG, '') AS CATEGORY_SLUG " +
     'FROM BBS B LEFT JOIN BBS_CATEGORY C ON C.ID = B.CATEGORY_ID WHERE ' +
     whereSql +
@@ -64,7 +66,8 @@ async function findPostById(connection, brdno, includeHidden) {
   var sql =
     'SELECT B.NO, B.TITLE, B.CONTENT, ' +
     "B.WRITER, to_char(B.REGDATE,'yyyy-mm-dd'), B.VIEW_COUNT, " +
-    'NVL(B.LIKE_COUNT, 0), NVL(B.DISLIKE_COUNT, 0), NVL(B.IS_NOTICE, 0), NVL(B.ADMIN_HIDDEN, 0), ' +
+    'NVL(B.LIKE_COUNT, 0) AS LIKE_COUNT, NVL(B.DISLIKE_COUNT, 0) AS DISLIKE_COUNT, ' +
+    'NVL(B.IS_NOTICE, 0) AS IS_NOTICE, NVL(B.ADMIN_HIDDEN, 0) AS ADMIN_HIDDEN, ' +
     "NVL(C.NAME, '미분류') AS CATEGORY_NAME, NVL(C.SLUG, '') AS CATEGORY_SLUG " +
     ' FROM BBS B LEFT JOIN BBS_CATEGORY C ON C.ID = B.CATEGORY_ID' +
     ' WHERE OK = 1 AND NO = :brdno' +
@@ -123,7 +126,7 @@ async function updatePost(connection, brdno, title, content, writer, categoryId)
 async function findAdminPosts(connection, offset, pageSize) {
   var sql =
     "SELECT NO, TITLE, WRITER, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-    'VIEW_COUNT, NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0), ' +
+    'VIEW_COUNT, NVL(IS_NOTICE, 0) AS IS_NOTICE, NVL(ADMIN_HIDDEN, 0) AS ADMIN_HIDDEN, ' +
     "TO_CHAR(ADMIN_HIDDEN_AT, 'yyyy-mm-dd hh24:mi:ss'), ADMIN_HIDDEN_BY " +
     'FROM BBS WHERE OK = 1 ' +
     'ORDER BY NVL(ADMIN_HIDDEN, 0) DESC, NVL(IS_NOTICE, 0) DESC, NO DESC ' +

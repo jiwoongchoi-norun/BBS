@@ -6,9 +6,10 @@ Thanks for considering a contribution to BBS.
 
 1. Install Node.js 20 or newer.
 2. Install dependencies with `npm install`.
-3. Copy `.env.example` to `.env` and fill in OracleDB settings.
-4. Apply either `scripts/schema.sql` for a fresh database or `scripts/migration.sql` for an existing database.
-5. Start the app with `npm start`.
+3. Copy `.env.example` to `.env` and fill in PostgreSQL settings.
+4. Start PostgreSQL with `docker compose up -d postgres` or provide your own PostgreSQL instance.
+5. Apply `scripts/schema.sql` and `scripts/sample-data.sql` for a fresh database.
+6. Start the app with `npm start`.
 
 ## Quality Checks
 
@@ -18,6 +19,7 @@ Run these before opening a pull request:
 npm run verify:app
 npm run lint
 npm run format:check
+npm run ui:check
 npm run audit
 ```
 
@@ -33,7 +35,7 @@ npm run security:semgrep
 - Keep changes focused on one feature or fix.
 - Do not commit `.env`, uploaded files, logs, database dumps, or local IDE settings.
 - Prefer existing route, repository, validation, and view patterns.
-- Use Oracle bind variables for SQL input.
+- Use repository helpers and bind variables for SQL input.
 - Add or update documentation when behavior or setup changes.
 - Include manual test notes for UI and database flows.
 
