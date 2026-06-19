@@ -20,7 +20,7 @@
 | -------------------- | ------------------------------ | --------------------------------------------------------------- |
 | Express 앱 설정      | `app.js`                       | EJS, static, session, flash message, router, error handler 연결 |
 | 서버 실행            | `bin/www`                      | HTTP 서버 시작 진입점                                           |
-| DB 설정              | `config/dbconfig.js`           | `.env`의 OracleDB 접속 정보 사용                                |
+| DB 설정              | `config/dbconfig.js`           | `.env`의 PostgreSQL 접속 정보 사용                              |
 | DB connection helper | `db/oracle.js`                 | `withConnection()`으로 connection close 공통 처리               |
 | `/bbs` 조립          | `routes/bbs.js`                | CSRF 적용, feature router mount, 조회수 skip token 처리         |
 | 로그인 필요 처리     | `routes/middleware/auth.js`    | 로그인하지 않은 사용자를 `/bbs/login`으로 이동                  |
@@ -67,17 +67,14 @@
 
 ## DB 스크립트
 
-| 상황           | 실행 파일                                                                                                      |
-| -------------- | -------------------------------------------------------------------------------------------------------------- |
-| 새 DB 생성     | `scripts/schema.sql` 실행 후 `scripts/sample-data.sql` 실행                                                    |
-| 기존 DB 보강   | `scripts/migration.sql`                                                                                        |
-| 롤백 참고      | `scripts/rollback.sql`                                                                                         |
-| 부분 보강 참고 | `scripts/add-view-count.sql`, `scripts/add-login-salt.sql`, `scripts/add-bbsw.sql`, `scripts/add-bbs-file.sql` |
+| 상황       | 실행 파일                                                   |
+| ---------- | ----------------------------------------------------------- |
+| 새 DB 생성 | `scripts/schema.sql` 실행 후 `scripts/sample-data.sql` 실행 |
 
 ## 기본 확인 순서
 
-1. `.env`에 `SESSION_SECRET`, `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING` 설정
-2. OracleDB에 `scripts/schema.sql` 또는 `scripts/migration.sql` 적용
+1. `.env`에 `SESSION_SECRET`, `DATABASE_URL` 설정
+2. PostgreSQL에 `scripts/schema.sql`, `scripts/sample-data.sql` 적용
 3. `npm install`
 4. `npm run verify:app`
 5. `npm run lint`
@@ -95,4 +92,4 @@
 - 업로드 파일은 DB 메타데이터와 실제 파일 경로를 함께 검증한다.
 - 관리자 기능은 `LOGIN.ROLE = 'ADMIN'` 계정만 접근할 수 있다.
 - `.env` 실제 값은 문서, 로그, Git에 남기지 않는다.
-- 이 repo는 자유게시판 과제 기능만 유지한다. 취약점 학습 연구소는 별도 Security Labs repo에서 관리한다.
+- 이 저장소는 자유게시판 애플리케이션의 핵심 기능과 운영 기능을 유지한다.

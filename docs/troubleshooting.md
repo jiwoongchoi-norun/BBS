@@ -6,8 +6,8 @@
 
 1. `.env` 파일이 있는지 확인한다.
 2. `SESSION_SECRET`이 비어 있지 않은지 확인한다.
-3. OracleDB가 실행 중인지 확인한다.
-4. `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING`을 확인한다.
+3. PostgreSQL이 실행 중인지 확인한다.
+4. `DATABASE_URL` 또는 `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`를 확인한다.
 5. 3000번 포트를 이미 다른 프로세스가 사용 중인지 확인한다.
 
 ```powershell
@@ -22,13 +22,12 @@ npm run verify:app
 
 실패하면 require error, router error, syntax error를 먼저 확인한다.
 
-## OracleDB 연결 실패
+## PostgreSQL 연결 실패
 
-- Oracle XE 서비스가 실행 중인지 확인한다.
-- 접속 문자열이 환경에 맞는지 확인한다. 예: `localhost/XEPDB1`, `localhost/XE`
+- PostgreSQL 컨테이너 또는 서비스가 실행 중인지 확인한다.
+- 접속 문자열이 환경에 맞는지 확인한다. 예: `postgres://bbs:bbs_dev_password@127.0.0.1:5432/bbs`
 - DB 계정 권한과 비밀번호를 확인한다.
-- 신규 DB이면 `scripts/schema.sql`을 먼저 적용한다.
-- 기존 DB이면 `scripts/migration.sql` 적용 여부를 확인한다.
+- 신규 DB이면 `scripts/schema.sql`, `scripts/sample-data.sql`을 먼저 적용한다.
 
 ## 로그인 실패
 
@@ -53,12 +52,12 @@ WHERE ID = '확인할_ID';
 - `GET /bbs/read`
 - `POST /bbs/reaction`
 
-## NJS-098 오류
+## PostgreSQL bind 오류
 
 오류 예:
 
 ```text
-NJS-098: 0 bind placeholders were used in the SQL statement but 1 bind values were provided
+bind message supplies 1 parameters, but prepared statement requires 0
 ```
 
 원인:

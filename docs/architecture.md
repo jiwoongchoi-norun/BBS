@@ -10,7 +10,7 @@ Browser
     -> /bbs routes/bbs.js
       -> routes/bbs/*.routes.js
       -> db/repositories/*.js
-      -> OracleDB
+      -> PostgreSQL
       -> uploads/bbs
     -> views/bbs/*.ejs
     -> public/stylesheets/style.css
@@ -24,7 +24,7 @@ Browser
 | ------------------------------ | ------------------------------------------------------------------- |
 | `app.js`                       | Express 설정, EJS, static, session, router 연결, 전역 error handler |
 | `bin/www`                      | HTTP 서버 시작                                                      |
-| `config/dbconfig.js`           | `.env` 기반 OracleDB 접속 설정                                      |
+| `config/dbconfig.js`           | `.env` 기반 PostgreSQL 접속 설정                                    |
 | `routes/bbs.js`                | `/bbs` 공통 CSRF 처리, feature router mount, CSRF 오류 처리         |
 | `routes/bbs/*.routes.js`       | 회원, 게시글 조회/변경, 파일, 댓글, 반응 기능별 라우터              |
 | `db/repositories/*.js`         | 게시글, 댓글, 반응 SQL 실행 함수                                    |
@@ -40,7 +40,7 @@ Browser
 
 - 환경 변수는 `.env`에서 읽는다.
 - `SESSION_SECRET`이 없으면 앱이 시작되지 않는다.
-- DB 접속에는 `DB_USER`, `DB_PASSWORD`, `DB_CONNECT_STRING`이 필요하다.
+- DB 접속에는 `DATABASE_URL` 또는 `PGHOST`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`가 필요하다.
 - production 모드에서는 세션 cookie `secure` 옵션이 켜진다.
 
 ## 주요 라우트
@@ -120,6 +120,6 @@ Browser
 ## 구조상 주의점
 
 - 라우트가 기능별 파일로 분리되었지만 URL은 기존 `/bbs/...` 경로를 유지하므로, 변경 시 기존 경로 동작을 함께 확인한다.
-- `oracledb.autoCommit = true` 기반 코드가 있어 여러 SQL을 하나의 업무 단위로 묶는 transaction 안정성은 추가 개선 후보이다.
+- PostgreSQL 어댑터는 기존 `connection.execute()` 호출 형태를 유지하면서 `pg` pool을 사용한다.
 - 삭제는 게시글/댓글/회원 대부분 soft delete를 사용한다.
 - 첨부파일은 DB 메타데이터와 실제 파일이 함께 관리되므로 삭제/롤백 작업 시 양쪽 상태를 함께 확인해야 한다.

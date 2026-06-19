@@ -90,7 +90,7 @@ function createPostsWriteRouter(options) {
         var hasUploadFile = !!req.file;
         var saveSucceeded = await withConnection(async function (connection) {
           try {
-            var nextNoSql = 'SELECT BBS_SEQ.NEXTVAL FROM DUAL';
+            var nextNoSql = "SELECT nextval('bbs_seq')";
             var seqResult = await connection.execute(nextNoSql);
             var bbsno = seqResult.rows[0][0];
             var validCategoryId = null;

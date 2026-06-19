@@ -21,9 +21,9 @@ npm run security:semgrep
 ## 환경 준비
 
 1. `.env.example`을 참고해 `.env` 작성
-2. OracleDB 실행 확인
-3. 신규 DB는 `@scripts/schema.sql`, `@scripts/sample-data.sql` 실행
-4. 기존 DB는 `@scripts/migration.sql` 실행
+2. PostgreSQL 실행 확인 또는 `docker compose up -d postgres`
+3. `psql "$DATABASE_URL" -f scripts/schema.sql` 실행
+4. `psql "$DATABASE_URL" -f scripts/sample-data.sql` 실행
 5. `npm install`
 6. `npm start`
 7. `http://localhost:3000/bbs/list` 접속

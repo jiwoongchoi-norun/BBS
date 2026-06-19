@@ -4,7 +4,7 @@ var bcrypt = require('bcrypt');
 
 var bcryptSaltRounds = 12;
 
-// 과거 과제 코드에서 사용하던 SHA-512 + salt 비밀번호를 검증할 때만 사용한다.
+// Legacy SHA-512 + salt 비밀번호를 검증할 때만 사용한다.
 function createPasswordHash(password, salt) {
   return crypto
     .createHash('sha512')
@@ -51,7 +51,7 @@ function validateAccountInput(id, email, phone, options) {
   return '';
 }
 
-// 과제용 기본 정책: 8자 이상이며 영문과 숫자를 모두 포함해야 한다.
+// 기본 비밀번호 정책: 8자 이상이며 영문과 숫자를 모두 포함해야 한다.
 function validatePasswordPolicy(password) {
   if (!password) return '비밀번호를 입력해주세요.';
   if (password.length < 8) return '비밀번호는 최소 8자 이상이어야 합니다.';
@@ -142,7 +142,7 @@ function createAuthRouter(options) {
     });
   });
 
-  // 실제 메일 발송 대신 화면에 재설정 링크를 보여주는 과제용 흐름이다.
+  // 메일 발송 연동 전에는 화면에 재설정 링크를 보여준다.
   router.post('/reset-password/request', async function (req, res, next) {
     var id = cleanText(req.body.id, 50);
     var email = cleanText(req.body.email, 200);
@@ -209,7 +209,7 @@ function createAuthRouter(options) {
       }
 
       renderRequest(
-        '비밀번호 재설정 토큰이 생성되었습니다. 실제 이메일 발송은 과제 범위에서 제외했습니다.',
+        '비밀번호 재설정 토큰이 생성되었습니다. 현재 설정에서는 이메일 대신 화면에 재설정 링크를 표시합니다.',
         '/bbs/reset-password/confirm?token=' + encodeURIComponent(resetRequestResult.token)
       );
     } catch (err) {

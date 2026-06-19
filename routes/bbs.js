@@ -1,9 +1,7 @@
 var express = require('express');
 var router = express.Router();
-var oracledb = require('oracledb');
 var crypto = require('crypto');
 var csrf = require('csurf');
-oracledb.autoCommit = true;
 
 var withConnection = require('../db/oracle').withConnection;
 var postsRepository = require('../db/repositories/posts.repository');

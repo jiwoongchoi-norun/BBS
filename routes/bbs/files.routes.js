@@ -25,7 +25,7 @@ function createFilesRouter(options) {
       }
 
       var result = await withConnection(async function (connection) {
-        // 과제의 작성자 권한 체크 요구사항에 맞춰 게시글 작성자만 다운로드할 수 있게 한다.
+        // 첨부파일은 게시글 작성자만 다운로드할 수 있게 제한한다.
         var sql =
           'SELECT F.ORG_FILENAME, F.SAVE_FILENAME, F.FILEPATH ' +
           'FROM BBS_FILE F ' +

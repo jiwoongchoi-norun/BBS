@@ -1,16 +1,32 @@
 require('dotenv').config({ quiet: true });
 
-var requiredEnv = ['DB_USER', 'DB_PASSWORD', 'DB_CONNECT_STRING'];
-var missingEnv = requiredEnv.filter(function (key) {
-  return !process.env[key];
-});
+var hasDatabaseUrl = !!process.env.DATABASE_URL;
+var requiredEnv = ['PGHOST', 'PGDATABASE', 'PGUSER', 'PGPASSWORD'];
+var missingEnv = hasDatabaseUrl
+  ? []
+  : requiredEnv.filter(function (key) {
+      return !process.env[key];
+    });
 
 if (missingEnv.length > 0) {
-  throw new Error('Missing required database environment variables: ' + missingEnv.join(', '));
+  throw new Error(
+    'Missing required PostgreSQL environment variables: DATABASE_URL or ' + missingEnv.join(', ')
+  );
 }
 
-module.exports = {
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  connectString: process.env.DB_CONNECT_STRING
-};
+var timezone = process.env.PG_TIMEZONE || 'Asia/Seoul';
+var timezoneOption = '-c timezone=' + timezone;
+
+module.exports = hasDatabaseUrl
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      options: timezoneOption
+    }
+  : {
+      host: process.env.PGHOST,
+      port: Number(process.env.PGPORT || 5432),
+      database: process.env.PGDATABASE,
+      user: process.env.PGUSER,
+      password: process.env.PGPASSWORD,
+      options: timezoneOption
+    };

@@ -7,12 +7,12 @@ async function countPosts(connection, whereSql, binds) {
 // bind variables so search, paging, and owner filters are not string-concatenated.
 async function findPosts(connection, whereSql, orderBy, binds, offset, pageSize) {
   var sql =
-    "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-    'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
-    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
-    'NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0), ' +
+    "SELECT B.NO, B.TITLE, B.WRITER, B.CONTENT, to_char(B.REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+    'B.VIEW_COUNT, B.OK, NVL(B.LIKE_COUNT, 0), NVL(B.DISLIKE_COUNT, 0), ' +
+    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = B.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
+    'NVL(B.IS_NOTICE, 0), NVL(B.ADMIN_HIDDEN, 0), ' +
     "NVL(C.NAME, '미분류') AS CATEGORY_NAME, NVL(C.SLUG, '') AS CATEGORY_SLUG " +
-    'FROM BBS LEFT JOIN BBS_CATEGORY C ON C.ID = BBS.CATEGORY_ID WHERE ' +
+    'FROM BBS B LEFT JOIN BBS_CATEGORY C ON C.ID = B.CATEGORY_ID WHERE ' +
     whereSql +
     ' ORDER BY ' +
     orderBy +
@@ -33,12 +33,12 @@ async function countSearchPosts(connection, whereSql, binds) {
 
 async function findSearchPosts(connection, whereSql, orderBy, binds, offset, pageSize) {
   var sql =
-    "SELECT NO, TITLE, WRITER, CONTENT, to_char(REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
-    'VIEW_COUNT, OK, NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), ' +
-    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = BBS.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
-    'NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0), ' +
+    "SELECT B.NO, B.TITLE, B.WRITER, B.CONTENT, to_char(B.REGDATE,'yyyy-mm-dd hh24:mi:ss'), " +
+    'B.VIEW_COUNT, B.OK, NVL(B.LIKE_COUNT, 0), NVL(B.DISLIKE_COUNT, 0), ' +
+    '(SELECT COUNT(*) FROM BBSW WHERE BBSW.BBSNO = B.NO AND BBSW.OK = 1) AS COMMENT_COUNT, ' +
+    'NVL(B.IS_NOTICE, 0), NVL(B.ADMIN_HIDDEN, 0), ' +
     "NVL(C.NAME, '미분류') AS CATEGORY_NAME, NVL(C.SLUG, '') AS CATEGORY_SLUG " +
-    'FROM BBS LEFT JOIN BBS_CATEGORY C ON C.ID = BBS.CATEGORY_ID WHERE ' +
+    'FROM BBS B LEFT JOIN BBS_CATEGORY C ON C.ID = B.CATEGORY_ID WHERE ' +
     whereSql +
     ' ORDER BY ' +
     orderBy +
@@ -62,11 +62,11 @@ async function incrementViewCount(connection, brdno) {
 
 async function findPostById(connection, brdno, includeHidden) {
   var sql =
-    'SELECT NO, TITLE, CONTENT, ' +
-    "WRITER, to_char(REGDATE,'yyyy-mm-dd'), VIEW_COUNT, " +
-    'NVL(LIKE_COUNT, 0), NVL(DISLIKE_COUNT, 0), NVL(IS_NOTICE, 0), NVL(ADMIN_HIDDEN, 0), ' +
+    'SELECT B.NO, B.TITLE, B.CONTENT, ' +
+    "B.WRITER, to_char(B.REGDATE,'yyyy-mm-dd'), B.VIEW_COUNT, " +
+    'NVL(B.LIKE_COUNT, 0), NVL(B.DISLIKE_COUNT, 0), NVL(B.IS_NOTICE, 0), NVL(B.ADMIN_HIDDEN, 0), ' +
     "NVL(C.NAME, '미분류') AS CATEGORY_NAME, NVL(C.SLUG, '') AS CATEGORY_SLUG " +
-    ' FROM BBS LEFT JOIN BBS_CATEGORY C ON C.ID = BBS.CATEGORY_ID' +
+    ' FROM BBS B LEFT JOIN BBS_CATEGORY C ON C.ID = B.CATEGORY_ID' +
     ' WHERE OK = 1 AND NO = :brdno' +
     (includeHidden ? '' : ' AND NVL(ADMIN_HIDDEN, 0) = 0');
   return connection.execute(sql, { brdno: brdno });

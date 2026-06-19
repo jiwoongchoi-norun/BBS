@@ -27,7 +27,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Keep sessions simple for the assignment, but do not allow a hardcoded secret.
+// Keep sessions simple, but do not allow a hardcoded secret.
 // Production enables secure cookies, so HTTPS is required if NODE_ENV=production.
 app.use(
   expressSession({
@@ -77,7 +77,7 @@ app.use(function (req, res, next) {
 });
 
 // Hide stack traces and internal messages in production, but keep them visible
-// while developing so Oracle/route errors can be fixed quickly.
+// while developing so database/route errors can be fixed quickly.
 app.use(function (err, req, res, _next) {
   var status = err.status || 500;
   var publicMessage =

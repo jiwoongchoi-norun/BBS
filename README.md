@@ -1,8 +1,8 @@
 # BBS 자유게시판
 
-Node.js, Express, EJS, OracleDB 기반 자유게시판 과제 프로젝트입니다.
+Node.js, Express, EJS, PostgreSQL 기반 자유게시판 프로젝트입니다.
 
-이 repo는 게시판 본기능만 유지합니다. 취약점 학습 연구소는 별도 Security Labs repo에서 관리합니다.
+이 저장소는 게시글, 댓글, 파일 업로드, 계정 관리, 관리자 운영 기능을 포함한 게시판 애플리케이션입니다.
 
 ## 실행 환경
 
@@ -11,7 +11,7 @@ Node.js, Express, EJS, OracleDB 기반 자유게시판 과제 프로젝트입니
 | Runtime   | Node.js          |
 | Framework | Express          |
 | Template  | EJS              |
-| Database  | OracleDB         |
+| Database  | PostgreSQL       |
 | Session   | express-session  |
 | Security  | bcrypt, csurf    |
 | Upload    | multer           |
@@ -29,22 +29,20 @@ npm install
 PORT=3000
 HOST=127.0.0.1
 SESSION_SECRET=change-this-session-secret
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_CONNECT_STRING=localhost/XEPDB1
+DATABASE_URL=postgres://bbs:bbs_dev_password@127.0.0.1:5432/bbs
 ```
 
-신규 DB를 준비하는 경우:
+개발용 PostgreSQL을 Docker로 실행합니다.
 
-```sql
-@scripts/schema.sql
-@scripts/sample-data.sql
+```bash
+docker compose up -d postgres
 ```
 
-기존 DB를 보강하는 경우:
+DB 스키마와 샘플 데이터를 적용합니다.
 
-```sql
-@scripts/migration.sql
+```bash
+psql "$DATABASE_URL" -f scripts/schema.sql
+psql "$DATABASE_URL" -f scripts/sample-data.sql
 ```
 
 실행:
@@ -96,7 +94,7 @@ npm run dev
 | GET        | `/bbs/admin`, `/bbs/admin/posts`                            | 관리자 대시보드, 게시글 운영 관리              |
 | POST       | `/bbs/admin/posts/*`, `/bbs/admin/comments/*`               | 공지 설정, 게시글/댓글 숨김 및 복구            |
 
-## 검증
+## 개발 품질 확인
 
 ```bash
 npm run verify:app
@@ -105,7 +103,7 @@ npm run format:check
 git diff --check
 ```
 
-선택 검증:
+선택 확인:
 
 ```bash
 npm run audit
