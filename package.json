@@ -1,6 +1,6 @@
 {
   "name": "bbs",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A Node.js, Express, EJS, and PostgreSQL based open source bulletin board system.",
   "license": "MIT",
   "repository": {

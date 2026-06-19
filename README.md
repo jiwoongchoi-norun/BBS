@@ -115,6 +115,7 @@ npm run dev
 - `v1.0.0`: PostgreSQL 기반 공개 1.0 릴리스
 - `v1.0.1`: 정렬 안정화, UI smoke test 추가
 - `v1.0.2`: Docker 앱 이미지, Compose 실행, CI/Release workflow 추가
+- `v1.0.3`: 모의해킹용 현실형 더미 데이터 개선
 
 릴리스 태그가 푸시되면 GitHub Actions가 GitHub Release와 GHCR Docker 이미지를 생성합니다.
 
@@ -123,7 +124,7 @@ npm run dev
 - `latest`
 - `1`
 - `1.0`
-- `1.0.2`
+- `1.0.3`
 
 ## 주요 기능
 
@@ -185,18 +186,27 @@ npm run security:semgrep
 
 `npm run ui:check`는 Playwright로 핵심 화면을 실제 브라우저에서 확인합니다. `BASE_URL`을 지정하지 않으면 `http://127.0.0.1:3010`에 테스트용 서버를 자동으로 띄웁니다.
 
-## 로컬 테스트 계정
+## 로컬 테스트 계정과 더미 데이터
 
-`scripts/sample-data.sql` 또는 `npm run db:seed` 기준 개발용 계정입니다. 공개 운영 환경에서는 반드시 비밀번호를 변경합니다.
+`scripts/sample-data.sql`은 최소 실행용 `admin` 계정과 첫 게시글만 추가합니다.
+`npm run db:seed`는 모의해킹과 UI 확인을 위한 현실형 게시판 데이터를 추가합니다.
+공개 운영 환경에서는 반드시 비밀번호를 변경합니다.
 
-| ID     | 권한  | 비밀번호       |
-| ------ | ----- | -------------- |
-| admin  | ADMIN | `Password123!` |
-| user01 | USER  | `Password123!` |
-| user02 | USER  | `Password123!` |
-| user03 | USER  | `Password123!` |
-| user04 | USER  | `Password123!` |
-| user05 | USER  | `Password123!` |
+| ID          | 권한           | 비밀번호       |
+| ----------- | -------------- | -------------- |
+| admin       | ADMIN          | `Password123!` |
+| manager01   | ADMIN          | `Password123!` |
+| minseo      | USER           | `Password123!` |
+| junho       | USER           | `Password123!` |
+| soyeon      | USER           | `Password123!` |
+| hyejin      | USER           | `Password123!` |
+| taewoo      | USER           | `Password123!` |
+| yuna        | USER           | `Password123!` |
+| donghyun    | USER           | `Password123!` |
+| nari        | USER           | `Password123!` |
+| suspended01 | SUSPENDED USER | `Password123!` |
+
+`npm run db:seed`는 질문, 후기, 자료공유, 공지, 숨김 게시글, 숨김 댓글, 신고, 북마크, 첨부파일, 좋아요/싫어요가 섞인 데이터를 생성합니다.
 
 ## 참고 문서
 

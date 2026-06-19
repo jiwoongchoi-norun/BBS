@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.3 - 2026-06-20
+
+- Reworked pentest seed data to look like realistic community activity.
+- Added varied users, admin accounts, a suspended account, profiles, categories, posts, comments, reactions, bookmarks, reports, hidden content, and attachments.
+- Updated README and test plan with the realistic seed account list and usage notes.
+
 ## 1.0.2 - 2026-06-20
 
 - Added a production Dockerfile for the Node.js application.
