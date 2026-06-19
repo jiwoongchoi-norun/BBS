@@ -4,6 +4,23 @@ Node.js, Express, EJS, PostgreSQL 기반 자유게시판 프로젝트입니다.
 
 이 저장소는 게시글, 댓글, 파일 업로드, 계정 관리, 관리자 운영 기능을 포함한 게시판 애플리케이션입니다.
 
+## Quick Start
+
+Docker만 있으면 앱과 PostgreSQL을 함께 실행할 수 있습니다.
+
+```bash
+git clone https://github.com/jiwoongchoi-norun/BBS.git
+cd BBS
+docker compose up --build
+```
+
+접속:
+
+- App: `http://localhost:3000/bbs/list`
+- PostgreSQL: `localhost:5432`
+
+첫 실행 시 `scripts/schema.sql`, `scripts/sample-data.sql`이 PostgreSQL 컨테이너에 자동 적용됩니다. 기존 `postgres-data` 볼륨이 있으면 init SQL은 다시 실행되지 않습니다.
+
 ## 실행 환경
 
 | 구분      | 내용                             |
@@ -15,15 +32,35 @@ Node.js, Express, EJS, PostgreSQL 기반 자유게시판 프로젝트입니다.
 | Session   | express-session                  |
 | Security  | bcrypt, CSRF, Helmet, rate limit |
 | Upload    | multer                           |
-| Tooling   | ESLint, Prettier                 |
+| Tooling   | ESLint, Prettier, Playwright     |
 
-## 설치와 실행
+## Docker 실행
 
 ```bash
-npm install
+docker compose up --build
 ```
 
-`.env.example`을 참고해 `.env`를 작성합니다.
+백그라운드 실행:
+
+```bash
+docker compose up -d --build
+```
+
+종료:
+
+```bash
+docker compose down
+```
+
+DB까지 초기화하려면 볼륨을 함께 제거합니다.
+
+```bash
+docker compose down -v
+```
+
+## 로컬 Node.js 실행
+
+`.env.example`을 참고해 `.env`를 작성합니다. 로컬 Node.js 실행 기준 예시는 다음과 같습니다.
 
 ```env
 PORT=3000
@@ -70,6 +107,23 @@ npm start
 ```bash
 npm run dev
 ```
+
+## Versioning
+
+이 프로젝트는 SemVer 형식의 태그를 사용합니다.
+
+- `v1.0.0`: PostgreSQL 기반 공개 1.0 릴리스
+- `v1.0.1`: 정렬 안정화, UI smoke test 추가
+- `v1.0.2`: Docker 앱 이미지, Compose 실행, CI/Release workflow 추가
+
+릴리스 태그가 푸시되면 GitHub Actions가 GitHub Release와 GHCR Docker 이미지를 생성합니다.
+
+이미지 태그:
+
+- `latest`
+- `1`
+- `1.0`
+- `1.0.2`
 
 ## 주요 기능
 

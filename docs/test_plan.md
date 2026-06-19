@@ -22,13 +22,12 @@ npm run security:semgrep
 ## 환경 준비
 
 1. `.env.example`을 참고해 `.env` 작성
-2. PostgreSQL 실행 확인 또는 `docker compose up -d postgres`
-3. `psql "$DATABASE_URL" -f scripts/schema.sql` 실행
-4. `psql "$DATABASE_URL" -f scripts/sample-data.sql` 실행
+2. Docker 실행 기준이면 `docker compose up --build` 실행
+3. 로컬 Node.js 실행 기준이면 `docker compose up -d postgres` 실행
+4. 신규 DB이면 `psql "$DATABASE_URL" -f scripts/schema.sql`와 `psql "$DATABASE_URL" -f scripts/sample-data.sql` 실행
 5. 로컬에 `psql`이 없으면 `docker compose exec -T postgres psql -U bbs -d bbs < scripts/schema.sql`와 `docker compose exec -T postgres psql -U bbs -d bbs < scripts/sample-data.sql` 실행
-6. `npm install`
-7. `npm start`
-8. `http://localhost:3000/bbs/list` 접속
+6. 로컬 Node.js 실행 기준이면 `npm install` 후 `npm start`
+7. `http://localhost:3000/bbs/list` 접속
 
 ## 기능 테스트
 

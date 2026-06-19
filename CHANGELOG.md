@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.2 - 2026-06-20
+
+- Added a production Dockerfile for the Node.js application.
+- Updated Docker Compose to run the app and PostgreSQL together.
+- Added CI workflow for lint, formatting, audit, app load, and Playwright UI smoke checks.
+- Added release workflow for GitHub Releases and GHCR Docker image publishing.
+- Updated README with Quick Start, Docker, and versioning documentation.
+
 ## 1.0.1 - 2026-06-20
 
 - Fixed default post ordering to use newest posts first.
