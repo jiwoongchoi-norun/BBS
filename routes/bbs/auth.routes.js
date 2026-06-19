@@ -208,8 +208,13 @@ function createAuthRouter(options) {
         return;
       }
 
+      if (process.env.NODE_ENV === 'production') {
+        renderRequest('비밀번호 재설정 요청이 접수되었습니다.', '');
+        return;
+      }
+
       renderRequest(
-        '비밀번호 재설정 토큰이 생성되었습니다. 현재 설정에서는 이메일 대신 화면에 재설정 링크를 표시합니다.',
+        '비밀번호 재설정 토큰이 생성되었습니다. 개발 환경에서는 이메일 대신 화면에 재설정 링크를 표시합니다.',
         '/bbs/reset-password/confirm?token=' + encodeURIComponent(resetRequestResult.token)
       );
     } catch (err) {

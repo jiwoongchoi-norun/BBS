@@ -1,7 +1,6 @@
 var express = require('express');
 var router = express.Router();
 var crypto = require('crypto');
-var csrf = require('csurf');
 
 var withConnection = require('../db/oracle').withConnection;
 var postsRepository = require('../db/repositories/posts.repository');
@@ -29,6 +28,7 @@ var requireAdmin = authMiddleware.requireAdmin;
 var responseHelpers = require('./helpers/response');
 var uploadHelpers = require('./helpers/upload');
 var validationHelpers = require('./helpers/validation');
+var csrfMiddleware = require('./middleware/csrf');
 var renderBadRequest = responseHelpers.renderBadRequest;
 var renderForbidden = responseHelpers.renderForbidden;
 var cleanText = validationHelpers.cleanText;
@@ -39,7 +39,7 @@ var getUploadErrorMessage = uploadHelpers.getUploadErrorMessage;
 var resolveStoredUploadPath = uploadHelpers.resolveStoredUploadPath;
 var deleteStoredFile = uploadHelpers.deleteStoredFile;
 var deleteStoredFiles = uploadHelpers.deleteStoredFiles;
-var csrfProtection = csrf();
+var csrfProtection = csrfMiddleware.csrfProtection;
 var skipViewCountTokens = Object.create(null);
 
 // 추천/댓글 처리 뒤 상세 페이지로 돌아올 때는 사용자가 글을 새로 읽은 것이 아니므로
@@ -103,12 +103,6 @@ function setFlash(req, type, text) {
 }
 
 router.use(csrfProtection);
-
-router.use(function (req, res, next) {
-  // /bbs 하위의 모든 EJS form에서 같은 방식으로 CSRF 토큰을 꺼내 쓴다.
-  res.locals.csrfToken = req.csrfToken();
-  next();
-});
 
 router.use(
   asyncHandler(async function (req, res, next) {
@@ -283,14 +277,5 @@ router.use(
     resolveStoredUploadPath: resolveStoredUploadPath
   })
 );
-
-router.use(function (err, _req, res, next) {
-  if (err.code !== 'EBADCSRFTOKEN') {
-    return next(err);
-  }
-
-  res.status(403);
-  res.send('CSRF token validation failed.');
-});
 
 module.exports = router;

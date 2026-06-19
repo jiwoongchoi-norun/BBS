@@ -6,16 +6,16 @@ Node.js, Express, EJS, PostgreSQL 기반 자유게시판 프로젝트입니다.
 
 ## 실행 환경
 
-| 구분      | 내용             |
-| --------- | ---------------- |
-| Runtime   | Node.js          |
-| Framework | Express          |
-| Template  | EJS              |
-| Database  | PostgreSQL       |
-| Session   | express-session  |
-| Security  | bcrypt, csurf    |
-| Upload    | multer           |
-| Tooling   | ESLint, Prettier |
+| 구분      | 내용                             |
+| --------- | -------------------------------- |
+| Runtime   | Node.js                          |
+| Framework | Express                          |
+| Template  | EJS                              |
+| Database  | PostgreSQL                       |
+| Session   | express-session                  |
+| Security  | bcrypt, CSRF, Helmet, rate limit |
+| Upload    | multer                           |
+| Tooling   | ESLint, Prettier                 |
 
 ## 설치와 실행
 
@@ -30,6 +30,7 @@ PORT=3000
 HOST=127.0.0.1
 SESSION_SECRET=change-this-session-secret
 DATABASE_URL=postgres://bbs:bbs_dev_password@127.0.0.1:5432/bbs
+PG_TIMEZONE=Asia/Seoul
 ```
 
 개발용 PostgreSQL을 Docker로 실행합니다.
@@ -43,6 +44,12 @@ DB 스키마와 샘플 데이터를 적용합니다.
 ```bash
 psql "$DATABASE_URL" -f scripts/schema.sql
 psql "$DATABASE_URL" -f scripts/sample-data.sql
+```
+
+모의해킹용 더미 데이터를 추가합니다.
+
+```bash
+npm run db:seed
 ```
 
 실행:
@@ -107,11 +114,25 @@ git diff --check
 
 ```bash
 npm run audit
+npm run db:seed
 npm run security:secrets
 npm run security:semgrep
 ```
 
 `npm run check`는 `lint`, `format:check`, `audit`를 함께 실행합니다.
+
+## 로컬 테스트 계정
+
+`scripts/sample-data.sql` 또는 `npm run db:seed` 기준 개발용 계정입니다. 공개 운영 환경에서는 반드시 비밀번호를 변경합니다.
+
+| ID     | 권한  | 비밀번호       |
+| ------ | ----- | -------------- |
+| admin  | ADMIN | `Password123!` |
+| user01 | USER  | `Password123!` |
+| user02 | USER  | `Password123!` |
+| user03 | USER  | `Password123!` |
+| user04 | USER  | `Password123!` |
+| user05 | USER  | `Password123!` |
 
 ## 참고 문서
 

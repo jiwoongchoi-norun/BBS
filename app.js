@@ -3,17 +3,26 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var expressSession = require('express-session');
+var PgSession = require('connect-pg-simple')(expressSession);
+var helmet = require('helmet');
+var rateLimit = require('express-rate-limit');
 var logger = require('morgan');
 require('dotenv').config({ quiet: true });
 
+var dbconfig = require('./config/dbconfig');
 var indexRouter = require('./routes/index');
 var bbsRouter = require('./routes/bbs');
 var app = express();
 var sessionSecret = process.env.SESSION_SECRET;
 var isProduction = process.env.NODE_ENV === 'production';
+var isDefaultSessionSecret = sessionSecret === 'change-this-session-secret';
 
 if (!sessionSecret) {
   throw new Error('SESSION_SECRET is required. Set it in your .env file.');
+}
+
+if (isProduction && isDefaultSessionSecret) {
+  throw new Error('SESSION_SECRET must be changed before running in production.');
 }
 
 // The project uses EJS only. Old Express-generator Jade views were removed so
@@ -21,16 +30,44 @@ if (!sessionSecret) {
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
+app.use(
+  helmet({
+    contentSecurityPolicy: false
+  })
+);
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Keep sessions simple, but do not allow a hardcoded secret.
+var authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: Number(process.env.AUTH_RATE_LIMIT || 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+});
+
+var writeLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  limit: Number(process.env.WRITE_RATE_LIMIT || 120),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.'
+});
+
+app.use(['/bbs/logincheck', '/bbs/signupsave', '/bbs/reset-password/request'], authLimiter);
+app.use(['/bbs/save', '/bbs/updatesave'], writeLimiter);
+
+// Session data is stored in PostgreSQL so login state survives app restarts.
 // Production enables secure cookies, so HTTPS is required if NODE_ENV=production.
 app.use(
   expressSession({
+    store: new PgSession({
+      conObject: dbconfig,
+      createTableIfMissing: true
+    }),
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,

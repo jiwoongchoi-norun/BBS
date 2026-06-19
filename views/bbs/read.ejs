@@ -24,6 +24,7 @@
             var isPostOwner = loginUser && (loginUser.id === column[3] || loginUser.name === column[3]);
             var bookmarked = typeof isBookmarked !== 'undefined' ? isBookmarked : false;
             var canWrite = loginUser && loginUser.status !== 'SUSPENDED';
+            var canInteractWithPost = canWrite && !isHiddenByAdmin;
 
             function formatFileSize(bytes) {
                 bytes = Number(bytes || 0);
@@ -69,7 +70,7 @@
                     <div class="text-secondary small me-sm-auto">
                         추천 현황: 좋아요 <span class="fw-semibold"><%=likeCount%></span> · 싫어요 <span class="fw-semibold"><%=dislikeCount%></span>
                     </div>
-                    <% if (canWrite) { %>
+                    <% if (canInteractWithPost) { %>
                         <div class="reaction-actions">
                             <form action="/bbs/reaction" method="post" class="d-inline">
                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -92,12 +93,14 @@
                                 </button>
                             </form>
                         </div>
+                    <% } else if (isHiddenByAdmin) { %>
+                        <span class="text-danger small">숨김 처리된 게시글은 추천할 수 없습니다.</span>
                     <% } else { %>
                         <a href="/bbs/login" class="btn btn-sm btn-outline-primary">로그인 후 추천</a>
                     <% } %>
                 </div>
                 <div class="d-flex flex-column flex-sm-row justify-content-end gap-2 mt-3">
-                    <% if (canWrite) { %>
+                    <% if (canInteractWithPost) { %>
                         <form action="/bbs/bookmark" method="post">
                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                             <input type="hidden" name="bbsno" value="<%=column[0]%>">
@@ -205,7 +208,7 @@
                 <span class="badge text-bg-light border"><%= activeCommentCount %>개</span>
             </div>
             <div class="card-body">
-                <% if (canWrite) { %>
+                <% if (canInteractWithPost) { %>
                     <form action="/bbs/wsave" method="post" class="mb-4">
                         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                         <input type="hidden" name="bbsno" value="<%=column[0]%>">
@@ -266,10 +269,10 @@
                                         <% } %>
                                     </div>
                                     <div class="d-flex flex-wrap justify-content-md-end gap-2">
-                                        <% if (canWrite && canInteractWithComment) { %>
+                                        <% if (canInteractWithPost && canInteractWithComment) { %>
                                             <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#replyForm<%= comment[0] %>">답글</button>
                                         <% } %>
-                                        <% if (canWrite && canInteractWithComment && !isMine) { %>
+                                        <% if (canInteractWithPost && canInteractWithComment && !isMine) { %>
                                             <form action="/bbs/report" method="post" class="d-inline">
                                                 <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                 <input type="hidden" name="target_type" value="COMMENT">
@@ -308,7 +311,7 @@
                                     <% } else { %>
                                         <div class="comment-content mb-2 text-break"><%= comment[4] %></div>
                                         <div class="comment-reaction-summary" aria-label="댓글 추천 현황">
-                                            <% if (canWrite && canInteractWithComment) { %>
+                                            <% if (canInteractWithPost && canInteractWithComment) { %>
                                                 <form action="/bbs/wreaction" method="post" class="d-inline">
                                                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                                                     <input type="hidden" name="bbsno" value="<%=column[0]%>">
@@ -345,7 +348,7 @@
                                     <% } %>
                                 </div>
 
-                                <% if (canWrite && canInteractWithComment) { %>
+                                <% if (canInteractWithPost && canInteractWithComment) { %>
                                     <div class="collapse mt-3" id="replyForm<%= comment[0] %>">
                                         <form action="/bbs/wreply" method="post" class="border-top pt-3">
                                             <input type="hidden" name="_csrf" value="<%= csrfToken %>">

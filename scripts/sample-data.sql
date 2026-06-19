@@ -1,7 +1,7 @@
 INSERT INTO login (id, password, salt, password_algo, password_updated_at, name, email, role, ok)
 VALUES (
   'admin',
-  'zACoQfcn9zAU7FfnIcxLVH0Uo0fyQLu0V6MUCli6gOubrRi9RXDhT2M/NMAsAQ+6OyLPB3Pp13cjv1quBlZw5w==',
+  'gkJAFXEUx/pnA9WonZOpVRPtcAdivxo7/ulK5RN0VxRUAslVPkN9eZb3J+4MLlpBR7F2YVpZrwVEIR8kNUanMw==',
   'sample-salt',
   'sha512',
   CURRENT_TIMESTAMP,

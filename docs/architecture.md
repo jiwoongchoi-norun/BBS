@@ -16,7 +16,7 @@ Browser
     -> public/stylesheets/style.css
 ```
 
-이 프로젝트는 `/bbs` 기능을 회원, 게시글 조회, 게시글 변경, 파일, 댓글, 반응 라우터로 분리한 Express 기반 게시판이다. `routes/bbs.js`는 공통 CSRF 처리와 feature router 조립을 담당하고, 게시글/댓글/반응 SQL은 `db/repositories/*.js`로 분리되어 있다.
+이 프로젝트는 `/bbs` 기능을 회원, 게시글 조회, 게시글 변경, 파일, 댓글, 반응 라우터로 분리한 Express 기반 게시판이다. `routes/bbs.js`는 세션 기반 CSRF 처리와 feature router 조립을 담당하고, 게시글/댓글/반응 SQL은 `db/repositories/*.js`로 분리되어 있다.
 
 ## 주요 파일
 
@@ -25,7 +25,7 @@ Browser
 | `app.js`                       | Express 설정, EJS, static, session, router 연결, 전역 error handler |
 | `bin/www`                      | HTTP 서버 시작                                                      |
 | `config/dbconfig.js`           | `.env` 기반 PostgreSQL 접속 설정                                    |
-| `routes/bbs.js`                | `/bbs` 공통 CSRF 처리, feature router mount, CSRF 오류 처리         |
+| `routes/bbs.js`                | `/bbs` 공통 CSRF 처리, feature router mount                         |
 | `routes/bbs/*.routes.js`       | 회원, 게시글 조회/변경, 파일, 댓글, 반응 기능별 라우터              |
 | `db/repositories/*.js`         | 게시글, 댓글, 반응 SQL 실행 함수                                    |
 | `routes/helpers/*.js`          | 응답, 업로드, 입력값 검증 helper                                    |
@@ -114,7 +114,8 @@ Browser
 - XSS 완화: 사용자 입력은 EJS `<%= %>` escaped output 사용
 - CSRF 완화: `/bbs` POST form에 session 기반 CSRF token 적용
 - 권한 확인: 게시글/댓글 수정 삭제, 다운로드에서 작성자 검증
-- 세션 보안: hardcoded secret 제거, `httpOnly`, `sameSite=lax`, production secure cookie
+- 세션 보안: PostgreSQL session store, hardcoded secret 제거, `httpOnly`, `sameSite=lax`, production secure cookie
+- 요청 제한: 로그인, 회원가입, 비밀번호 재설정, 파일 업로드에 rate limit 적용
 - 오류 메시지: production에서는 일반화된 오류 메시지 표시
 
 ## 구조상 주의점

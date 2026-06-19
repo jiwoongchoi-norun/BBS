@@ -27,11 +27,12 @@ Reports are reviewed on a best-effort basis. Confirmed issues are fixed in `main
 The project currently includes:
 
 - bcrypt password hashing
-- session cookies with `httpOnly` and production `secure` mode
-- CSRF protection on `/bbs` forms
-- Oracle bind variables for database queries
+- PostgreSQL-backed sessions with `httpOnly` and production `secure` cookies
+- Session-backed CSRF protection on `/bbs` forms
+- PostgreSQL parameterized queries for database input
+- Helmet security headers and request rate limits
 - upload extension and MIME allowlists
 - path validation for stored file downloads
 - role checks for administrator routes
 
-Production deployments should also configure HTTPS, a production session store, secure environment variables, request rate limiting, centralized logs, backups, and dependency scanning.
+Production deployments should also configure HTTPS, secure environment variables, centralized logs, backups, and dependency scanning.
